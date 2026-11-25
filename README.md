@@ -59,9 +59,10 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 
 - App chỉ nhận biết **"vừa gõ ký tự"** hay **"vừa xoá"**. Không ghi lại, không lưu, không gửi đi phím nào (xem hàm `classify_key` trong mã nguồn).
 - Tắt trong **Cài đặt → Hiệu ứng gõ phím** là app gỡ hẳn chức năng bắt phím của Windows.
-- Tự tắt ở ô mật khẩu của phần mềm Windows và khi trình chiếu / toàn màn hình. Ô mật khẩu trên trình duyệt web thì app không nhận biết được.
+- Tự tắt ở ô mật khẩu (cả phần mềm Windows lẫn trình duyệt web) và khi trình chiếu / toàn màn hình.
 - Bỏ qua phím do Unikey/EVKey tự gửi khi bỏ dấu, nên không hiện hiệu ứng chém nhầm.
-- Vị trí hiệu ứng: đúng con trỏ nhập ở phần lớn phần mềm Windows kiểu cũ. Với Chrome, Edge, Zalo (không báo vị trí con trỏ nhập) thì hiệu ứng hiện cạnh con trỏ chuột.
+- Vị trí hiệu ứng được tìm lần lượt bằng: con trỏ hệ thống → **UI Automation** (Chrome, Edge, Word, app Windows 11) → **MSAA** (Zalo, app Electron). Không cách nào được thì hiện cạnh con trỏ chuột. Mục Cài đặt cho biết từng phần mềm đang dùng cách nào.
+- Phần tìm con trỏ nhập chạy ở **tiến trình phụ riêng** (`--caret-helper`), có hạn chờ 0,25 giây. Phần mềm kia treo hay lỗi thì chibi vẫn chạy; lỗi 3 lần thì tự chuyển sang hiện cạnh chuột.
 - Phần mềm diệt virus có thể cảnh báo vì app dùng kỹ thuật bắt phím toàn hệ thống. Mã nguồn công khai ở repo này để kiểm chứng.
 
 ## Cập nhật phiên bản

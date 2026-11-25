@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CHIBI NHẮC VIỆC  v2.6
+CHIBI NHẮC VIỆC  v2.7
 Robot chibi nhắc việc chạy trên màn hình Windows 10/11.
 - Đi lại tự do toàn màn hình (hỗ trợ nhiều màn hình), kéo thả, đổi kích thước, đổi nhân vật
 - Nhắc việc: một lần / hằng ngày / T2-T6 / chọn thứ / lặp mỗi N phút, hoãn, báo trước
@@ -26,6 +26,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, colorchooser
 
 IS_WIN = sys.platform.startswith("win")
+import ctypes                      # dùng cả cho cấu trúc COM khai báo ở cấp module
 if IS_WIN:
     import ctypes
     from ctypes import wintypes
@@ -67,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "2.6"
+APP_VER = "2.7"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -96,6 +97,14 @@ def data_dir():
 DATA_DIR = data_dir()
 DATA_FILE = os.path.join(DATA_DIR, "chibi_data.json")
 ERR_FILE = os.path.join(DATA_DIR, "errors.log")
+
+
+def log_error_msg(msg):
+    try:
+        with open(ERR_FILE, "a", encoding="utf-8") as f:
+            f.write("\n[%s] %s\n" % (dt.datetime.now().isoformat(timespec="seconds"), msg))
+    except Exception:
+        pass
 
 
 def log_error():
@@ -2134,6 +2143,10 @@ class GlobalMouse:
     # ── luồng chính: gom cú bấm thành 1 lần / 2 lần ──
     def poll(self):
         self.mode = self.app.store.s.get("screen_mode", "desktop")
+        try:
+            self.app.keyfx.poll()
+        except Exception:
+            log_error()
         while True:
             try:
                 ev = self.q.get_nowait()
@@ -2235,6 +2248,277 @@ def caret_info():
         return None, pw
     except Exception:
         return None, False
+
+
+# ── Tìm vị trí con trỏ nhập ở MỌI phần mềm: UI Automation (Chrome, Edge, Word, app mới), MSAA (Electron/Zalo) ──
+def _release(p):
+    if p:
+        try:
+            vtbl = ctypes.cast(p, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
+            ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)(vtbl[2])(p)
+        except Exception:
+            pass
+
+
+def _guid(s):
+    class GUID(ctypes.Structure):
+        _fields_ = [("a", ctypes.c_ulong), ("b", ctypes.c_ushort), ("c", ctypes.c_ushort), ("d", ctypes.c_ubyte * 8)]
+    h = s.strip("{}").replace("-", "")
+    g = GUID(int(h[0:8], 16), int(h[8:12], 16), int(h[12:16], 16))
+    for i in range(8):
+        g.d[i] = int(h[16 + i * 2:18 + i * 2], 16)
+    return g
+
+
+class _VARIANT(ctypes.Structure):
+    _fields_ = [("vt", ctypes.c_ushort), ("r1", ctypes.c_ushort), ("r2", ctypes.c_ushort), ("r3", ctypes.c_ushort),
+                ("v1", ctypes.c_void_p), ("v2", ctypes.c_void_p)]
+
+
+def _vcall(ptr, index, argtypes, args, restype=ctypes.c_long):
+    vtbl = ctypes.cast(ptr, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
+    fn = ctypes.WINFUNCTYPE(restype, ctypes.c_void_p, *argtypes)(vtbl[index])
+    return fn(ptr, *args)
+
+
+def _rects_from_safearray(psa):
+    oa = ctypes.windll.oleaut32
+    out = []
+    if not psa:
+        return out
+    try:
+        ub = ctypes.c_long()
+        oa.SafeArrayGetUBound(psa, 1, ctypes.byref(ub))
+        n = ub.value + 1
+        data = ctypes.c_void_p()
+        if n >= 4 and oa.SafeArrayAccessData(psa, ctypes.byref(data)) == 0:
+            arr = ctypes.cast(data, ctypes.POINTER(ctypes.c_double))
+            vals = [arr[i] for i in range(n)]
+            oa.SafeArrayUnaccessData(psa)
+            for i in range(0, n - 3, 4):
+                out.append(tuple(vals[i:i + 4]))
+    finally:
+        oa.SafeArrayDestroy(psa)
+    return out
+
+
+class _CaretCore:
+    """Phần gọi UI Automation / MSAA. Chỉ chạy trong TIẾN TRÌNH PHỤ (--caret-helper):
+    lỡ lệnh COM làm sập thì chỉ tiến trình phụ chết, chibi vẫn chạy."""
+    IID_IAccessible = "{618736E0-3C3D-11CF-810C-00AA00389B71}"
+    CLSID_UIA = "{FF48DBA4-60EF-4201-AA87-54103EEF594E}"
+    IID_UIA = "{30CBE57D-D9D0-452A-AB13-7AC5AC4825EE}"
+    IID_TP2 = "{506A921A-FCC9-409F-B23B-37EB74106872}"
+    IID_TP = "{32EBA289-3583-42C9-9C59-3B6D9A1E9B6A}"
+
+    def __init__(self):
+        self.uia = None
+        try:
+            ctypes.windll.ole32.CoInitializeEx(None, 0)       # COINIT_MULTITHREADED
+            p = ctypes.c_void_p()
+            if ctypes.windll.ole32.CoCreateInstance(ctypes.byref(_guid(self.CLSID_UIA)), None, 1,
+                                                    ctypes.byref(_guid(self.IID_UIA)), ctypes.byref(p)) == 0:
+                self.uia = p
+        except Exception:
+            pass
+
+    def find(self):
+        pw = False
+        if self.uia:
+            pos, pw = self._uia()
+            if pw:
+                return None, True, "UIA"
+            if pos:
+                return pos, False, "UI Automation"
+        pos = self._msaa()
+        if pos:
+            return pos, pw, "MSAA"
+        return None, pw, ""
+
+    def _uia(self):
+        el = ctypes.c_void_p()
+        if _vcall(self.uia, 8, [ctypes.POINTER(ctypes.c_void_p)], [ctypes.byref(el)]) != 0 or not el:
+            return None, False
+        try:
+            v = _VARIANT()
+            pw = False
+            if _vcall(el, 10, [ctypes.c_int, ctypes.POINTER(_VARIANT)], [30019, ctypes.byref(v)]) == 0:   # IsPassword
+                pw = v.vt == 11 and (ctypes.c_short(v.v1 or 0).value != 0)
+            if pw:
+                return None, True
+            for pid, iid in ((10024, self.IID_TP2), (10014, self.IID_TP)):
+                unk = ctypes.c_void_p()
+                if _vcall(el, 16, [ctypes.c_int, ctypes.POINTER(ctypes.c_void_p)], [pid, ctypes.byref(unk)]) != 0 or not unk:
+                    continue
+                tp = ctypes.c_void_p()
+                try:
+                    _vcall(unk, 0, [ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)],
+                           [ctypes.byref(_guid(iid)), ctypes.byref(tp)])
+                finally:
+                    _release(unk)
+                if not tp:
+                    continue
+                try:
+                    rng = ctypes.c_void_p()
+                    if pid == 10024:
+                        active = ctypes.c_int()
+                        _vcall(tp, 10, [ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_void_p)],
+                               [ctypes.byref(active), ctypes.byref(rng)])
+                    else:
+                        arr = ctypes.c_void_p()
+                        if _vcall(tp, 5, [ctypes.POINTER(ctypes.c_void_p)], [ctypes.byref(arr)]) == 0 and arr:
+                            n = ctypes.c_int()
+                            _vcall(arr, 3, [ctypes.POINTER(ctypes.c_int)], [ctypes.byref(n)])
+                            if n.value > 0:
+                                _vcall(arr, 4, [ctypes.c_int, ctypes.POINTER(ctypes.c_void_p)], [0, ctypes.byref(rng)])
+                            _release(arr)
+                    if rng:
+                        try:
+                            pos = self._range_pos(rng)
+                        finally:
+                            _release(rng)
+                        if pos:
+                            return pos, False
+                finally:
+                    _release(tp)
+            return None, False
+        finally:
+            _release(el)
+
+    def _range_pos(self, rng):
+        psa = ctypes.c_void_p()
+        _vcall(rng, 10, [ctypes.POINTER(ctypes.c_void_p)], [ctypes.byref(psa)])
+        rects = _rects_from_safearray(psa)
+        if not rects:                                      # con trỏ = khoảng rỗng -> nới ra 1 ký tự để lấy toạ độ
+            _vcall(rng, 6, [ctypes.c_int], [0])
+            psa = ctypes.c_void_p()
+            _vcall(rng, 10, [ctypes.POINTER(ctypes.c_void_p)], [ctypes.byref(psa)])
+            rects = _rects_from_safearray(psa)
+        rects = [r for r in rects if r[3] > 0]
+        if not rects:
+            return None
+        l, t, w, h = rects[-1]
+        return int(l + w), int(t + h / 2)
+
+    def _msaa(self):
+        u32 = ctypes.windll.user32
+        fg = u32.GetForegroundWindow()
+        if not fg:
+            return None
+        tid = u32.GetWindowThreadProcessId(fg, None)
+
+        class GTI(ctypes.Structure):
+            _fields_ = [("cbSize", wintypes.DWORD), ("flags", wintypes.DWORD), ("hwndActive", wintypes.HWND),
+                        ("hwndFocus", wintypes.HWND), ("hwndCapture", wintypes.HWND), ("hwndMenuOwner", wintypes.HWND),
+                        ("hwndMoveSize", wintypes.HWND), ("hwndCaret", wintypes.HWND), ("rcCaret", wintypes.RECT)]
+        gi = GTI()
+        gi.cbSize = ctypes.sizeof(GTI)
+        hwnd = fg
+        if u32.GetGUIThreadInfo(tid, ctypes.byref(gi)) and gi.hwndFocus:
+            hwnd = gi.hwndFocus
+        acc = ctypes.c_void_p()
+        oacc = ctypes.windll.oleacc
+        oacc.AccessibleObjectFromWindow.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p,
+                                                    ctypes.POINTER(ctypes.c_void_p)]
+        if oacc.AccessibleObjectFromWindow(hwnd, 0xFFFFFFF8, ctypes.byref(_guid(self.IID_IAccessible)),
+                                           ctypes.byref(acc)) != 0 or not acc:          # OBJID_CARET
+            return None
+        try:
+            l, t, w, h = ctypes.c_long(), ctypes.c_long(), ctypes.c_long(), ctypes.c_long()
+            child = _VARIANT()
+            child.vt = 3                                    # VT_I4, CHILDID_SELF = 0
+            hr = _vcall(acc, 22, [ctypes.POINTER(ctypes.c_long)] * 4 + [_VARIANT],
+                        [ctypes.byref(l), ctypes.byref(t), ctypes.byref(w), ctypes.byref(h), child])
+            if hr == 0 and (l.value or t.value) and h.value > 0:
+                return l.value + w.value, t.value + h.value // 2
+        finally:
+            _release(acc)
+        return None
+
+
+
+
+def caret_helper_main():
+    """Tiến trình phụ: đọc mã yêu cầu từ stdin, trả 'mã x y mậtkhẩu cách' ra stdout. Thoát khi app chính đóng."""
+    core = _CaretCore()
+    out = sys.stdout
+    for line in sys.stdin:
+        rid = line.strip()
+        if not rid:
+            continue
+        try:
+            pos, pw, how = core.find()
+        except Exception:
+            pos, pw, how = None, False, ""
+        x, y = pos if pos else (-99999, -99999)
+        out.write("%s %d %d %d %s\n" % (rid, x, y, 1 if pw else 0, how.replace(" ", "_") or "-"))
+        out.flush()
+
+
+class CaretFinder:
+    """Hỏi tiến trình phụ vị trí con trỏ nhập. Tiến trình phụ chỉ khởi động khi cần, sập thì tự mở lại (tối đa 3 lần)."""
+
+    def __init__(self):
+        import queue
+        self.results = queue.Queue()
+        self.proc = None
+        self.crashes = 0
+        self.uia = None
+        self.lock = threading.Lock()
+
+    def available(self):
+        return IS_WIN and self.crashes < 3
+
+    def _spawn(self):
+        import subprocess
+        exe = sys.executable
+        con = os.path.join(os.path.dirname(exe), "python.exe")
+        if os.path.exists(con):
+            exe = con                       # python.exe + CREATE_NO_WINDOW: có ống stdin/stdout, không hiện cửa sổ
+        self.proc = subprocess.Popen([exe, os.path.abspath(sys.argv[0]), "--caret-helper"],
+                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                     creationflags=0x08000000 if IS_WIN else 0, cwd=BASE_DIR)
+        threading.Thread(target=self._reader, args=(self.proc,), daemon=True).start()
+
+    def _reader(self, proc):
+        try:
+            for raw in proc.stdout:
+                parts = raw.decode("utf-8", "replace").split()
+                if len(parts) >= 5:
+                    x, y = int(parts[1]), int(parts[2])
+                    pos = None if x == -99999 else (x, y)
+                    how = parts[4].replace("_", " ")
+                    self.results.put((int(parts[0]), pos, parts[3] == "1", "" if how == "-" else how))
+        except Exception:
+            pass
+        with self.lock:
+            if self.proc is proc:
+                self.proc = None
+                self.crashes += 1           # tiến trình phụ chết bất thường
+                if self.crashes >= 3:
+                    log_error_msg("Tìm con trỏ nhập (UI Automation/MSAA) lỗi 3 lần – chuyển sang hiện hiệu ứng cạnh chuột.")
+
+    def request(self, rid):
+        if not self.available():
+            return
+        try:
+            with self.lock:
+                if self.proc is None or self.proc.poll() is not None:
+                    self._spawn()
+                p = self.proc
+            p.stdin.write(("%d\n" % rid).encode())
+            p.stdin.flush()
+        except Exception:
+            log_error()
+
+    def stop(self):
+        with self.lock:
+            p, self.proc = self.proc, None
+        if p:
+            try:
+                p.kill()
+            except Exception:
+                pass
 
 
 def _bezier(p0, p1, p2, n=18):
@@ -2894,28 +3178,77 @@ class KeyFx:
         self.hist = {"T": [], "D": []}
         self.cool = {"T": 0.0, "D": 0.0}
         self.last_pos = None
+        self.finder = CaretFinder()
+        self.wait = None                          # (mã yêu cầu, loại, lúc hỏi, vị trí chuột dự phòng)
+        self.rid = 0
+        self.stats = {}                           # tên chương trình -> cách tìm con trỏ nhập lần gần nhất
+        self.last_info = ""
 
     def size(self):
         return int(150 * float(self.app.store.s.get("key_fx_size", 1.0)) * self.app.dpi)
+
+    def _note(self, how):
+        exe = get_foreground_exe() or "?"
+        self.stats[exe] = how
+        self.last_info = "%s → %s" % (app_name(exe) if exe != "?" else "?", how)
+
+    def _play(self, kind, pos):
+        s = self.app.store.s
+        self.last_pos = pos
+        if kind == "T":
+            self.bolt.play(pos[0], pos[1], self.size(), s.get("key_fx_type", "bolt"))
+        else:
+            self.slash.play(pos[0], pos[1], self.size(), s.get("key_fx_del", "slash"))
+
+    def _pointer(self):
+        px, py = self.app.root.winfo_pointerxy()
+        return (px + 14, py + 18)
 
     def on_key(self, kind):
         s = self.app.store.s
         if not s.get("key_fx", True) or self.app.fs_hidden:
             return
         t = time_now()
-        pos, pw = caret_info()
-        if pw:
-            return                                   # ô mật khẩu: không hiệu ứng
-        if pos is None:
-            px, py = self.app.root.winfo_pointerxy()
-            pos = (px + 14, py + 18)                 # phần mềm không báo vị trí con trỏ nhập -> cạnh chuột
-        self.last_pos = pos
         if t - self.t_last[kind] >= (0.07 if kind == "T" else 0.09):     # gõ nhanh / giữ phím: gộp bớt
             self.t_last[kind] = t
-            if kind == "T":
-                self.bolt.play(pos[0], pos[1], self.size(), s.get("key_fx_type", "bolt"))
+            pos, pw = caret_info()                          # 1) con trỏ hệ thống: nhanh, làm ngay
+            if pw:
+                return                                      # ô mật khẩu: không hiệu ứng
+            if pos is not None:
+                self._note("con trỏ hệ thống")
+                self._play(kind, pos)
+            elif self.finder.available():
+                self.rid += 1                               # 2) hỏi UI Automation / MSAA ở tiến trình phụ
+                self.wait = (self.rid, kind, t, self._pointer())
+                self.finder.request(self.rid)
             else:
-                self.slash.play(pos[0], pos[1], self.size(), s.get("key_fx_del", "slash"))
+                self._note("cạnh chuột")
+                self._play(kind, self._pointer())
+        self._react(kind, t)
+
+    def poll(self):
+        """Gọi mỗi nhịp từ luồng chính: nhận kết quả tìm con trỏ nhập, quá hạn thì hiện cạnh chuột."""
+        while True:
+            try:
+                rid, pos, pw, how = self.finder.results.get_nowait()
+            except Exception:
+                break
+            if self.wait and rid == self.wait[0]:
+                _, kind, _t, ptr = self.wait
+                self.wait = None
+                if pw:
+                    self._note("ô mật khẩu – bỏ qua")
+                    continue
+                self._note(how or "cạnh chuột")
+                self._play(kind, pos or ptr)
+        if self.wait and time_now() - self.wait[2] > 0.25:
+            _, kind, _t, ptr = self.wait
+            self.wait = None
+            self._note("cạnh chuột (phần mềm chậm trả lời)")
+            self._play(kind, ptr)
+
+    def _react(self, kind, t):
+        s = self.app.store.s
         if not s.get("key_fx_pet", True) or self.app.hidden:
             return
         h = self.hist[kind]
@@ -2930,6 +3263,7 @@ class KeyFx:
             act = ((s.get("triggers") or {}).get(key) or {}).get("act")
             if act:
                 eng = self.app.pet.engine
+                pos = self.last_pos or self._pointer()
                 if kind == "D":
                     eng.fly_and_act(pos[0], pos[1] + 40, act)
                 else:
@@ -4047,6 +4381,7 @@ class App:
     def quit(self):
         try:
             self.gmouse.stop()
+            self.keyfx.finder.stop()
             if self.save_job:
                 self.root.after_cancel(self.save_job)
             self.store.s["pos"] = self.pet.anchor_screen()
@@ -4912,6 +5247,9 @@ class Manager:
         ttk.Label(kf, text="App chỉ nhận biết 'vừa gõ' hay 'vừa xoá', không ghi lại phím nào. Tự tắt ở ô mật khẩu và khi "
                            "trình chiếu. Tắt mục này là gỡ hẳn chức năng bắt phím.", style="Muted.TLabel", wraplength=470,
                   justify="left").grid(row=7, column=0, columnspan=2, sticky="w")
+        self.kdiag = ttk.Label(kf, text="", style="Muted.TLabel", wraplength=470, justify="left")
+        self.kdiag.grid(row=8, column=0, columnspan=2, sticky="w", pady=(4, 0))
+        self.kdiag_loop()
         self.fxprev = tk.Canvas(kf, width=260, height=220, bg="#120d1c", highlightthickness=1, highlightbackground=C_ACC2)
         self.fxprev.grid(row=1, column=2, rowspan=7, padx=(18, 0), sticky="n")
         self._fxp = {"key": s.get("key_fx_type", "bolt"), "frames": [], "i": 0, "n": 0}
@@ -4939,6 +5277,17 @@ class Manager:
         self.ustat = ttk.Label(uf, text=self.app.updater.status, style="Muted.TLabel")
         self.ustat.grid(row=3, column=0, columnspan=4, sticky="w")
         self.app.updater.on_status = lambda t: self.alive() and self.ustat.config(text=t)
+
+    def kdiag_loop(self):
+        """Cho biết phần mềm vừa gõ tìm được con trỏ nhập bằng cách nào (để kiểm tra Chrome, Zalo...)."""
+        if not self.alive():
+            return
+        kf = self.app.keyfx
+        txt = "Vị trí hiệu ứng lần gõ gần nhất: " + (kf.last_info or "chưa gõ")
+        if kf.stats:
+            txt += "\n" + " • ".join("%s: %s" % (app_name(e) if e != "?" else "?", h) for e, h in list(kf.stats.items())[-5:])
+        self.kdiag.config(text=txt)
+        self.win.after(1000, self.kdiag_loop)
 
     def fx_preview_set(self, key):
         self._fxp.update(key=key, frames=[], i=0)
@@ -5353,6 +5702,9 @@ class Updater:
 
 
 def main():
+    if "--caret-helper" in sys.argv:          # tiến trình phụ tìm con trỏ nhập
+        caret_helper_main()
+        return
     # chống chạy 2 lần: nếu đã chạy thì gọi bản cũ mở bảng quản lý
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     bound = False

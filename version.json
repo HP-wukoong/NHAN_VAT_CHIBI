@@ -1,9 +1,10 @@
 {
-  "version": "2.6",
+  "version": "2.7",
   "date": "2026-11-25",
   "notes": [
-    "Quăng nhân vật đập vào tường: bật ra, rơi xuống rồi nằm ăn vạ",
-    "Nhân vật không còn lấn ra ngoài mép màn hình (giới hạn theo từng màn hình)",
-    "Tab Điều khiển: chọn chiêu khi đập tường, hoặc bám tường như cũ"
+    "Hiệu ứng gõ / xoá hiện đúng chỗ gõ ở cả Chrome, Edge, Word, Zalo và app hiện đại (UI Automation + MSAA)",
+    "Tự tắt hiệu ứng ở ô mật khẩu trên trình duyệt",
+    "Phần tìm con trỏ nhập chạy ở tiến trình riêng: lỗi hay treo cũng không làm sập chibi",
+    "Cài đặt hiển thị từng phần mềm đang tìm con trỏ nhập bằng cách nào"
   ]
 }

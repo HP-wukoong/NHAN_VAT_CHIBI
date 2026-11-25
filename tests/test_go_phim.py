@@ -79,6 +79,55 @@ def run():
     for _ in range(8):
         fx.on_key("D")
     check(("fly", app.store.s["triggers"]["E_DELETING"]["act"]) in calls, "xoá liên tục -> nhân vật lao tới chỗ xoá")
+    # đường tìm con trỏ nhập ở luồng riêng (UI Automation / MSAA cho Chrome, Zalo...)
+    import ctypes
+    check(ctypes.sizeof(C._VARIANT) == (24 if ctypes.sizeof(ctypes.c_void_p) == 8 else 16), "cấu trúc VARIANT đúng kích thước COM")
+    n0 = fx.bolt.played
+    fx.wait = (901, "T", C.time_now(), (11, 11))
+    fx.finder.results.put((901, (640, 360), False, "UI Automation"))
+    fx.poll()
+    check(fx.bolt.played == n0 + 1 and fx.last_pos == (640, 360), "nhận vị trí từ UI Automation -> hiệu ứng đúng chỗ gõ")
+    check("UI Automation" in fx.last_info, "ghi lại cách tìm được con trỏ nhập (%s)" % fx.last_info)
+    fx.wait = (902, "D", C.time_now(), (11, 11))
+    fx.finder.results.put((902, None, True, "UIA"))
+    s0 = fx.slash.played
+    fx.poll()
+    check(fx.slash.played == s0, "ô mật khẩu trên trình duyệt -> không hiệu ứng")
+    fx.wait = (903, "T", C.time_now() - 1.0, (77, 88))
+    fx.poll()
+    check(fx.last_pos == (77, 88), "phần mềm chậm trả lời quá 0,25 giây -> hiện cạnh chuột, không chờ")
+    fx.wait = (904, "T", C.time_now(), (1, 1))
+    fx.finder.results.put((900, (5, 5), False, "MSAA"))
+    fx.poll()
+    check(fx.wait is not None, "bỏ qua kết quả cũ không đúng yêu cầu")
+    fx.wait = None
+    # tiến trình phụ: hỏi - đáp qua ống, sập thì chibi vẫn sống, tự mở lại, quá 3 lần thì thôi
+    import time as _t
+    fd = C.CaretFinder()
+    fd.available = lambda: fd.crashes < 3
+    fd.request(1)
+    got = None
+    for _ in range(100):
+        try:
+            got = fd.results.get(timeout=0.1)
+            break
+        except Exception:
+            pass
+    check(got is not None and got[0] == 1, "tiến trình phụ trả lời yêu cầu (%s)" % (got,))
+    for k in range(3):
+        fd.proc.kill()
+        fd.proc.wait()
+        for _ in range(50):
+            if fd.crashes > k:
+                break
+            _t.sleep(0.1)
+        if fd.crashes < 3:
+            fd.request(2 + k)
+            _t.sleep(1.0)
+    check(fd.crashes >= 3 and app.root.winfo_exists(), "tiến trình phụ sập 3 lần: chibi vẫn chạy, tắt cách tìm này")
+    fd.request(99)
+    check(fd.proc is None, "đã tắt thì không mở lại tiến trình phụ nữa")
+    fd.stop()
     q = app.gmouse.q
     q.put(("K", "D"))
     s0 = fx.slash.played
