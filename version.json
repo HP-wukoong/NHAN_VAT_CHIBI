@@ -1,8 +1,8 @@
 {
-  "version": "3.0",
+  "version": "3.1",
   "date": "2026-11-25",
   "notes": [
-    "Cỡ hiệu ứng gõ / xoá tự theo cỡ chữ của phần mềm (chữ to → hiệu ứng to), có hệ số chỉnh thêm",
-    "Thay rồng bằng Lôi long: rồng sấm sét chạy dọc trên chữ, sét con đánh xuống chữ, nổ chớp ở chỗ gõ"
+    "Thêm 8 hiệu ứng sấm sét: Lôi xích liên hoàn, Lôi cầu plasma, Lôi vân giáng thế, Lôi thương xuyên chữ, Lôi trảo xé chữ, Huyết lôi diệt thế, Thiên phạt lôi trụ, Lôi võng thu lưới",
+    "Thêm lựa chọn ★ Ngẫu nhiên hệ Lôi (mỗi lần gõ ra một kiểu sấm sét khác nhau)"
   ]
 }

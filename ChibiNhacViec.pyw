@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.0"
+APP_VER = "3.1"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -3379,18 +3379,353 @@ def make_sword_frames(size, seed):
 
 
 # (khoá, tên hiển thị, hàm tạo, điểm neo trong khung: tỉ lệ x, y)
+def _zap(dc, dg, pts, w, glow, mid, al=1.0, white=True):
+    """Vẽ một tia sét: quầng màu + lõi sáng + chỉ trắng."""
+    a = max(0.0, min(1.0, al))
+    dg.line(pts, fill=glow[:3] + (int(glow[3] * a),), width=max(2, int(w * 3.2)))
+    dc.line(pts, fill=mid[:3] + (int(mid[3] * a),), width=max(1, int(w)))
+    if white:
+        dc.line(pts, fill=(255, 255, 255, int(255 * a)), width=max(1, int(w * 0.4)))
+
+
+def _sparks(dc, rnd, c, rmin, rmax, n, q, col, al=1.0, sy=1.0):
+    for _ in range(n):
+        a = rnd.uniform(0, 2 * math.pi)
+        d = rnd.uniform(rmin, rmax)
+        x, y = c[0] + math.cos(a) * d, c[1] + math.sin(a) * d * sy
+        dc.ellipse((x - q, y - q, x + q, y + q), fill=col[:3] + (int(col[3] * al),))
+
+
+def make_chain_frames(size, seed):
+    """Lôi xích liên hoàn: tia sét nhảy từ chữ này sang chữ kia dọc dòng, dồn về chỗ gõ rồi nổ."""
+    rnd = random.Random(seed + 17000)
+    W, H = int(size * 2.2), int(size * 0.8)
+    base = H * 0.62
+    n = rnd.randint(4, 6)
+    nodes = []
+    for i in range(n):
+        t = i / float(n - 1)
+        nodes.append((W * (0.06 + 0.84 * t) + rnd.uniform(-1, 1) * W * 0.02, base - H * rnd.uniform(0.08, 0.3)))
+    nodes[-1] = (W * 0.9, base - H * 0.12)
+    G, M = (80, 140, 255, 210), (180, 215, 255, 255)
+    F = n + 6
+    frames = []
+    for f in range(F):
+        core, glow, dc, dg = _fx_new(W, H)
+        for i in range(n - 1):
+            age = f - i
+            if age < 0:
+                continue
+            al = 1.0 if age < 3 else max(0.0, 1 - (age - 2) * 0.3)
+            if al <= 0:
+                continue
+            a, b = nodes[i], nodes[i + 1]
+            for k in range(2 if age < 2 else 1):             # cung sét vồng lên giữa 2 chữ
+                mx, my = (a[0] + b[0]) / 2, min(a[1], b[1]) - H * rnd.uniform(0.1, 0.25)
+                arc = _jagged(a, (mx, my), 4, H * 0.04, rnd)[:-1] + _jagged((mx, my), b, 4, H * 0.04, rnd)
+                _zap(dc, dg, arc, H * 0.03 * (1 if k == 0 else 0.6), G, M, al)
+            if age < 2:                                      # chớp tại chữ bị trúng
+                r = H * 0.07
+                dg.ellipse((b[0] - r * 2, b[1] - r * 2, b[0] + r * 2, b[1] + r * 2), fill=(120, 170, 255, int(200 * al)))
+                dc.ellipse((b[0] - r * 0.6, b[1] - r * 0.6, b[0] + r * 0.6, b[1] + r * 0.6), fill=(255, 255, 255, 255))
+                _sparks(dc, rnd, b, H * 0.05, H * 0.22, 4, max(1, H * 0.012), (210, 230, 255, 255))
+        if f >= n - 1:                                       # nổ tại chỗ gõ
+            k = f - (n - 1)
+            c = nodes[-1]
+            al = max(0.0, 1 - k / 6.0)
+            r = min(H * (0.12 + 0.06 * k), H * 0.3)
+            dg.ellipse((c[0] - r * 1.5, c[1] - r, c[0] + r * 1.5, c[1] + r), fill=(90, 150, 255, int(220 * al)))
+            for _ in range(5):
+                a = rnd.uniform(0, 2 * math.pi)
+                _zap(dc, dg, _jagged(c, (c[0] + math.cos(a) * r * 1.8, c[1] + math.sin(a) * r * 1.1), 4, H * 0.03, rnd),
+                     H * 0.015, G, M, al, white=False)
+            if k < 2:
+                rr = H * 0.06
+                dc.ellipse((c[0] - rr, c[1] - rr, c[0] + rr, c[1] + rr), fill=(255, 255, 255, 255))
+        frames.append(_fx_merge(core, glow, max(1, H * 0.03)))
+    return frames
+
+
+def make_plasma_frames(size, seed):
+    """Lôi cầu plasma: quả cầu điện tụ lại, tua sét quằn quại, rồi nổ bung."""
+    rnd = random.Random(seed + 18000)
+    W = H = size
+    c = (W / 2.0, H / 2.0)
+    G, M = (150, 80, 255, 210), (210, 180, 255, 255)
+    frames = []
+    for f in range(9):
+        core, glow, dc, dg = _fx_new(W, H)
+        if f < 6:
+            grow = min(1.0, (f + 1) / 3.0)
+            R = W * 0.13 * grow
+            dg.ellipse((c[0] - R * 2.2, c[1] - R * 2.2, c[0] + R * 2.2, c[1] + R * 2.2), fill=(120, 70, 255, 170))
+            dc.ellipse((c[0] - R, c[1] - R, c[0] + R, c[1] + R), fill=(170, 140, 255, 150), outline=(230, 220, 255, 255),
+                       width=max(1, int(W * 0.012)))
+            r2 = R * 0.45
+            dc.ellipse((c[0] - r2, c[1] - r2, c[0] + r2, c[1] + r2), fill=(255, 255, 255, 255))
+            for _ in range(rnd.randint(5, 8)):               # tua sét bám ra ngoài
+                a = rnd.uniform(0, 2 * math.pi)
+                L = W * rnd.uniform(0.25, 0.44) * grow
+                p1 = (c[0] + math.cos(a) * L, c[1] + math.sin(a) * L)
+                _zap(dc, dg, _jagged(c, p1, 6, W * 0.035, rnd), W * 0.012, G, M, 1.0)
+                q = max(1, W * 0.014)
+                dc.ellipse((p1[0] - q, p1[1] - q, p1[0] + q, p1[1] + q), fill=(240, 230, 255, 255))
+        else:                                                # nổ bung
+            k = f - 5
+            al = 1 - k / 4.0
+            r = W * (0.18 + 0.1 * k)
+            dg.ellipse((c[0] - r, c[1] - r, c[0] + r, c[1] + r), outline=(160, 100, 255, int(230 * al)), width=max(3, int(W * 0.06)))
+            dc.ellipse((c[0] - r, c[1] - r, c[0] + r, c[1] + r), outline=(240, 230, 255, int(255 * al)), width=max(1, int(W * 0.012)))
+            if k == 1:
+                rr = W * 0.12
+                dc.ellipse((c[0] - rr, c[1] - rr, c[0] + rr, c[1] + rr), fill=(255, 255, 255, 230))
+            for _ in range(6):
+                a = rnd.uniform(0, 2 * math.pi)
+                p1 = (c[0] + math.cos(a) * r * 1.1, c[1] + math.sin(a) * r * 1.1)
+                _zap(dc, dg, _jagged((c[0] + math.cos(a) * r * 0.5, c[1] + math.sin(a) * r * 0.5), p1, 3, W * 0.02, rnd),
+                     W * 0.01, G, M, al, white=False)
+        frames.append(_fx_merge(core, glow, max(1, W * 0.035)))
+    return frames
+
+
+def make_storm_frames(size, seed):
+    """Lôi vân giáng thế: mây giông đen kéo tới trên chữ, chớp loé trong mây, sét đánh xuống liên hồi."""
+    rnd = random.Random(seed + 19000)
+    W, H = int(size * 1.6), int(size * 1.6)
+    ground = H * 0.9
+    puffs = [(W * rnd.uniform(0.12, 0.88), H * rnd.uniform(0.1, 0.22), W * rnd.uniform(0.12, 0.2)) for _ in range(9)]
+    strikes = []
+    for i in range(rnd.randint(3, 4)):
+        x = W * 0.5 if i == 0 else W * rnd.uniform(0.18, 0.82)
+        strikes.append((2 + i * 2, _jagged((x + rnd.uniform(-1, 1) * W * 0.1, H * 0.2), (x, ground), 9, W * 0.05, rnd)))
+    F = 13
+    frames = []
+    for f in range(F):
+        core, glow, dc, dg = _fx_new(W, H)
+        cl = min(1.0, (f + 1) / 2.5) * (1.0 if f < F - 3 else max(0.0, (F - f) / 3.0))
+        flash = any(0 <= f - t0 < 2 for t0, _ in strikes)
+        for (px, py, pr) in puffs:                           # mây giông
+            col = (70, 60, 110, int(200 * cl)) if flash else (30, 26, 52, int(210 * cl))
+            dc.ellipse((px - pr, py - pr * 0.6, px + pr, py + pr * 0.6), fill=col)
+        if flash:
+            dg.ellipse((W * 0.15, H * 0.05, W * 0.85, H * 0.3), fill=(140, 150, 255, int(160 * cl)))
+        for t0, pts in strikes:
+            age = f - t0
+            if age < 0 or age > 3:
+                continue
+            al = (1, 1, 0.6, 0.3)[age]
+            if age == 0:
+                pts_ = pts[:len(pts) // 2 + 1]
+            else:
+                pts_ = pts
+            _zap(dc, dg, pts_, W * 0.022, (90, 120, 255, 220), (200, 215, 255, 255), al)
+            if age >= 1:
+                hx, hy = pts[-1]
+                r = W * 0.1
+                dg.ellipse((hx - r * 1.6, hy - r * 0.6, hx + r * 1.6, hy + r * 0.4), fill=(130, 160, 255, int(220 * al)))
+                _sparks(dc, rnd, (hx, hy), W * 0.03, W * 0.18, 5, max(1, W * 0.01), (220, 230, 255, 255), al, sy=0.4)
+        frames.append(_fx_merge(core, glow, max(1, W * 0.03)))
+    return frames
+
+
+def make_spear_frames(size, seed):
+    """Lôi thương xuyên chữ: ngọn giáo sét lao vút ngang tới chỗ gõ, cắm xuyên, nổ toé điện."""
+    rnd = random.Random(seed + 20000)
+    W, H = int(size * 2.0), int(size * 0.8)
+    hit = (W * 0.85, H * 0.5)
+    G, M = (70, 150, 255, 220), (190, 225, 255, 255)
+    frames = []
+    for f in range(10):
+        core, glow, dc, dg = _fx_new(W, H)
+        tx = W * 0.05 + (hit[0] + W * 0.06 - W * 0.05) * min(1.0, (f + 1) / 4.0)
+        y = hit[1]
+        if f < 7:
+            al = 1.0 if f < 5 else 0.5
+            tail = max(0.0, tx - W * 0.55)
+            Ls = H * 0.13
+            for k in range(3):                               # thân giáo = bó sét
+                _zap(dc, dg, _jagged((tail, y), (tx - Ls, y), 8, H * (0.03 + 0.02 * k), rnd),
+                     H * (0.03 if k == 0 else 0.015), G, M, al)
+            tip = [(tx + Ls * 0.4, y), (tx - Ls, y - Ls * 0.45), (tx - Ls * 0.7, y), (tx - Ls, y + Ls * 0.45)]
+            dg.polygon(tip, fill=(110, 180, 255, int(230 * al)))
+            dc.polygon(tip, fill=(220, 240, 255, int(255 * al)), outline=(255, 255, 255, int(255 * al)))
+            for _ in range(3):                               # tua điện kéo đuôi
+                x = rnd.uniform(tail, tx)
+                _zap(dc, dg, _jagged((x, y), (x - W * 0.06, y + rnd.choice((-1, 1)) * H * rnd.uniform(0.1, 0.25)), 3, H * 0.02, rnd),
+                     H * 0.01, G, M, al * 0.8, white=False)
+        if f >= 3:                                           # cắm trúng: nổ toé
+            k = f - 3
+            al = max(0.0, 1 - k / 6.5)
+            r = min(H * (0.12 + 0.06 * k), H * 0.32)
+            dg.ellipse((hit[0] - r * 0.7, hit[1] - r * 0.7, hit[0] + r * 0.7, hit[1] + r * 0.7), fill=(90, 160, 255, int(170 * al)))
+            if k < 2:
+                rr = H * 0.1
+                dc.ellipse((hit[0] - rr, hit[1] - rr, hit[0] + rr, hit[1] + rr), fill=(255, 255, 255, 255))
+            for _ in range(6):
+                a = rnd.uniform(-math.pi * 0.6, math.pi * 0.6) + (0 if rnd.random() < 0.7 else math.pi)
+                _zap(dc, dg, _jagged(hit, (hit[0] + math.cos(a) * r * 1.6, hit[1] + math.sin(a) * r * 1.2), 4, H * 0.03, rnd),
+                     H * 0.012, G, M, al, white=False)
+        frames.append(_fx_merge(core, glow, max(1, H * 0.035)))
+    return frames
+
+
+def make_claw_frames(size, seed):
+    """Lôi trảo xé chữ: ba vuốt sét chéo cào qua liên tiếp, để lại vệt điện rồi tan."""
+    rnd = random.Random(seed + 21000)
+    W = H = size
+    ang = math.radians(rnd.uniform(50, 70)) * rnd.choice((-1, 1))
+    dx, dy = math.cos(ang), math.sin(ang)
+    nx, ny = -dy, dx
+    c = (W / 2.0, H / 2.0)
+    G, M = (60, 170, 255, 220), (200, 235, 255, 255)
+    claws = []
+    for i in range(3):
+        o = (i - 1) * W * 0.16
+        L = W * (0.36 if i == 1 else 0.3)
+        cx, cy = c[0] + nx * o, c[1] + ny * o
+        claws.append(((cx - dx * L, cy - dy * L), (cx + dx * L, cy + dy * L)))
+    frames = []
+    for f in range(8):
+        core, glow, dc, dg = _fx_new(W, H)
+        for i, (a, b) in enumerate(claws):
+            age = f - i * 0.6
+            if age < 0:
+                continue
+            reach = min(1.0, (age + 1) / 2.0)
+            al = 1.0 if age < 3 else max(0.0, 1 - (age - 2.5) * 0.35)
+            if al <= 0:
+                continue
+            e = (a[0] + (b[0] - a[0]) * reach, a[1] + (b[1] - a[1]) * reach)
+            pts = _jagged(a, e, 7, W * 0.022, rnd)
+            w = W * 0.03 * (1.3 if i == 1 else 1.0)
+            _zap(dc, dg, pts, w, G, M, al)
+            if age < 2:
+                _sparks(dc, rnd, e, W * 0.02, W * 0.12, 4, max(1, W * 0.012), (220, 240, 255, 255), al)
+        frames.append(_fx_merge(core, glow, max(1, W * 0.03)))
+    return frames
+
+
+def make_bloodbolt_frames(size, seed):
+    """Huyết lôi diệt thế: sét đỏ máu quầng đen nổ xé từ chỗ gõ, vòng hắc khí lan ra."""
+    rnd = random.Random(seed + 22000)
+    W = H = int(size * 1.15)
+    c = (W / 2.0, H / 2.0)
+    bolts = [(rnd.uniform(0, 2 * math.pi), rnd.uniform(0.32, 0.48) * W) for _ in range(rnd.randint(4, 5))]
+    G, M = (230, 10, 30, 230), (255, 90, 90, 255)
+    frames = []
+    for f in range(8):
+        core, glow, dc, dg = _fx_new(W, H)
+        fade = (1, 1, 1, 0.85, 0.6, 0.4, 0.22, 0.1)[f]
+        grow = min(1.0, (f + 1) / 2.0)
+        r = W * (0.12 + 0.05 * f)                            # vòng hắc khí
+        dg.ellipse((c[0] - r, c[1] - r, c[0] + r, c[1] + r), outline=(40, 0, 10, int(220 * fade)), width=max(3, int(W * 0.07)))
+        dc.ellipse((c[0] - r, c[1] - r, c[0] + r, c[1] + r), outline=(200, 0, 30, int(200 * fade)), width=max(1, int(W * 0.01)))
+        for ang, L in bolts:
+            end = (c[0] + math.cos(ang) * L * grow, c[1] + math.sin(ang) * L * grow)
+            pts = _jagged(c, end, 7, W * 0.05, rnd)
+            dg.line(pts, fill=(20, 0, 0, int(200 * fade)), width=max(4, int(W * 0.08)))   # quầng đen
+            _zap(dc, dg, pts, W * 0.022, G, M, fade)
+            if rnd.random() < 0.7:
+                k = rnd.randint(2, len(pts) - 2)
+                a2 = ang + rnd.choice((-1, 1)) * rnd.uniform(0.5, 1.0)
+                br = _jagged(pts[k], (pts[k][0] + math.cos(a2) * L * 0.3, pts[k][1] + math.sin(a2) * L * 0.3), 3, W * 0.02, rnd)
+                _zap(dc, dg, br, W * 0.012, G, M, fade, white=False)
+        if f < 3:
+            rr = W * (0.08 - f * 0.015)
+            dg.ellipse((c[0] - rr * 2, c[1] - rr * 2, c[0] + rr * 2, c[1] + rr * 2), fill=(255, 20, 40, int(200 * fade)))
+            dc.ellipse((c[0] - rr, c[1] - rr, c[0] + rr, c[1] + rr), fill=(255, 235, 235, 255))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.03)))
+    return frames
+
+
+def make_pillar_frames(size, seed):
+    """Thiên phạt lôi trụ: cột sáng vàng kim giáng thẳng xuống chữ, sét xoắn quanh cột, vòng chấn động dưới chân."""
+    rnd = random.Random(seed + 23000)
+    W, H = int(size * 1.1), int(size * 2.0)
+    cx, gy = W / 2.0, H * 0.9
+    G, M = (255, 170, 30, 220), (255, 230, 150, 255)
+    from PIL import ImageChops
+    fade_mask = Image.linear_gradient("L").resize((W, H))
+    fade_mask = fade_mask.point(lambda v: min(255, int(v * 2.6)))
+    frames = []
+    for f in range(10):
+        core, glow, dc, dg = _fx_new(W, H)
+        if f == 0:
+            dc.line([(cx, 0), (cx, gy)], fill=(255, 240, 180, 160), width=max(1, int(W * 0.01)))
+        else:
+            al = 1.0 if f < 6 else max(0.0, 1 - (f - 5) / 4.5)
+            bw = W * (0.09 if f < 3 else 0.07) * (1 if f < 6 else al)
+            dg.rectangle((cx - bw * 2.2, 0, cx + bw * 2.2, gy), fill=(255, 170, 40, int(170 * al)))
+            dc.rectangle((cx - bw * 0.7, 0, cx + bw * 0.7, gy), fill=(255, 235, 160, int(240 * al)))
+            dc.rectangle((cx - bw * 0.25, 0, cx + bw * 0.25, gy), fill=(255, 255, 255, int(255 * al)))
+            for s_ in (-1, 1):                               # sét xoắn quanh cột
+                pts = []
+                for i in range(21):
+                    y = gy * i / 20.0
+                    pts.append((cx + s_ * math.sin(y / (H * 0.07) + f * 1.2) * W * 0.16 + rnd.uniform(-1, 1) * W * 0.015, y))
+                _zap(dc, dg, pts, W * 0.016, G, M, al)
+            k = f - 1                                        # vòng chấn động dưới chân
+            r = W * (0.12 + 0.07 * k)
+            dg.ellipse((cx - r, gy - r * 0.28, cx + r, gy + r * 0.28), outline=(255, 190, 60, int(230 * al)), width=max(3, int(W * 0.05)))
+            dc.ellipse((cx - r, gy - r * 0.28, cx + r, gy + r * 0.28), outline=(255, 245, 200, int(255 * al)), width=max(1, int(W * 0.012)))
+            _sparks(dc, rnd, (cx, gy), W * 0.05, W * 0.4, 6, max(1, W * 0.012), (255, 240, 190, 255), al, sy=0.35)
+        im = _fx_merge(core, glow, max(1, W * 0.035))
+        a_ = im.getchannel("A")                              # đỉnh cột mờ dần như từ trời cao giáng xuống
+        im.putalpha(ImageChops.multiply(a_, fade_mask))
+        frames.append(im)
+    return frames
+
+
+def make_net_frames(size, seed):
+    """Lôi võng thu lưới: lưới điện giăng quanh chữ rồi siết lại vào chỗ gõ, nổ chớp."""
+    rnd = random.Random(seed + 24000)
+    W = H = size
+    c = (W / 2.0, H / 2.0)
+    n = rnd.randint(6, 8)
+    angs = [2 * math.pi * i / n + rnd.uniform(-0.2, 0.2) for i in range(n)]
+    G, M = (170, 90, 255, 210), (220, 190, 255, 255)
+    frames = []
+    for f in range(9):
+        core, glow, dc, dg = _fx_new(W, H)
+        if f < 7:
+            R = W * (0.44 - max(0, f - 2) * 0.08) * min(1.0, (f + 1) / 2.0)
+            pts = [(c[0] + math.cos(a) * R, c[1] + math.sin(a) * R) for a in angs]
+            for i in range(n):                               # vòng lưới + nan lưới
+                _zap(dc, dg, _jagged(pts[i], pts[(i + 1) % n], 4, W * 0.02, rnd), W * 0.01, G, M, 1.0, white=False)
+                _zap(dc, dg, _jagged(pts[i], pts[(i + n // 2) % n], 6, W * 0.025, rnd), W * 0.008, G, M, 0.75, white=False)
+            for p in pts:
+                q = max(1, W * 0.018)
+                dc.ellipse((p[0] - q, p[1] - q, p[0] + q, p[1] + q), fill=(255, 255, 255, 255))
+        if f >= 6:
+            k = f - 6
+            al = 1 - k / 3.0
+            r = W * (0.1 + 0.08 * k)
+            dg.ellipse((c[0] - r * 1.5, c[1] - r * 1.5, c[0] + r * 1.5, c[1] + r * 1.5), fill=(170, 110, 255, int(220 * al)))
+            dc.ellipse((c[0] - r * 0.5, c[1] - r * 0.5, c[0] + r * 0.5, c[1] + r * 0.5), fill=(255, 255, 255, int(255 * al)))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.03)))
+    return frames
+
+
 FX_EFFECTS = [
-    ("bolt", "Lôi điện tỏa", make_bolt_frames, (0.5, 0.5)),
-    ("thunder", "Lôi đình giáng xuống", make_thunder_frames, (0.5, 0.9)),
+    ("bolt", "⚡ Lôi điện tỏa", make_bolt_frames, (0.5, 0.5)),
+    ("thunder", "⚡ Lôi đình giáng xuống", make_thunder_frames, (0.5, 0.9)),
     ("holy", "Thần quang vàng", make_holy_frames, (0.5, 0.5)),
     ("skull", "Đầu lâu ma quái bay lên", make_skull_frames, (0.5, 0.86)),
-    ("dragon", "Lôi long sấm sét chạy trên chữ", make_dragon_frames, (0.9, 0.62)),
+    ("dragon", "⚡ Lôi long sấm sét chạy trên chữ", make_dragon_frames, (0.9, 0.62)),
     ("hellfire", "Lửa địa ngục (lam hoả)", make_hellfire_frames, (0.5, 0.86)),
     ("darkflame", "Hắc diễm bùng cháy", make_darkflame_frames, (0.5, 0.85)),
     ("ice", "Băng tinh nổ", make_ice_frames, (0.5, 0.5)),
     ("star", "Tinh tú lấp lánh", make_star_frames, (0.5, 0.5)),
     ("shock", "Sóng xung kích", make_shock_frames, (0.5, 0.5)),
     ("slash", "Loạn đao chém", make_slash_frames, (0.5, 0.5)),
+    ("chain", "⚡ Lôi xích liên hoàn", make_chain_frames, (0.9, 0.62)),
+    ("plasma", "⚡ Lôi cầu plasma", make_plasma_frames, (0.5, 0.5)),
+    ("storm", "⚡ Lôi vân giáng thế", make_storm_frames, (0.5, 0.9)),
+    ("spear", "⚡ Lôi thương xuyên chữ", make_spear_frames, (0.85, 0.5)),
+    ("claw", "⚡ Lôi trảo xé chữ", make_claw_frames, (0.5, 0.5)),
+    ("bloodbolt", "⚡ Huyết lôi diệt thế", make_bloodbolt_frames, (0.5, 0.5)),
+    ("pillar", "⚡ Thiên phạt lôi trụ", make_pillar_frames, (0.5, 0.9)),
+    ("net", "⚡ Lôi võng thu lưới", make_net_frames, (0.5, 0.5)),
     ("hammer", "Búa sấm đập vỡ chữ", make_hammer_frames, (0.5, 0.65)),
     ("sword", "Vạn kiếm đâm vỡ chữ", make_sword_frames, (0.5, 0.55)),
     ("shatter", "Vỡ vụn", make_shatter_frames, (0.5, 0.5)),
@@ -3398,7 +3733,19 @@ FX_EFFECTS = [
     ("explode", "Nổ tung", make_explode_frames, (0.5, 0.5)),
 ]
 FX_BY_KEY = {e[0]: e for e in FX_EFFECTS}
-FX_CHOICES = [("random", "★ Ngẫu nhiên (đổi mỗi lần)")] + [(e[0], e[1]) for e in FX_EFFECTS]
+FX_THUNDER = ("bolt", "thunder", "dragon", "chain", "plasma", "storm", "spear", "claw", "bloodbolt", "pillar", "net")
+
+
+def fx_resolve(key):
+    """Đổi lựa chọn ngẫu nhiên thành một mẫu cụ thể."""
+    if key == "random_thunder":
+        return random.choice(FX_THUNDER)
+    if key == "random" or key not in FX_BY_KEY:
+        return random.choice([e[0] for e in FX_EFFECTS])
+    return key
+
+
+FX_CHOICES = [("random", "★ Ngẫu nhiên (đổi mỗi lần)"), ("random_thunder", "★ Ngẫu nhiên hệ Lôi (sấm sét)")] + [(e[0], e[1]) for e in FX_EFFECTS]
 
 
 class FxPlayer:
@@ -3440,8 +3787,7 @@ class FxPlayer:
 
     def play(self, x, y, size, key=None):
         key = key or self.default_key
-        if key == "random" or key not in FX_BY_KEY:
-            key = random.choice([e[0] for e in FX_EFFECTS])
+        key = fx_resolve(key)
         self.last_key = key
         self.seq = random.choice(self.variants(key, size))
         self.anchor = FX_BY_KEY[key][3]
@@ -5616,8 +5962,7 @@ class Manager:
             p = self._fxp
             if not p["frames"] or p["i"] >= len(p["frames"]) + 6:
                 key = p["key"]
-                if key == "random" or key not in FX_BY_KEY:
-                    key = random.choice([e[0] for e in FX_EFFECTS])
+                key = fx_resolve(key)
                 e = FX_BY_KEY[key]
                 frames = e[2](150, random.randint(0, 99))
                 p.update(frames=frames, i=0, anchor=e[3], name=e[1])

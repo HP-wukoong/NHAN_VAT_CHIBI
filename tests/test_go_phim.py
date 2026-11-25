@@ -50,6 +50,15 @@ def run():
         fx.on_key("T")
         got.add(fx.bolt.last_key)
     check(len(got) >= 4, "ngẫu nhiên: đổi mẫu mỗi lần (%d mẫu khác nhau)" % len(got))
+    app.store.s["key_fx_type"] = "random_thunder"
+    got = set()
+    for _ in range(40):
+        fx.t_last["T"] = 0
+        fx.on_key("T")
+        got.add(fx.bolt.last_key)
+    check(got <= set(C.FX_THUNDER) and len(got) >= 4, "ngẫu nhiên hệ Lôi: chỉ ra mẫu sấm sét (%d mẫu)" % len(got))
+    check(all(k in C.FX_BY_KEY for k in C.FX_THUNDER) and len(C.FX_THUNDER) >= 11, "hệ Lôi có đủ 11 mẫu")
+    check(any(c[0] == "random_thunder" for c in C.FX_CHOICES), "có lựa chọn Ngẫu nhiên hệ Lôi trong danh sách")
     app.store.s["key_fx_type"], app.store.s["key_fx_del"] = "bolt", "slash"
     C.caret_info = lambda: ((400, 300), True)
     p = fx.bolt.played
