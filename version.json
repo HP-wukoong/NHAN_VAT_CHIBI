@@ -1,9 +1,9 @@
 {
-  "version": "2.5",
+  "version": "2.6",
   "date": "2026-11-25",
   "notes": [
-    "Kéo xách nhân vật rồi thả: lao cắm đầu xuống theo đà tay, chạm đất nện tạo hố (Rơi tạo hố)",
-    "Thả sát đất thì tiếp đất bình thường",
-    "Đổi kiểu rơi khi thả ở tab Điều khiển"
+    "Quăng nhân vật đập vào tường: bật ra, rơi xuống rồi nằm ăn vạ",
+    "Nhân vật không còn lấn ra ngoài mép màn hình (giới hạn theo từng màn hình)",
+    "Tab Điều khiển: chọn chiêu khi đập tường, hoặc bám tường như cũ"
   ]
 }

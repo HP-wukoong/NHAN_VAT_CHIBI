@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CHIBI NHẮC VIỆC  v2.5
+CHIBI NHẮC VIỆC  v2.6
 Robot chibi nhắc việc chạy trên màn hình Windows 10/11.
 - Đi lại tự do toàn màn hình (hỗ trợ nhiều màn hình), kéo thả, đổi kích thước, đổi nhân vật
 - Nhắc việc: một lần / hằng ngày / T2-T6 / chọn thứ / lặp mỗi N phút, hoãn, báo trước
@@ -67,7 +67,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "2.5"
+APP_VER = "2.6"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -191,11 +191,15 @@ def repeat_desc(t):
 
 
 # ───────────────────────── Windows API ─────────────────────────
+MONITORS = []      # khung toàn màn hình (kể cả taskbar) của từng màn hình, cập nhật cùng get_work_areas()
+
+
 def get_work_areas():
     """Danh sách vùng làm việc (trừ taskbar) của mọi màn hình: (l, t, r, b)."""
     if IS_WIN:
         try:
             areas = []
+            mons = []
             Proc = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(_RECT), ctypes.c_ssize_t)
 
             def cb(hmon, hdc, lprc, lp):
@@ -203,11 +207,14 @@ def get_work_areas():
                 mi.cbSize = ctypes.sizeof(_MONITORINFO)
                 if ctypes.windll.user32.GetMonitorInfoW(ctypes.c_void_p(hmon), ctypes.byref(mi)):
                     w = mi.rcWork
+                    m = mi.rcMonitor
                     areas.append((w.l, w.t, w.r, w.b))
+                    mons.append((m.l, m.t, m.r, m.b))
                 return 1
 
             ctypes.windll.user32.EnumDisplayMonitors(None, None, Proc(cb), 0)
             if areas:
+                MONITORS[:] = mons
                 return areas
         except Exception:
             log_error()
@@ -317,7 +324,7 @@ DEFAULT_SETTINGS = {
     "auto_jump": True, "climb": True, "smooth": True, "triggers": None, "screen_mode": "desktop",
     "update_mode": "notify", "last_update_check": "", "just_updated": "",
     "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0, "key_fx_type": "bolt", "key_fx_del": "slash",
-    "drop_action": "VaCham_RoiHoDat",
+    "drop_action": "VaCham_RoiHoDat", "wall_hit_action": "TrangThai_AnVa",
 }
 
 
@@ -995,6 +1002,7 @@ class Engine:
         self.on_hwnd = None
         self.last_plat = None
         self.pending = None          # (tên chiêu, hạn chót) chờ đứng vững rồi ra chiêu
+        self.wall_hit = False        # vừa bị quăng đập vào tường
 
     # ── tiện ích ──
     def ctx(self):
@@ -1201,12 +1209,18 @@ class Engine:
                 area = self.env.area_at(self.ax, self.ay)
                 if nx <= area[0] or nx >= area[2]:
                     nx = max(area[0], min(area[2], nx))
-                    if abs(vx) > 6 and self.app.store.s.get("climb", True) and ny < area[3] - 40:
-                        self.ax, self.ay = nx, ny       # bị ném vào tường -> bám tường
+                    hard = abs(vx) > 6 and ny < area[3] - 40
+                    if hard and self.app.store.s.get("wall_hit_action", "TrangThai_AnVa"):
+                        self.wall_hit = True            # đập vào tường: bật ra, rơi xuống rồi ăn vạ
+                        vx = -vx * 0.35
+                        vy = min(vy, 0.0) + 2.0
+                    elif hard and self.app.store.s.get("climb", True):
+                        self.ax, self.ay = nx, ny       # bị ném vào tường -> bám tường (kiểu cũ)
                         self.look_right = nx >= area[2]
                         yield p
                         return
-                    vx = -vx * 0.3
+                    else:
+                        vx = -vx * 0.3
                 if ny < area[1]:
                     ny, vy = area[1], 0.0
                 if vy >= 0:
@@ -1496,6 +1510,8 @@ class Engine:
     def _drop_gen(self, fall_name, after):
         spec = self.pack.actions[fall_name]
         yield from self.act_fall(spec, dict(spec.attrs))
+        if self.wall_hit:
+            return                                            # đã đập tường -> ăn vạ thay vì nện hố
         if self.env.on_floor(self.ax, self.ay) is None:
             return                                            # va vào tường -> để engine chuyển sang bám tường
         for nm in after:
@@ -1507,6 +1523,7 @@ class Engine:
         self.env.temp = None
         self.env.platforms = [p for p in self.env.platforms if p.kind != "temp"]
         self.pending = None
+        self.wall_hit = False
         self.dragging = True
         self.start("Dragged")
 
@@ -1529,6 +1546,12 @@ class Engine:
                 break
             except StopIteration:
                 self.gen = None
+                if self.wall_hit and self.cur != "Dragged" and self.env.on_floor(self.ax, self.ay) is not None:
+                    self.wall_hit = False
+                    act = self.app.store.s.get("wall_hit_action", "TrangThai_AnVa")
+                    if act in self.pack.actions:
+                        self.forced = act             # rơi xuống đất sau cú đập tường -> ăn vạ
+                        continue
                 if self.cur == "Dragged":
                     if not self.after_drop():
                         sp = math.hypot(self.vx, self.vy)
@@ -3037,6 +3060,22 @@ class Pet:
             self.env.refresh(force=True)
             self.engine.clamp()
 
+    def clamp_to_screen(self, x, y, w, h, sx, sy):
+        """Giữ trọn khung hình nhân vật trong màn hình đang đứng, không lấn ra ngoài mép."""
+        mons = getattr(self.app, "monitors", None) or [self.app.bounds]
+        m = None
+        for r in mons:
+            if r[0] <= sx < r[2] and r[1] <= sy <= r[3]:
+                m = r
+                break
+        if m is None:
+            m = min(mons, key=lambda r: abs(sx - (r[0] + r[2]) / 2.0) + abs(sy - (r[1] + r[3]) / 2.0))
+        if w <= m[2] - m[0]:
+            x = max(m[0], min(m[2] - w, x))
+        if h <= m[3] - m[1]:
+            y = max(m[1], min(m[3] - h, y))
+        return x, y
+
     def anchor_screen(self):
         return [int(self.engine.ax * self.zoom), int(self.engine.ay * self.zoom)]
 
@@ -3129,6 +3168,7 @@ class Pet:
         z = self.zoom
         x = int(round(eng.ax * z - ax * z))
         y = int(round(eng.ay * z - p.ay * z - off))
+        x, y = self.clamp_to_screen(x, y, w, h, eng.ax * z, eng.ay * z)
         size_changed = (w, h) != (self.W, self.H)
         if self.mode == "layered":
             if size_changed or (x, y) != (self.x, self.y):
@@ -3465,6 +3505,8 @@ class App:
             sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
             areas = [(0, 0, sw, sh - (40 if IS_WIN else 0))]
         self.areas = areas
+        self.monitors = list(MONITORS) if len(MONITORS) == len(areas) else \
+            [(0, 0, self.root.winfo_screenwidth(), self.root.winfo_screenheight())] if len(areas) == 1 else list(areas)
         self.bounds = (min(a[0] for a in areas), min(a[1] for a in areas),
                        max(a[2] for a in areas), max(a[3] for a in areas))
 
@@ -4655,6 +4697,12 @@ class Manager:
         self.dropcb.bind("<<ComboboxSelected>>", lambda e: self.app.set_setting(
             "drop_action", self._drop_map.get(self.dropcb.get(), "")))
         r += 1
+        ttk.Label(f, text="Quăng đập vào tường rồi rơi xuống").grid(row=r, column=0, sticky="w", pady=2)
+        self.wallcb = ttk.Combobox(f, state="readonly", width=28)
+        self.wallcb.grid(row=r, column=1, sticky="w", padx=6)
+        self.wallcb.bind("<<ComboboxSelected>>", lambda e: self.app.set_setting(
+            "wall_hit_action", self._wall_map.get(self.wallcb.get(), "")))
+        r += 1
         ttk.Label(f, text="(Kéo giữ chuột trái + di chuyển = túm nhân vật; thả ra = rơi theo đà tay.  Ctrl + lăn chuột = đổi kích thước.)",
                   foreground=C_MUTED).grid(row=r, column=0, columnspan=3, sticky="w", pady=(2, 8))
         r += 1
@@ -4715,6 +4763,12 @@ class Manager:
         self.dropcb.config(values=list(self._drop_map))
         cur = self.app.store.s.get("drop_action", "VaCham_RoiHoDat")
         self.dropcb.set(next((k for k, v in self._drop_map.items() if v == cur), "Rơi thường (bị ném xoay tròn)"))
+        self._wall_map = {"Bám luôn vào tường (kiểu cũ)": ""}
+        for n in self.beh_names():
+            self._wall_map[beh_label(n)] = n
+        self.wallcb.config(values=list(self._wall_map))
+        cw_ = self.app.store.s.get("wall_hit_action", "TrangThai_AnVa")
+        self.wallcb.set(next((k for k, v in self._wall_map.items() if v == cw_), "Bám luôn vào tường (kiểu cũ)"))
         self.smode.set(dict(SCREEN_MODES).get(self.app.store.s.get("screen_mode", "desktop"), SCREEN_MODES[0][1]))
         names = self.beh_names()
         cmdl = dict(COMMANDS)
