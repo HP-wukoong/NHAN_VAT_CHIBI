@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CHIBI NHẮC VIỆC  v2.1
+CHIBI NHẮC VIỆC  v2.2
 Robot chibi nhắc việc chạy trên màn hình Windows 10/11.
 - Đi lại tự do toàn màn hình (hỗ trợ nhiều màn hình), kéo thả, đổi kích thước, đổi nhân vật
 - Nhắc việc: một lần / hằng ngày / T2-T6 / chọn thứ / lặp mỗi N phút, hoãn, báo trước
@@ -67,7 +67,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "2.1"
+APP_VER = "2.2"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -315,6 +315,7 @@ DEFAULT_SETTINGS = {
     "autostart": False, "pos": None, "last_greet_date": "", "hide_fullscreen": True,
     "pack": "", "free_master": True, "free": {}, "assigned_no_free": True, "walk_windows": True, "jump_icons": True,
     "auto_jump": True, "climb": True, "smooth": True, "triggers": None, "screen_mode": "desktop",
+    "update_mode": "notify", "last_update_check": "", "just_updated": "",
 }
 
 
@@ -1378,8 +1379,9 @@ class Engine:
         sp = self.pack.actions.get("Fall")
         return sp.poses if sp else []
 
-    def fly_and_act(self, sx, sy, name):
-        """Bay thẳng tới điểm (toạ độ màn hình) rồi tung chiêu; giữa không trung thì đứng trên nền tạm."""
+    def fly_and_act(self, sx, sy, name, hold=0.0):
+        """Lao thẳng tới điểm (toạ độ màn hình) rồi tung chiêu; giữa không trung thì đứng trên nền tạm.
+        hold > 0: chỉ lao tới và đứng chờ (giây) – dùng khi vừa nhấn chuột, chưa biết bấm 1 hay 2 lần."""
         if self.dragging:
             return False
         if self.gen is not None:
@@ -1404,16 +1406,18 @@ class Engine:
             name = ""
         self.pending = None
         self.cur = name or "Stand"
-        self.gen = self._fly_gen(tx, ty, name)
+        self.gen = self._fly_gen(tx, ty, name, hold)
         return True
 
-    def _fly_gen(self, tx, ty, name):
+    def _fly_gen(self, tx, ty, name, hold=0.0):
         try:
             poses = self.fly_poses()
-            if poses:
+            d0 = math.hypot(tx - self.ax, ty - self.ay)
+            if poses and d0 > 1:
                 it = self.cycle(poses)
-                sp = 30.0
-                for _ in range(600):
+                # tốc độ theo quãng đường: xa cỡ nào cũng tới trong ~4 nhịp (~0,16 giây)
+                sp = max(45.0, d0 / 4.0)
+                for _ in range(60):
                     p = next(it)
                     dx, dy = tx - self.ax, ty - self.ay
                     d = math.hypot(dx, dy)
@@ -1427,7 +1431,13 @@ class Engine:
                     self.ay += sp * dy / d
                     yield p
             self.ax, self.ay = tx, ty
-            if name:
+            if hold > 0:
+                st = self.pack.actions.get("Stand")
+                poses = st.poses if st and st.poses else self.fly_poses()
+                it = self.cycle(poses)
+                for _ in range(int(hold * 1000 / TICK_MS)):
+                    yield next(it)
+            elif name:
                 yield from self.run_action(self.pack.behaviors[name].action if name in self.pack.behaviors else name)
             else:
                 st = self.pack.actions.get("Stand")
@@ -1772,7 +1782,8 @@ SCREEN_TRIGGERS = [
     ("S_WU", "Màn hình – lăn chuột lên"), ("S_WD", "Màn hình – lăn chuột xuống"),
     ("S_M1", "Màn hình – nhấn con lăn"), ("S_HK", "Phím Ctrl + Alt + X (gọi tới chỗ chuột)"),
 ]
-SCREEN_MODES = [("desktop", "Chỉ trên vùng trống desktop (an toàn)"), ("alt", "Giữ Alt + thao tác (mọi nơi)"),
+SCREEN_MODES = [("desktop", "Chỉ trên vùng trống desktop (an toàn)"),
+                ("all", "Mọi nơi, kể cả vùng an toàn (không cần giữ phím)"), ("alt", "Giữ Alt + thao tác (mọi nơi)"),
                 ("ctrlalt", "Giữ Ctrl + Alt + thao tác (mọi nơi)"), ("off", "Tắt")]
 COMMANDS = [
     ("", "— Không —"), ("upcoming", "Xem việc sắp tới"), ("manager", "Mở bảng quản lý"), ("menu", "Mở menu nhanh"),
@@ -1983,6 +1994,8 @@ class GlobalMouse:
                 return False                    # trên cửa sổ của chính app -> để app tự xử lý
         if mode == "desktop":
             ok = bool(root) and _class_name(root) in ("Progman", "WorkerW")
+        elif mode == "all":
+            ok = True
         else:
             alt = u32.GetAsyncKeyState(0x12) & 0x8000
             ctrl = u32.GetAsyncKeyState(0x11) & 0x8000
@@ -1993,8 +2006,8 @@ class GlobalMouse:
             self.q.put(("W", ctypes.c_short((m.mouseData >> 16) & 0xFFFF).value, m.pt.x, m.pt.y))
         else:
             self.q.put((btn, "up" if up else "down", m.pt.x, m.pt.y))
-        if mode == "desktop":
-            return False                        # desktop: không chặn, chuột vẫn chạy bình thường
+        if mode in ("desktop", "all"):
+            return False                        # không chặn: chuột vẫn chạy bình thường
         if not up and btn != "W":
             self.swallow.add(btn)
         return True                             # chế độ phím: chặn để phần mềm bên dưới không nhận cú bấm
@@ -2020,6 +2033,9 @@ class GlobalMouse:
                     self.fire("S_WU" if ev[1] > 0 else "S_WD", ev[2], ev[3])
             elif ev[1] == "down":
                 self.down[k] = (ev[2], ev[3], time_now())
+                if self.has_act(k):
+                    # lao tới ngay khi vừa nhấn xuống -> tới nơi cùng lúc với cú bấm
+                    self.app.pet.engine.fly_and_act(ev[2], ev[3], "", hold=1.2)
             else:
                 d = self.down.pop(k, None)
                 if not d or abs(ev[2] - d[0]) + abs(ev[3] - d[1]) > 10 or time_now() - d[2] > 0.6:
@@ -2031,6 +2047,11 @@ class GlobalMouse:
                 if self.timer.get(k):
                     self.app.root.after_cancel(self.timer[k])
                 self.timer[k] = self.app.root.after(300, lambda k=k, x=ev[2], y=ev[3]: self.finish(k, x, y))
+
+    def has_act(self, k):
+        tr = self.app.store.s.get("triggers") or {}
+        keys = {"L": ("S_L1", "S_L2"), "R": ("S_R1", "S_R2"), "M": ("S_M1",)}.get(k, ())
+        return any((tr.get(x) or {}).get("act") for x in keys)
 
     def finish(self, k, x, y):
         n = self.count.get(k, 0)
@@ -2509,6 +2530,8 @@ class App:
         self.learner = Learner(self)
         self.gmouse = GlobalMouse(self)
         self.gmouse.start()
+        self.updater = Updater(self)
+        self.root.bind_all("<F5>", lambda e: self.updater.check(manual=True, install=True))
         self._last = now().timestamp()
         self.root.after(50, self.anim_loop)
         self.root.after(2500, self.schedule_loop)
@@ -2518,6 +2541,8 @@ class App:
         self.root.after(1500, self.greet_if_new_day)
         self.root.after(3000, self.fullscreen_loop)
         self.root.after(3500, self.restore_pending)
+        self.root.after(20000, self.update_loop)
+        self.root.after(2500, self.after_update_hello)
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
         self.start_server()
         if self.store.s.get("autostart") and IS_WIN:
@@ -2609,6 +2634,25 @@ class App:
     def is_muted(self):
         """Đang im lặng hoặc đang trình chiếu/toàn màn hình -> dời nhắc lại."""
         return (self.muted_until is not None and now() < self.muted_until) or self.fs_hidden
+
+    def update_loop(self):
+        """Tự kiểm tra bản mới khi mở app và mỗi 6 giờ."""
+        try:
+            if self.store.s.get("update_mode", "notify") != "off":
+                last = parse_iso(self.store.s.get("last_update_check") or "")
+                if not last or (now() - last).total_seconds() > 6 * 3600:
+                    self.updater.check()
+        except Exception:
+            log_error()
+        self.root.after(30 * 60 * 1000, self.update_loop)
+
+    def after_update_hello(self):
+        v = self.store.s.get("just_updated")
+        if v:
+            self.store.s["just_updated"] = ""
+            self.save_soon()
+            self.say("Đã lên v%s! ⚔" % APP_VER, "Cập nhật thành công. Xem có gì mới ở Bảng quản lý → Cài đặt.", timeout=10)
+            self.pet.event("E_GREET")
 
     def save_soon(self, ms=1500):
         """Gộp nhiều lần ghi (kéo thanh trượt, gõ tên...) thành 1 lần ghi đĩa."""
@@ -3005,6 +3049,7 @@ class App:
         qm.add_command(label="Bật lại ngay", command=lambda: self.mute(0))
         m.add_cascade(label="Im lặng (dời nhắc)", menu=qm)
         m.add_command(label="Ẩn 15 phút", command=lambda: self.hide(15))
+        m.add_command(label="⟳  Kiểm tra cập nhật (F5)", command=lambda: self.updater.check(manual=True))
         m.add_separator()
         m.add_command(label="Thoát", command=self.quit)
         x, y = (e.x_root, e.y_root) if e is not None else self.root.winfo_pointerxy()
@@ -3392,6 +3437,12 @@ class Manager:
             cv.create_text(W - 16, H * 0.66, anchor="e", fill=C_MUTED, font=(FONT, 9), text=nxt[:60])
         except Exception:
             pass
+        bx = W * 0.58
+        cv.create_rectangle(bx, H * 0.30, bx + 150, H * 0.70, fill="#2a0d1c", outline=C_GOLD, width=1, tags="upd")
+        cv.create_text(bx + 75, H * 0.50, text="⟳  CẬP NHẬT  (F5)", fill=C_GOLD, font=(FONT, 9, "bold"), tags="upd")
+        cv.tag_bind("upd", "<Button-1>", lambda e: self.app.updater.check(manual=True, install=True))
+        cv.tag_bind("upd", "<Enter>", lambda e: cv.config(cursor="hand2"))
+        cv.tag_bind("upd", "<Leave>", lambda e: cv.config(cursor=""))
 
     def auto_refresh(self):
         if not self.alive():
@@ -3766,6 +3817,7 @@ class Manager:
             self._ctrl_row(f, r, k, lab, with_cmd=False, screen=True)
             r += 1
         ttk.Label(f, text="Desktop: bấm lên vùng trống / biểu tượng ngoài desktop, chuột vẫn hoạt động bình thường.\n"
+                          "Mọi nơi: bấm ở bất kỳ đâu nhân vật cũng lao tới (chuột vẫn hoạt động bình thường với phần mềm).\n"
                           "Chế độ phím: giữ phím rồi bấm ở bất kỳ đâu; cú bấm đó bị giữ lại, không lọt xuống phần mềm bên dưới.",
                   style="Muted.TLabel", justify="left").grid(row=r, column=0, columnspan=4, sticky="w", pady=(2, 8))
         r += 1
@@ -3890,7 +3942,28 @@ class Manager:
                  "(đổi tất cả ở tab Điều khiển) • Kéo thả để túm/ném • Ctrl + lăn chuột trên nhân vật = phóng to/thu nhỏ\n"
                  "Bấm 'Xong' / 'Bỏ qua' khi được nhắc và dùng 'Ghi nhận việc vừa làm' để chibi học thói quen của bạn.\n"
                  "Dữ liệu: " + DATA_FILE)
-        ttk.Label(f, text=help_, foreground=C_MUTED, justify="left").grid(row=10, column=0, columnspan=3, sticky="w", pady=(16, 0))
+        ttk.Label(f, text=help_, foreground=C_MUTED, justify="left").grid(row=12, column=0, columnspan=3, sticky="w", pady=(16, 0))
+        # ── cập nhật ──
+        uf = ttk.Frame(f)
+        uf.grid(row=10, column=0, columnspan=3, sticky="we", pady=(16, 0))
+        ttk.Label(uf, text="⟳  Cập nhật phần mềm", style="H.TLabel").grid(row=0, column=0, columnspan=4, sticky="w")
+        ttk.Label(uf, text="Chế độ:").grid(row=1, column=0, sticky="w", pady=4)
+        self.umode = ttk.Combobox(uf, state="readonly", width=40, values=[b for _, b in UPDATE_MODES])
+        self.umode.set(dict(UPDATE_MODES).get(s.get("update_mode", "notify")))
+        self.umode.grid(row=1, column=1, columnspan=3, sticky="w", padx=6)
+        self.umode.bind("<<ComboboxSelected>>", lambda e: self.app.set_setting(
+            "update_mode", {b: k for k, b in UPDATE_MODES}.get(self.umode.get(), "notify")))
+        ub = ttk.Frame(uf)
+        ub.grid(row=2, column=0, columnspan=4, sticky="w", pady=2)
+        ttk.Button(ub, text="⟳ Cập nhật ngay (F5)", style="Accent.TButton",
+                   command=lambda: self.app.updater.check(manual=True, install=True)).pack(side="left")
+        ttk.Button(ub, text="Chỉ kiểm tra", command=lambda: self.app.updater.check(manual=True)).pack(side="left", padx=4)
+        ttk.Button(ub, text="Cập nhật từ file .zip...", command=lambda: self.app.updater.from_file(self.win)).pack(side="left")
+        ttk.Button(ub, text="Quay về bản trước", command=lambda: self.app.updater.rollback(self.win)).pack(side="left", padx=4)
+        ttk.Button(ub, text="Trang GitHub", command=lambda: __import__("webbrowser").open(URL_PAGE)).pack(side="left")
+        self.ustat = ttk.Label(uf, text=self.app.updater.status, style="Muted.TLabel")
+        self.ustat.grid(row=3, column=0, columnspan=4, sticky="w")
+        self.app.updater.on_status = lambda t: self.alive() and self.ustat.config(text=t)
 
     def backup(self):
         p = filedialog.asksaveasfilename(parent=self.win, defaultextension=".json",
@@ -4055,11 +4128,233 @@ def set_autostart(on):
         log_error()
 
 
+
+# ───────────────────────── Cập nhật phiên bản từ GitHub ─────────────────────────
+UPDATE_REPO = "HP-wukoong/NHAN_VAT_CHIBI"
+UPDATE_BRANCH = "main"
+URL_VERSION = "https://raw.githubusercontent.com/%s/%s/version.json" % (UPDATE_REPO, UPDATE_BRANCH)
+URL_ZIP = "https://github.com/%s/archive/refs/heads/%s.zip" % (UPDATE_REPO, UPDATE_BRANCH)
+URL_PAGE = "https://github.com/%s" % UPDATE_REPO
+INSTALL_ITEMS = ["ChibiNhacViec.pyw", "ChayChibi.bat", "README.md", "version.json", "NhanVat", "tests"]
+UPDATE_MODES = [("notify", "Báo khi có bản mới (hỏi trước khi cập nhật)"), ("auto", "Tự động cập nhật"),
+                ("off", "Tắt kiểm tra tự động")]
+BACKUP_DIR = os.path.join(DATA_DIR, "backup")
+
+
+def ver_tuple(v):
+    return tuple(int(x) for x in re.findall(r"\d+", str(v))[:4]) or (0,)
+
+
+class Updater:
+    def __init__(self, app):
+        self.app = app
+        self.busy = False
+        self.status = "Phiên bản hiện tại: v%s" % APP_VER
+        self.on_status = None
+
+    def set_status(self, txt):
+        self.status = txt
+        if self.on_status:
+            try:
+                self.on_status(txt)
+            except Exception:
+                pass
+
+    def _ui(self, fn, *a):
+        self.app.root.after(0, lambda: fn(*a))
+
+    # ── kiểm tra ──
+    def check(self, manual=False, install=False):
+        """manual: người dùng bấm (báo cả khi đã mới nhất). install: có bản mới thì cài luôn (F5)."""
+        if self.busy:
+            return
+        self.busy = True
+        self.set_status("Đang kiểm tra bản mới trên GitHub...")
+        threading.Thread(target=self._check, args=(manual, install), daemon=True).start()
+
+    def _fetch(self, url, timeout=20):
+        import urllib.request
+        req = urllib.request.Request(url, headers={"User-Agent": "ChibiNhacViec/" + APP_VER, "Cache-Control": "no-cache"})
+        return urllib.request.urlopen(req, timeout=timeout)
+
+    def _check(self, manual, install):
+        try:
+            with self._fetch(URL_VERSION + "?t=%d" % int(time_now())) as r:
+                info = json.loads(r.read().decode("utf-8-sig"))
+            self._ui(self._checked, info, manual, install)
+        except Exception as e:
+            self._ui(self._fail, "Không kết nối được GitHub (%s). Thử lại sau hoặc cập nhật từ file .zip." % e.__class__.__name__, manual)
+
+    def _fail(self, msg, manual):
+        self.busy = False
+        self.set_status(msg)
+        if manual:
+            self.app.say("Chưa cập nhật được", msg, timeout=8)
+
+    def _checked(self, info, manual, install):
+        self.busy = False
+        self.app.store.s["last_update_check"] = iso(now())
+        latest = str(info.get("version", "0"))
+        if ver_tuple(latest) <= ver_tuple(APP_VER):
+            self.set_status("Đang dùng bản mới nhất v%s ✓" % APP_VER)
+            if manual:
+                self.app.say("Đang dùng bản mới nhất ✓", "v%s" % APP_VER, timeout=5)
+            return
+        notes = info.get("notes") or []
+        if isinstance(notes, str):
+            notes = [notes]
+        self.set_status("Có bản mới v%s (đang dùng v%s)" % (latest, APP_VER))
+        if install or self.app.store.s.get("update_mode", "notify") == "auto":
+            self.download_install(info)
+            return
+        txt = "\n".join("• " + n for n in notes[:6]) or "Có cải tiến và sửa lỗi."
+        self.app.bubble.push({
+            "kind": "suggest", "key": "update", "title": "⟳ Có bản mới v%s!" % latest, "title_fg": C_GOLD,
+            "edge": C_GOLD, "text": txt,
+            "buttons": [("Cập nhật ngay", lambda: self.download_install(info), C_ACC), ("Để sau", None, "#4a4060")]})
+
+    # ── tải và cài ──
+    def download_install(self, info=None):
+        if self.busy:
+            return
+        self.busy = True
+        self.set_status("Đang tải bản mới...")
+        threading.Thread(target=self._download, daemon=True).start()
+
+    def _download(self):
+        import tempfile
+        try:
+            path = os.path.join(tempfile.gettempdir(), "ChibiNhacViec_update.zip")
+            with self._fetch(URL_ZIP, timeout=60) as r, open(path, "wb") as f:
+                total = int(r.headers.get("Content-Length") or 0)
+                got = 0
+                while True:
+                    b = r.read(256 * 1024)
+                    if not b:
+                        break
+                    f.write(b)
+                    got += len(b)
+                    self._ui(self.set_status, "Đang tải... %.1f MB%s" % (got / 1048576.0,
+                                                                          (" / %.1f MB" % (total / 1048576.0)) if total else ""))
+            ver = self.install_zip(path)
+            self._ui(self._installed, ver)
+        except Exception as e:
+            log_error()
+            self._ui(self._fail, "Cập nhật thất bại: %s" % e, True)
+
+    def install_zip(self, path):
+        """Kiểm tra gói, sao lưu bản đang dùng rồi chép đè. Trả về số phiên bản mới. Chạy được trong luồng phụ."""
+        import zipfile
+        import shutil
+        import tempfile
+        with zipfile.ZipFile(path) as z:
+            cands = [n for n in z.namelist() if n.replace("\\", "/").endswith("ChibiNhacViec.pyw")]
+            if not cands:
+                raise ValueError("file .zip không có ChibiNhacViec.pyw")
+            main_name = min(cands, key=len)
+            src = z.read(main_name).decode("utf-8")
+            compile(src, "ChibiNhacViec.pyw", "exec")          # file hỏng / tải dở thì dừng, không đụng bản đang chạy
+            m = re.search(r'^APP_VER\s*=\s*"([^"]+)"', src, re.M)
+            new_ver = m.group(1) if m else "?"
+            tmp = tempfile.mkdtemp(prefix="chibi_upd_")
+            z.extractall(tmp)
+        root = os.path.join(tmp, os.path.dirname(main_name))
+        # sao lưu bản đang dùng (giữ 3 bản gần nhất)
+        bdir = os.path.join(BACKUP_DIR, "v%s_%s" % (APP_VER, now().strftime("%Y%m%d_%H%M%S")))
+        os.makedirs(bdir, exist_ok=True)
+        for it in ("ChibiNhacViec.pyw", "ChayChibi.bat", "version.json"):
+            p = os.path.join(BASE_DIR, it)
+            if os.path.exists(p):
+                shutil.copy2(p, os.path.join(bdir, it))
+        olds = sorted(d for d in os.listdir(BACKUP_DIR) if os.path.isdir(os.path.join(BACKUP_DIR, d)))
+        for d in olds[:-3]:
+            shutil.rmtree(os.path.join(BACKUP_DIR, d), ignore_errors=True)
+        for it in INSTALL_ITEMS:
+            sp = os.path.join(root, it)
+            dp = os.path.join(BASE_DIR, it)
+            if os.path.isdir(sp):
+                shutil.copytree(sp, dp, dirs_exist_ok=True)
+            elif os.path.isfile(sp):
+                shutil.copy2(sp, dp + ".new")
+                os.replace(dp + ".new", dp)                      # thay nguyên khối, không để file dở dang
+        shutil.rmtree(tmp, ignore_errors=True)
+        return new_ver
+
+    def _installed(self, ver):
+        self.busy = False
+        self.set_status("Đã cài v%s – đang khởi động lại..." % ver)
+        self.app.store.s["just_updated"] = ver
+        self.app.say("Đã cập nhật lên v%s!" % ver, "Mình khởi động lại chút nhé...", timeout=3)
+        self.app.root.after(1800, self.restart)
+
+    def from_file(self, parent=None):
+        p = filedialog.askopenfilename(parent=parent, title="Chọn gói cập nhật (.zip)",
+                                       filetypes=[("Gói cập nhật", "*.zip")])
+        if not p:
+            return
+        try:
+            ver = self.install_zip(p)
+        except Exception as e:
+            log_error()
+            messagebox.showerror(APP_NAME, "Không cài được gói này:\n%s" % e, parent=parent)
+            return
+        self._installed(ver)
+
+    def rollback(self, parent=None):
+        import shutil
+        bk = sorted(d for d in os.listdir(BACKUP_DIR)) if os.path.isdir(BACKUP_DIR) else []
+        if not bk:
+            messagebox.showinfo(APP_NAME, "Chưa có bản sao lưu nào.", parent=parent)
+            return
+        last = bk[-1]
+        if not messagebox.askyesno(APP_NAME, "Quay về bản trước (%s)?" % last.split("_")[0], parent=parent):
+            return
+        for it in os.listdir(os.path.join(BACKUP_DIR, last)):
+            shutil.copy2(os.path.join(BACKUP_DIR, last, it), os.path.join(BASE_DIR, it))
+        shutil.rmtree(os.path.join(BACKUP_DIR, last), ignore_errors=True)
+        self.app.store.s["update_mode"] = "notify" if self.app.store.s.get("update_mode") == "auto" else \
+            self.app.store.s.get("update_mode")
+        self.restart()
+
+    def restart(self):
+        import subprocess
+        app = self.app
+        try:
+            app.store.s["pos"] = app.pet.anchor_screen()
+            app.store.save()
+            app.gmouse.stop()
+            App.server.close()
+        except Exception:
+            log_error()
+        exe = sys.executable
+        if IS_WIN:
+            w = os.path.join(os.path.dirname(exe), "pythonw.exe")
+            if os.path.exists(w):
+                exe = w
+        try:
+            subprocess.Popen([exe, os.path.abspath(sys.argv[0]), "--restart"], cwd=BASE_DIR,
+                             close_fds=True, creationflags=0x00000008 if IS_WIN else 0)   # DETACHED_PROCESS
+        except Exception:
+            log_error()
+        app.root.destroy()
+
+
 def main():
     # chống chạy 2 lần: nếu đã chạy thì gọi bản cũ mở bảng quản lý
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    bound = False
+    if "--restart" in sys.argv:              # khởi động lại sau cập nhật: chờ bản cũ nhả cổng (tối đa 15 giây)
+        import time as _t
+        for _ in range(60):
+            try:
+                srv.bind(("127.0.0.1", PORT))
+                bound = True
+                break
+            except OSError:
+                _t.sleep(0.25)
     try:
-        srv.bind(("127.0.0.1", PORT))
+        if not bound:
+            srv.bind(("127.0.0.1", PORT))
         srv.listen(2)
     except OSError:
         try:

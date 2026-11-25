@@ -1,0 +1,9 @@
+{
+  "version": "2.2",
+  "date": "2026-11-25",
+  "notes": [
+    "Thêm chế độ thao tác chuột Mọi nơi (kể cả vùng an toàn)",
+    "Nhân vật lao tới ngay khi vừa nhấn chuột, tới nơi trong ~0,16 giây",
+    "Tự động cập nhật từ GitHub, phím F5, cập nhật từ file .zip, quay về bản trước"
+  ]
+}

@@ -73,6 +73,27 @@ def step4():
         if eng.cur == "BieuCam_HoaCuong":
             break
     check(eng.cur == "BieuCam_HoaCuong", "chạm đất là ra chiêu đã chờ")
+    # vừa nhấn chuột là lao tới ngay, không chờ phân loại 1 lần / 2 lần
+    for _ in range(50):
+        eng.tick()
+    gm.q.put(("L", "down", 1200, 200))
+    gm.poll()
+    z = pet.zoom
+    n = 0
+    while n < 20 and not (abs(eng.ax - 1200 / z) < 1 and abs(eng.ay - 200 / z) < 1):
+        eng.tick()
+        n += 1
+    check(n <= 5, "nhấn xuống -> lao tới nơi trong %d nhịp (%.2f giây)" % (n, n * C.TICK_MS / 1000.0))
+    gm.q.put(("L", "up", 1200, 200))
+    gm.poll()
+    app.root.after(450, after_click)
+
+
+def after_click():
+    eng = app.pet.engine
+    for _ in range(3):
+        eng.tick()
+    check(eng.cur == app.store.s["triggers"]["S_L1"]["act"], "nhả chuột -> tung chiêu tại chỗ")
     finish(app, C)
 
 
