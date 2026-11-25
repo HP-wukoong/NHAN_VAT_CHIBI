@@ -1,8 +1,8 @@
 {
  "name": "Cổ Long",
- "desc": "Hắc long thái cổ – rồng đen chibi, cánh màng, đuôi lưỡi đao, phun hắc viêm",
+ "desc": "Hắc long thái cổ (rồng đen vảy vàng) – bộ hình của người dùng, hiệu ứng lôi điện",
  "fly_prefix": "flydash",
- "drop_action": "LongPhi_ThienLongTruy",
+ "drop_action": "LongPhi_LaoXuongDapDat",
  "wall_hit_action": "LongTinh_AnVa",
  "climb_behaviors": [
   "LongDi_BamVachTrai",
@@ -10,44 +10,45 @@
  ],
  "groups": {
   "LongKy": "Long kỹ",
-  "LongBa": "Bá khí",
+  "LongBa": "Tuyệt kỹ",
   "LongPhi": "Bay lượn",
-  "LongTinh": "Cảm xúc",
+  "LongTinh": "Biểu cảm",
   "LongNghi": "Nghỉ ngơi",
   "LongDi": "Di chuyển",
-  "LongTruy": "Theo chuột"
+  "LongTruy": "Theo chuột",
+  "LongBien": "Biến hoá"
  },
  "labels": {
-  "StandAlt": "Phì khói ngó nghiêng",
-  "Run": "Phi nước đại",
+  "StandAlt": "Ngó nghiêng",
+  "Run": "Chạy nhanh",
   "Dash": "Lướt sát đất",
-  "LongNghi_CuonMinh": "Cuộn mình nằm nghỉ",
+  "LongNghi_CuonMinh": "Nằm nghỉ",
   "LongNghi_Ngu": "Ngủ say (khò khò)",
-  "LongKy_Hong": "Long hống (gầm sóng âm)",
-  "LongKy_HacViem": "Hắc viêm long tức (phun lửa đen)",
-  "LongKy_Trao": "Long trảo liên hoàn",
-  "LongKy_VyTram": "Thần vĩ trảm (quật đuôi)",
-  "LongKy_PhongDuc": "Phong dực cuồng phong (vỗ cánh)",
-  "LongKy_ChanDia": "Chấn địa (dậm nứt đất)",
-  "LongKy_LoiGiang": "Lôi long giáng thế (gọi sét)",
-  "LongBa_TuKhi": "Tụ long khí (nạp năng lượng)",
-  "LongBa_HacNhat": "Hắc nhật diệt thế (chiêu cuối)",
-  "LongBa_FullCombo": "THÁI CỔ LONG HOÀNG QUYẾT (full combo)",
-  "LongPhi_BayVut": "Cất cánh bay vút",
+  "LongKy_GamRu": "Gầm rú & thét lớn",
+  "LongKy_PhunLua": "Phun lửa",
+  "LongKy_PhunSamSet": "Phun sấm sét",
+  "LongKy_CuonThan": "Cuộn thân",
+  "LongKy_LoiDien": "Lôi điện quanh thân",
+  "LongKy_TreoLoLung": "Treo lơ lửng",
+  "LongBa_LongUy": "Tuyệt kỹ Long tộc (Long uy)",
+  "LongBa_HacHoa": "Hắc hoá (trạng thái tím)",
+  "LongBa_FullCombo": "FULL COMBO Long tộc",
+  "LongBien_HoaMini": "Hoá rồng mini",
+  "LongPhi_BayVut": "Bay vút lên trời",
   "LongPhi_BayTheoChuot": "Bay theo chuột",
-  "LongPhi_ThienLongTruy": "Thiên long trụy (bổ nhào tạo hố)",
+  "LongPhi_LaoXuongDapDat": "Lao xuống & đập đất",
   "LongDi_BamVachTrai": "Leo vách trái",
   "LongDi_BamVachPhai": "Leo vách phải",
-  "LongTinh_CuoiKhay": "Cười khẩy phì khói",
-  "LongTinh_CuongNo": "Cuồng nộ",
-  "LongTinh_AnVa": "Ăn vạ lăn đùng",
-  "LongTinh_Khoc": "Ngồi khóc",
-  "LongTinh_NanNi": "Nằn nì mắt long lanh",
+  "LongTinh_HoaiNghi": "Hoài nghi (???)",
+  "LongTinh_YeuThich": "Yêu thích (tim bay)",
+  "LongTinh_AnVa": "Ăn vạ",
+  "LongTinh_Khoc": "Khóc",
+  "LongTinh_NanNi": "Nằn nì",
   "LongTruy_DuoiChuot": "Đuổi theo chuột"
  },
  "triggers": {
   "L1": {
-   "act": "LongKy_Trao",
+   "act": "LongKy_PhunSamSet",
    "cmd": "upcoming"
   },
   "L2": {
@@ -59,7 +60,7 @@
    "cmd": ""
   },
   "LH": {
-   "act": "LongBa_TuKhi",
+   "act": "LongKy_LoiDien",
    "cmd": ""
   },
   "R1": {
@@ -67,11 +68,11 @@
    "cmd": "menu"
   },
   "R2": {
-   "act": "LongTinh_CuongNo",
+   "act": "LongBa_HacHoa",
    "cmd": ""
   },
   "R3": {
-   "act": "LongTinh_NanNi",
+   "act": "LongTinh_YeuThich",
    "cmd": ""
   },
   "RH": {
@@ -87,14 +88,14 @@
    "cmd": ""
   },
   "M1": {
-   "act": "LongTruy_DuoiChuot",
+   "act": "LongBien_HoaMini",
    "cmd": ""
   },
   "E_REMIND": {
-   "act": "LongKy_Hong"
+   "act": "LongKy_GamRu"
   },
   "E_DONE": {
-   "act": "LongTinh_CuoiKhay"
+   "act": "LongTinh_YeuThich"
   },
   "E_SNOOZE": {
    "act": "LongTinh_AnVa"
@@ -106,40 +107,40 @@
    "act": "LongNghi_CuonMinh"
   },
   "E_GREET": {
-   "act": "LongKy_PhongDuc"
+   "act": "LongKy_TreoLoLung"
   },
   "E_SLEEP": {
    "act": "LongNghi_Ngu"
   },
   "E_WAKE": {
-   "act": "LongKy_Hong"
+   "act": "LongKy_GamRu"
   },
   "E_TYPING": {
-   "act": "LongBa_TuKhi"
+   "act": "LongKy_LoiDien"
   },
   "E_DELETING": {
-   "act": "LongKy_VyTram"
+   "act": "LongKy_PhunSamSet"
   },
   "S_L1": {
-   "act": "LongKy_Trao"
+   "act": "LongKy_PhunSamSet"
   },
   "S_L2": {
-   "act": "LongKy_HacViem"
+   "act": "LongKy_PhunLua"
   },
   "S_R1": {
-   "act": "LongKy_VyTram"
+   "act": "LongKy_CuonThan"
   },
   "S_R2": {
-   "act": "LongBa_HacNhat"
+   "act": "LongBa_LongUy"
   },
   "S_WU": {
-   "act": "LongKy_LoiGiang"
+   "act": "LongPhi_LaoXuongDapDat"
   },
   "S_WD": {
-   "act": "LongKy_ChanDia"
+   "act": "LongKy_GamRu"
   },
   "S_M1": {
-   "act": "LongKy_Hong"
+   "act": "LongBa_HacHoa"
   },
   "S_HK": {
    "act": "LongBa_FullCombo"

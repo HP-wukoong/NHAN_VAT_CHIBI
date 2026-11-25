@@ -55,22 +55,38 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 
 Đổi tất cả trong **Bảng quản lý → Điều khiển**. Mở bảng quản lý bằng cách nhấp đúp vào nhân vật.
 
-## Nhân vật Cổ Long (hắc long thái cổ)
+## Nhân vật Cổ Long (rồng đen vảy vàng)
 
-Rồng đen chibi vẽ hoàn toàn bằng code theo khung xương (thân, cổ, đầu có hàm mở được, 4 chân, 2 cánh màng, đuôi 12 đốt có lưỡi đao). Mỗi khung hình là một tư thế tính từ đường cong mượt nên đi, bay, vỗ cánh, quật đuôi đều liền mạch (25 hình/giây). Có quầng hắc khí tím mờ quanh thân để nổi trên nền tối.
+Dựng từ bảng sprite của bạn (`tools/co_long_nguon.png`, 14 nhóm động tác). Công cụ `tools/dung_co_long.py`:
+
+1. **Cắt khung:** tách nền caro giả, bỏ nhãn chữ và vạch kẻ, cắt 70 khung gốc. Những khung quay mặt sang phải thì lật lại cho cùng hướng.
+2. **Dựng hoạt cảnh 25 hình/giây:**
+   - Mỗi khung gốc được giữ vài nhịp kèm chuyển động liên tục (thở, nhấp nhô, chao, co giãn, rung), rồi hoà nhanh sang khung kế.
+   - Đòn nhanh thì đổi khung 2–3 nhịp; động tác chậm (nghỉ, ngủ, biểu cảm) thì giữ lâu.
+3. **Phủ hiệu ứng vẽ bằng code:**
+   - Lôi điện bò trên thân, chớp loá vàng rực lúc ra đòn, sét trời giáng xuống.
+   - Sóng âm, vòng xung kích, đất nứt, đá văng.
+   - Lửa phun từ miệng (dùng chính lưỡi lửa trong ảnh của bạn), tia sét phân nhánh tự nhiên.
 
 | Nhóm | Động tác |
 |---|---|
-| Di chuyển | Đứng thở, phì khói ngó nghiêng, đi 4 chân (bàn chân không trượt), phi nước đại, lướt sát đất, leo vách, bò trên trần |
-| Long kỹ | **Long hống** (gầm sóng âm), **Hắc viêm long tức** (phun dòng lửa đen viền tím), **Long trảo liên hoàn** (đứng dậy cào 3 nhát), **Thần vĩ trảm** (quật đuôi qua đầu thành vệt trăng khuyết), **Phong dực cuồng phong** (vỗ cánh tạo gió xoáy), **Chấn địa** (dậm nứt đất, đá văng), **Lôi long giáng thế** (gầm gọi sét đánh quanh mình, sét đánh vào sừng) |
-| Bá khí | **Tụ long khí** (lửa hắc khí bốc quanh thân, hạt khí hút vào), **Hắc nhật diệt thế** (tụ mặt trời đen trước miệng rồi bắn pháo hắc nhật), **Thái cổ long hoàng quyết** (full combo 6 chiêu) |
-| Bay lượn | Cất cánh bay vút, bay theo chuột, **Thiên long trụy** (bay lên rồi bổ nhào kéo đuôi lửa, nện tạo hố) |
-| Cảm xúc | Cười khẩy phì khói, cuồng nộ (mắt đỏ, lửa đỏ), ăn vạ nằm ngửa giãy, ngồi khóc, nằn nì mắt long lanh |
-| Nghỉ | Cuộn mình nằm nghỉ, ngủ khò khò (chữ Z khói bay lên) |
+| Di chuyển | Đứng thở, ngó nghiêng, đi bộ, chạy, lướt sát đất, leo vách, bò trên trần |
+| Long kỹ | Gầm rú & thét lớn, Phun lửa, Phun sấm sét (vàng → tím), Cuộn thân, Lôi điện quanh thân, Treo lơ lửng (xoáy tím dưới chân) |
+| Tuyệt kỹ | Long uy (lốc vàng + sét trời), Hắc hoá (quả cầu tím → cột hắc khí), FULL COMBO (gầm → cuộn thân → sấm sét → lửa → lôi điện → Long uy) |
+| Bay | Bay vút, bay theo chuột, Lao xuống & đập đất (nổ tung, hố, đá văng) |
+| Biến hoá | Hoá rồng mini (chớp + khói, nhảy tưng tưng rồi biến lại) |
+| Biểu cảm | Hoài nghi (???), Yêu thích (tim bay), Ăn vạ, Khóc, Nằn nì |
+| Nghỉ | Nằm nghỉ, Ngủ khò khò (chữ Z) |
 
-Gán mặc định cho Cổ Long: trái 1 lần = Long trảo, trái 3 lần = full combo, giữ trái = Tụ long khí, phải 2 lần = Cuồng nộ, lăn lên = Bay vút; thả rơi = Thiên long trụy; đập tường = Ăn vạ. Trên màn hình: trái 2 lần = Hắc viêm, phải 2 lần = Hắc nhật, lăn lên = Lôi long giáng thế.
+Gán mặc định:
+- **Trên nhân vật:** trái 1 lần = Phun sấm sét, trái 3 lần = Full combo, giữ trái = Lôi điện, phải 2 lần = Hắc hoá, nhấn con lăn = Hoá rồng mini.
+- **Rơi / va chạm:** thả rơi = Lao xuống & đập đất, đập tường = Ăn vạ.
+- **Trên màn hình:** trái 2 lần = Phun lửa, phải 2 lần = Long uy.
 
-Muốn chỉnh hình rồng: sửa `tools/tao_co_long.py` rồi chạy `python tools/tao_co_long.py` (cần Pillow) để vẽ lại toàn bộ `NhanVat/CoLong/`. Xem nhanh vài động tác: `python tools/tao_co_long.py --xem roar,breath 8` (ảnh ra `/tmp/rong_xem.png`).
+Muốn chỉnh:
+- Sửa `tools/dung_co_long.py` (toạ độ cắt `BOXES`, dòng thời gian từng chiêu), rồi chạy `python tools/dung_co_long.py` để dựng lại. Cần Pillow và numpy.
+- Xem các khung đã cắt: `--khung`.
+- Xem nhanh vài chiêu: `--xem roar,fire`.
 
 ## Hiệu ứng gõ phím & quyền riêng tư
 
@@ -103,8 +119,8 @@ ChibiNhacViec.pyw      Chương trình (1 file, Python + tkinter + Pillow)
 ChayChibi.bat          Trình khởi động: tìm Python, cài Pillow, chạy không hiện cửa sổ đen
 version.json           Số phiên bản mới nhất + ghi chú (app đọc file này để biết có bản mới)
 NhanVat/NhanVatAoDen/  Nhân vật gốc: ảnh + conf/actions.xml + conf/behaviors.xml (định dạng Shimeji-ee)
-NhanVat/CoLong/        Nhân vật Cổ Long (ảnh do tools/tao_co_long.py vẽ) + conf/chibi.json (tên chiêu, gán mặc định)
-tools/                 Công cụ vẽ nhân vật Cổ Long
+NhanVat/CoLong/        Nhân vật Cổ Long (dựng từ bảng sprite của bạn) + conf/chibi.json (tên chiêu, gán mặc định)
+tools/                 Bảng sprite gốc + công cụ dựng Cổ Long (dung_co_long.py)
 ThuVien/               Để bộ cài Pillow .whl cho máy không có mạng
 tests/                 Kiểm thử tự động
 ChibiData/             (tự tạo khi chạy) dữ liệu người dùng – không đưa lên git

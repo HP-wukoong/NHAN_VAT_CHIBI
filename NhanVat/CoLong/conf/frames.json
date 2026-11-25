@@ -30,18 +30,16 @@
 "stand26.png",
 "stand27.png",
 "stand28.png",
-"stand29.png",
-"stand30.png",
-"stand31.png"
+"stand29.png"
 ],
 "anchor": [
-106,
-162
+77,
+149
 ],
 "d": 2,
 "size": [
-229,
-175
+176,
+167
 ]
 },
 "standb": {
@@ -81,20 +79,16 @@
 "standb32.png",
 "standb33.png",
 "standb34.png",
-"standb35.png",
-"standb36.png",
-"standb37.png",
-"standb38.png",
-"standb39.png"
+"standb35.png"
 ],
 "anchor": [
-151,
-164
+79,
+149
 ],
 "d": 2,
 "size": [
-274,
-177
+179,
+168
 ]
 },
 "walk": {
@@ -125,13 +119,13 @@
 "walk23.png"
 ],
 "anchor": [
-107,
-162
+80,
+149
 ],
 "d": 1,
 "size": [
-233,
-175
+179,
+166
 ]
 },
 "run": {
@@ -147,18 +141,16 @@
 "run08.png",
 "run09.png",
 "run10.png",
-"run11.png",
-"run12.png",
-"run13.png"
+"run11.png"
 ],
 "anchor": [
-111,
-165
+93,
+147
 ],
 "d": 1,
 "size": [
-246,
-178
+196,
+167
 ]
 },
 "dash": {
@@ -173,13 +165,13 @@
 "dash07.png"
 ],
 "anchor": [
-112,
-162
+141,
+149
 ],
 "d": 1,
 "size": [
-265,
-172
+320,
+164
 ]
 },
 "fly": {
@@ -195,16 +187,22 @@
 "fly08.png",
 "fly09.png",
 "fly10.png",
-"fly11.png"
+"fly11.png",
+"fly12.png",
+"fly13.png",
+"fly14.png",
+"fly15.png",
+"fly16.png",
+"fly17.png"
 ],
 "anchor": [
-102,
-174
+137,
+186
 ],
 "d": 1,
 "size": [
-217,
-188
+320,
+208
 ]
 },
 "flydash": {
@@ -217,13 +215,13 @@
 "flydash05.png"
 ],
 "anchor": [
-113,
-161
+157,
+173
 ],
 "d": 1,
 "size": [
-284,
-166
+367,
+193
 ]
 },
 "fall": {
@@ -238,13 +236,13 @@
 "fall07.png"
 ],
 "anchor": [
-108,
-155
+102,
+166
 ],
 "d": 1,
 "size": [
-239,
-159
+221,
+188
 ]
 },
 "spin": {
@@ -263,13 +261,13 @@
 "spin11.png"
 ],
 "anchor": [
-119,
-155
+107,
+181
 ],
 "d": 1,
 "size": [
-238,
-205
+214,
+213
 ]
 },
 "drag": {
@@ -297,24 +295,16 @@
 "drag20.png",
 "drag21.png",
 "drag22.png",
-"drag23.png",
-"drag24.png",
-"drag25.png",
-"drag26.png",
-"drag27.png",
-"drag28.png",
-"drag29.png",
-"drag30.png",
-"drag31.png"
+"drag23.png"
 ],
 "anchor": [
-83,
-85
+82,
+21
 ],
 "d": 1,
 "size": [
-178,
-235
+162,
+171
 ]
 },
 "land": {
@@ -329,13 +319,13 @@
 "land07.png"
 ],
 "anchor": [
-108,
-159
+84,
+155
 ],
 "d": 1,
 "size": [
-231,
-172
+194,
+173
 ]
 },
 "wallg": {
@@ -355,24 +345,16 @@
 "wallg12.png",
 "wallg13.png",
 "wallg14.png",
-"wallg15.png",
-"wallg16.png",
-"wallg17.png",
-"wallg18.png",
-"wallg19.png",
-"wallg20.png",
-"wallg21.png",
-"wallg22.png",
-"wallg23.png"
+"wallg15.png"
 ],
 "anchor": [
-13,
-106
+16,
+76
 ],
 "d": 2,
 "size": [
-175,
-226
+164,
+146
 ]
 },
 "wallc": {
@@ -403,13 +385,13 @@
 "wallc23.png"
 ],
 "anchor": [
-13,
-107
+16,
+79
 ],
 "d": 1,
 "size": [
-175,
-227
+163,
+149
 ]
 },
 "ceilg": {
@@ -429,24 +411,16 @@
 "ceilg12.png",
 "ceilg13.png",
 "ceilg14.png",
-"ceilg15.png",
-"ceilg16.png",
-"ceilg17.png",
-"ceilg18.png",
-"ceilg19.png",
-"ceilg20.png",
-"ceilg21.png",
-"ceilg22.png",
-"ceilg23.png"
+"ceilg15.png"
 ],
 "anchor": [
-106,
-13
+76,
+16
 ],
 "d": 2,
 "size": [
-229,
-175
+174,
+164
 ]
 },
 "ceilc": {
@@ -477,13 +451,13 @@
 "ceilc23.png"
 ],
 "anchor": [
-107,
-13
+79,
+16
 ],
 "d": 1,
 "size": [
-232,
-175
+178,
+163
 ]
 },
 "lie": {
@@ -499,18 +473,16 @@
 "lie08.png",
 "lie09.png",
 "lie10.png",
-"lie11.png",
-"lie12.png",
-"lie13.png"
+"lie11.png"
 ],
 "anchor": [
-114,
-159
+118,
+151
 ],
 "d": 1,
 "size": [
-248,
-178
+237,
+167
 ]
 },
 "rest": {
@@ -549,13 +521,13 @@
 "rest31.png"
 ],
 "anchor": [
-114,
-104
+118,
+155
 ],
 "d": 2,
 "size": [
-242,
-123
+237,
+167
 ]
 },
 "sleep": {
@@ -602,13 +574,403 @@
 "sleep39.png"
 ],
 "anchor": [
-115,
-104
+161,
+178
 ],
 "d": 2,
 "size": [
-242,
-124
+294,
+190
+]
+},
+"coil": {
+"files": [
+"coil00.png",
+"coil01.png",
+"coil02.png",
+"coil03.png",
+"coil04.png",
+"coil05.png",
+"coil06.png",
+"coil07.png",
+"coil08.png",
+"coil09.png",
+"coil10.png",
+"coil11.png",
+"coil12.png",
+"coil13.png",
+"coil14.png",
+"coil15.png",
+"coil16.png",
+"coil17.png",
+"coil18.png",
+"coil19.png",
+"coil20.png",
+"coil21.png",
+"coil22.png",
+"coil23.png",
+"coil24.png",
+"coil25.png",
+"coil26.png",
+"coil27.png",
+"coil28.png",
+"coil29.png",
+"coil30.png",
+"coil31.png",
+"coil32.png",
+"coil33.png",
+"coil34.png",
+"coil35.png",
+"coil36.png",
+"coil37.png"
+],
+"anchor": [
+145,
+176
+],
+"d": 1,
+"size": [
+331,
+197
+]
+},
+"fire": {
+"files": [
+"fire00.png",
+"fire01.png",
+"fire02.png",
+"fire03.png",
+"fire04.png",
+"fire05.png",
+"fire06.png",
+"fire07.png",
+"fire08.png",
+"fire09.png",
+"fire10.png",
+"fire11.png",
+"fire12.png",
+"fire13.png",
+"fire14.png",
+"fire15.png",
+"fire16.png",
+"fire17.png",
+"fire18.png",
+"fire19.png",
+"fire20.png",
+"fire21.png",
+"fire22.png",
+"fire23.png",
+"fire24.png",
+"fire25.png",
+"fire26.png",
+"fire27.png",
+"fire28.png",
+"fire29.png",
+"fire30.png",
+"fire31.png",
+"fire32.png",
+"fire33.png",
+"fire34.png",
+"fire35.png",
+"fire36.png",
+"fire37.png",
+"fire38.png",
+"fire39.png",
+"fire40.png",
+"fire41.png",
+"fire42.png",
+"fire43.png",
+"fire44.png",
+"fire45.png",
+"fire46.png",
+"fire47.png",
+"fire48.png",
+"fire49.png"
+],
+"anchor": [
+350,
+168
+],
+"d": 1,
+"size": [
+474,
+194
+]
+},
+"boltb": {
+"files": [
+"boltb00.png",
+"boltb01.png",
+"boltb02.png",
+"boltb03.png",
+"boltb04.png",
+"boltb05.png",
+"boltb06.png",
+"boltb07.png",
+"boltb08.png",
+"boltb09.png",
+"boltb10.png",
+"boltb11.png",
+"boltb12.png",
+"boltb13.png",
+"boltb14.png",
+"boltb15.png",
+"boltb16.png",
+"boltb17.png",
+"boltb18.png",
+"boltb19.png",
+"boltb20.png",
+"boltb21.png",
+"boltb22.png",
+"boltb23.png",
+"boltb24.png",
+"boltb25.png",
+"boltb26.png",
+"boltb27.png",
+"boltb28.png",
+"boltb29.png",
+"boltb30.png",
+"boltb31.png",
+"boltb32.png",
+"boltb33.png",
+"boltb34.png",
+"boltb35.png",
+"boltb36.png",
+"boltb37.png",
+"boltb38.png",
+"boltb39.png",
+"boltb40.png",
+"boltb41.png",
+"boltb42.png",
+"boltb43.png",
+"boltb44.png",
+"boltb45.png",
+"boltb46.png",
+"boltb47.png"
+],
+"anchor": [
+397,
+206
+],
+"d": 1,
+"size": [
+515,
+226
+]
+},
+"takeoff": {
+"files": [
+"takeoff00.png",
+"takeoff01.png",
+"takeoff02.png",
+"takeoff03.png",
+"takeoff04.png",
+"takeoff05.png",
+"takeoff06.png",
+"takeoff07.png",
+"takeoff08.png",
+"takeoff09.png"
+],
+"anchor": [
+127,
+166
+],
+"d": 1,
+"size": [
+279,
+186
+]
+},
+"dive": {
+"files": [
+"dive00.png",
+"dive01.png",
+"dive02.png",
+"dive03.png",
+"dive04.png",
+"dive05.png"
+],
+"anchor": [
+71,
+285
+],
+"d": 1,
+"size": [
+140,
+305
+]
+},
+"impact": {
+"files": [
+"impact00.png",
+"impact01.png",
+"impact02.png",
+"impact03.png",
+"impact04.png",
+"impact05.png",
+"impact06.png",
+"impact07.png",
+"impact08.png",
+"impact09.png",
+"impact10.png",
+"impact11.png",
+"impact12.png",
+"impact13.png",
+"impact14.png",
+"impact15.png",
+"impact16.png",
+"impact17.png",
+"impact18.png",
+"impact19.png",
+"impact20.png",
+"impact21.png",
+"impact22.png",
+"impact23.png",
+"impact24.png",
+"impact25.png",
+"impact26.png",
+"impact27.png",
+"impact28.png",
+"impact29.png",
+"impact30.png",
+"impact31.png",
+"impact32.png",
+"impact33.png",
+"impact34.png",
+"impact35.png"
+],
+"anchor": [
+206,
+192
+],
+"d": 1,
+"size": [
+413,
+262
+]
+},
+"aura": {
+"files": [
+"aura00.png",
+"aura01.png",
+"aura02.png",
+"aura03.png",
+"aura04.png",
+"aura05.png",
+"aura06.png",
+"aura07.png",
+"aura08.png",
+"aura09.png",
+"aura10.png",
+"aura11.png",
+"aura12.png",
+"aura13.png",
+"aura14.png",
+"aura15.png",
+"aura16.png",
+"aura17.png",
+"aura18.png",
+"aura19.png",
+"aura20.png",
+"aura21.png",
+"aura22.png",
+"aura23.png",
+"aura24.png",
+"aura25.png",
+"aura26.png",
+"aura27.png",
+"aura28.png",
+"aura29.png",
+"aura30.png",
+"aura31.png",
+"aura32.png",
+"aura33.png",
+"aura34.png",
+"aura35.png",
+"aura36.png",
+"aura37.png",
+"aura38.png",
+"aura39.png",
+"aura40.png",
+"aura41.png"
+],
+"anchor": [
+131,
+191
+],
+"d": 1,
+"size": [
+252,
+219
+]
+},
+"hover": {
+"files": [
+"hover00.png",
+"hover01.png",
+"hover02.png",
+"hover03.png",
+"hover04.png",
+"hover05.png",
+"hover06.png",
+"hover07.png",
+"hover08.png",
+"hover09.png",
+"hover10.png",
+"hover11.png",
+"hover12.png",
+"hover13.png",
+"hover14.png",
+"hover15.png",
+"hover16.png",
+"hover17.png",
+"hover18.png",
+"hover19.png",
+"hover20.png",
+"hover21.png",
+"hover22.png",
+"hover23.png",
+"hover24.png",
+"hover25.png",
+"hover26.png",
+"hover27.png",
+"hover28.png",
+"hover29.png",
+"hover30.png",
+"hover31.png",
+"hover32.png",
+"hover33.png",
+"hover34.png",
+"hover35.png",
+"hover36.png",
+"hover37.png",
+"hover38.png",
+"hover39.png",
+"hover40.png",
+"hover41.png",
+"hover42.png",
+"hover43.png",
+"hover44.png",
+"hover45.png",
+"hover46.png",
+"hover47.png",
+"hover48.png",
+"hover49.png",
+"hover50.png",
+"hover51.png",
+"hover52.png",
+"hover53.png",
+"hover54.png",
+"hover55.png"
+],
+"anchor": [
+110,
+191
+],
+"d": 1,
+"size": [
+232,
+209
 ]
 },
 "roar": {
@@ -652,395 +1014,111 @@
 "roar36.png",
 "roar37.png",
 "roar38.png",
-"roar39.png"
+"roar39.png",
+"roar40.png",
+"roar41.png",
+"roar42.png",
+"roar43.png",
+"roar44.png",
+"roar45.png",
+"roar46.png",
+"roar47.png",
+"roar48.png",
+"roar49.png"
 ],
 "anchor": [
-217,
-175
+255,
+241
 ],
 "d": 1,
 "size": [
-340,
-225
+450,
+276
 ]
 },
-"breath": {
+"mini": {
 "files": [
-"breath00.png",
-"breath01.png",
-"breath02.png",
-"breath03.png",
-"breath04.png",
-"breath05.png",
-"breath06.png",
-"breath07.png",
-"breath08.png",
-"breath09.png",
-"breath10.png",
-"breath11.png",
-"breath12.png",
-"breath13.png",
-"breath14.png",
-"breath15.png",
-"breath16.png",
-"breath17.png",
-"breath18.png",
-"breath19.png",
-"breath20.png",
-"breath21.png",
-"breath22.png",
-"breath23.png",
-"breath24.png",
-"breath25.png",
-"breath26.png",
-"breath27.png",
-"breath28.png",
-"breath29.png",
-"breath30.png",
-"breath31.png",
-"breath32.png",
-"breath33.png",
-"breath34.png",
-"breath35.png",
-"breath36.png",
-"breath37.png",
-"breath38.png",
-"breath39.png",
-"breath40.png",
-"breath41.png",
-"breath42.png",
-"breath43.png",
-"breath44.png",
-"breath45.png",
-"breath46.png",
-"breath47.png",
-"breath48.png",
-"breath49.png",
-"breath50.png",
-"breath51.png",
-"breath52.png",
-"breath53.png",
-"breath54.png",
-"breath55.png"
+"mini00.png",
+"mini01.png",
+"mini02.png",
+"mini03.png",
+"mini04.png",
+"mini05.png",
+"mini06.png",
+"mini07.png",
+"mini08.png",
+"mini09.png",
+"mini10.png",
+"mini11.png",
+"mini12.png",
+"mini13.png",
+"mini14.png",
+"mini15.png",
+"mini16.png",
+"mini17.png",
+"mini18.png",
+"mini19.png",
+"mini20.png",
+"mini21.png",
+"mini22.png",
+"mini23.png",
+"mini24.png",
+"mini25.png",
+"mini26.png",
+"mini27.png",
+"mini28.png",
+"mini29.png",
+"mini30.png",
+"mini31.png",
+"mini32.png",
+"mini33.png",
+"mini34.png",
+"mini35.png",
+"mini36.png",
+"mini37.png",
+"mini38.png",
+"mini39.png",
+"mini40.png",
+"mini41.png",
+"mini42.png",
+"mini43.png",
+"mini44.png",
+"mini45.png",
+"mini46.png",
+"mini47.png",
+"mini48.png",
+"mini49.png",
+"mini50.png",
+"mini51.png",
+"mini52.png",
+"mini53.png",
+"mini54.png",
+"mini55.png",
+"mini56.png",
+"mini57.png",
+"mini58.png",
+"mini59.png",
+"mini60.png",
+"mini61.png",
+"mini62.png",
+"mini63.png",
+"mini64.png",
+"mini65.png",
+"mini66.png",
+"mini67.png",
+"mini68.png",
+"mini69.png",
+"mini70.png",
+"mini71.png"
 ],
 "anchor": [
-360,
-161
+83,
+151
 ],
 "d": 1,
 "size": [
-483,
-211
-]
-},
-"claw": {
-"files": [
-"claw00.png",
-"claw01.png",
-"claw02.png",
-"claw03.png",
-"claw04.png",
-"claw05.png",
-"claw06.png",
-"claw07.png",
-"claw08.png",
-"claw09.png",
-"claw10.png",
-"claw11.png",
-"claw12.png",
-"claw13.png",
-"claw14.png",
-"claw15.png",
-"claw16.png",
-"claw17.png",
-"claw18.png",
-"claw19.png",
-"claw20.png",
-"claw21.png",
-"claw22.png",
-"claw23.png",
-"claw24.png",
-"claw25.png",
-"claw26.png",
-"claw27.png",
-"claw28.png",
-"claw29.png",
-"claw30.png",
-"claw31.png",
-"claw32.png",
-"claw33.png",
-"claw34.png",
-"claw35.png"
-],
-"anchor": [
-105,
-182
-],
-"d": 1,
-"size": [
-231,
-196
-]
-},
-"tailw": {
-"files": [
-"tailw00.png",
-"tailw01.png",
-"tailw02.png",
-"tailw03.png",
-"tailw04.png",
-"tailw05.png",
-"tailw06.png",
-"tailw07.png",
-"tailw08.png",
-"tailw09.png",
-"tailw10.png",
-"tailw11.png",
-"tailw12.png",
-"tailw13.png",
-"tailw14.png",
-"tailw15.png",
-"tailw16.png",
-"tailw17.png",
-"tailw18.png",
-"tailw19.png",
-"tailw20.png",
-"tailw21.png",
-"tailw22.png",
-"tailw23.png",
-"tailw24.png",
-"tailw25.png",
-"tailw26.png",
-"tailw27.png",
-"tailw28.png",
-"tailw29.png",
-"tailw30.png",
-"tailw31.png"
-],
-"anchor": [
-114,
-159
-],
-"d": 1,
-"size": [
-236,
-172
-]
-},
-"gust": {
-"files": [
-"gust00.png",
-"gust01.png",
-"gust02.png",
-"gust03.png",
-"gust04.png",
-"gust05.png",
-"gust06.png",
-"gust07.png",
-"gust08.png",
-"gust09.png",
-"gust10.png",
-"gust11.png",
-"gust12.png",
-"gust13.png",
-"gust14.png",
-"gust15.png",
-"gust16.png",
-"gust17.png",
-"gust18.png",
-"gust19.png",
-"gust20.png",
-"gust21.png",
-"gust22.png",
-"gust23.png",
-"gust24.png",
-"gust25.png",
-"gust26.png",
-"gust27.png",
-"gust28.png",
-"gust29.png",
-"gust30.png",
-"gust31.png",
-"gust32.png",
-"gust33.png",
-"gust34.png",
-"gust35.png"
-],
-"anchor": [
-284,
-161
-],
-"d": 1,
-"size": [
-407,
-177
-]
-},
-"stomp": {
-"files": [
-"stomp00.png",
-"stomp01.png",
-"stomp02.png",
-"stomp03.png",
-"stomp04.png",
-"stomp05.png",
-"stomp06.png",
-"stomp07.png",
-"stomp08.png",
-"stomp09.png",
-"stomp10.png",
-"stomp11.png",
-"stomp12.png",
-"stomp13.png",
-"stomp14.png",
-"stomp15.png",
-"stomp16.png",
-"stomp17.png",
-"stomp18.png",
-"stomp19.png",
-"stomp20.png",
-"stomp21.png",
-"stomp22.png",
-"stomp23.png",
-"stomp24.png",
-"stomp25.png",
-"stomp26.png",
-"stomp27.png",
-"stomp28.png",
-"stomp29.png",
-"stomp30.png",
-"stomp31.png"
-],
-"anchor": [
-143,
-159
-],
-"d": 1,
-"size": [
-269,
+183,
 187
-]
-},
-"thunder": {
-"files": [
-"thunder00.png",
-"thunder01.png",
-"thunder02.png",
-"thunder03.png",
-"thunder04.png",
-"thunder05.png",
-"thunder06.png",
-"thunder07.png",
-"thunder08.png",
-"thunder09.png",
-"thunder10.png",
-"thunder11.png",
-"thunder12.png",
-"thunder13.png",
-"thunder14.png",
-"thunder15.png",
-"thunder16.png",
-"thunder17.png",
-"thunder18.png",
-"thunder19.png",
-"thunder20.png",
-"thunder21.png",
-"thunder22.png",
-"thunder23.png",
-"thunder24.png",
-"thunder25.png",
-"thunder26.png",
-"thunder27.png",
-"thunder28.png",
-"thunder29.png",
-"thunder30.png",
-"thunder31.png",
-"thunder32.png",
-"thunder33.png",
-"thunder34.png",
-"thunder35.png",
-"thunder36.png",
-"thunder37.png",
-"thunder38.png",
-"thunder39.png",
-"thunder40.png",
-"thunder41.png",
-"thunder42.png",
-"thunder43.png",
-"thunder44.png",
-"thunder45.png",
-"thunder46.png",
-"thunder47.png",
-"thunder48.png",
-"thunder49.png",
-"thunder50.png",
-"thunder51.png",
-"thunder52.png",
-"thunder53.png",
-"thunder54.png",
-"thunder55.png"
-],
-"anchor": [
-197,
-330
-],
-"d": 1,
-"size": [
-381,
-345
-]
-},
-"charge": {
-"files": [
-"charge00.png",
-"charge01.png",
-"charge02.png",
-"charge03.png",
-"charge04.png",
-"charge05.png",
-"charge06.png",
-"charge07.png",
-"charge08.png",
-"charge09.png",
-"charge10.png",
-"charge11.png",
-"charge12.png",
-"charge13.png",
-"charge14.png",
-"charge15.png",
-"charge16.png",
-"charge17.png",
-"charge18.png",
-"charge19.png",
-"charge20.png",
-"charge21.png",
-"charge22.png",
-"charge23.png",
-"charge24.png",
-"charge25.png",
-"charge26.png",
-"charge27.png",
-"charge28.png",
-"charge29.png",
-"charge30.png",
-"charge31.png",
-"charge32.png",
-"charge33.png",
-"charge34.png",
-"charge35.png",
-"charge36.png",
-"charge37.png",
-"charge38.png",
-"charge39.png"
-],
-"anchor": [
-108,
-159
-],
-"d": 1,
-"size": [
-231,
-206
 ]
 },
 "ult": {
@@ -1112,215 +1190,145 @@
 "ult64.png",
 "ult65.png",
 "ult66.png",
-"ult67.png",
-"ult68.png",
-"ult69.png",
-"ult70.png",
-"ult71.png",
-"ult72.png",
-"ult73.png",
-"ult74.png",
-"ult75.png"
+"ult67.png"
 ],
 "anchor": [
-360,
-174
+287,
+262
 ],
 "d": 1,
 "size": [
-483,
-192
+565,
+332
 ]
 },
-"takeoff": {
+"dark": {
 "files": [
-"takeoff00.png",
-"takeoff01.png",
-"takeoff02.png",
-"takeoff03.png",
-"takeoff04.png",
-"takeoff05.png",
-"takeoff06.png",
-"takeoff07.png",
-"takeoff08.png",
-"takeoff09.png"
+"dark00.png",
+"dark01.png",
+"dark02.png",
+"dark03.png",
+"dark04.png",
+"dark05.png",
+"dark06.png",
+"dark07.png",
+"dark08.png",
+"dark09.png",
+"dark10.png",
+"dark11.png",
+"dark12.png",
+"dark13.png",
+"dark14.png",
+"dark15.png",
+"dark16.png",
+"dark17.png",
+"dark18.png",
+"dark19.png",
+"dark20.png",
+"dark21.png",
+"dark22.png",
+"dark23.png",
+"dark24.png",
+"dark25.png",
+"dark26.png",
+"dark27.png",
+"dark28.png",
+"dark29.png",
+"dark30.png",
+"dark31.png",
+"dark32.png",
+"dark33.png",
+"dark34.png",
+"dark35.png",
+"dark36.png",
+"dark37.png",
+"dark38.png",
+"dark39.png",
+"dark40.png",
+"dark41.png"
 ],
 "anchor": [
-105,
-167
+106,
+166
 ],
 "d": 1,
 "size": [
-231,
+215,
+204
+]
+},
+"doubt": {
+"files": [
+"doubt00.png",
+"doubt01.png",
+"doubt02.png",
+"doubt03.png",
+"doubt04.png",
+"doubt05.png",
+"doubt06.png",
+"doubt07.png",
+"doubt08.png",
+"doubt09.png",
+"doubt10.png",
+"doubt11.png",
+"doubt12.png",
+"doubt13.png",
+"doubt14.png",
+"doubt15.png",
+"doubt16.png",
+"doubt17.png",
+"doubt18.png",
+"doubt19.png",
+"doubt20.png",
+"doubt21.png",
+"doubt22.png",
+"doubt23.png"
+],
+"anchor": [
+97,
 180
+],
+"d": 2,
+"size": [
+201,
+195
 ]
 },
-"dive": {
+"love": {
 "files": [
-"dive00.png",
-"dive01.png",
-"dive02.png",
-"dive03.png",
-"dive04.png",
-"dive05.png"
+"love00.png",
+"love01.png",
+"love02.png",
+"love03.png",
+"love04.png",
+"love05.png",
+"love06.png",
+"love07.png",
+"love08.png",
+"love09.png",
+"love10.png",
+"love11.png",
+"love12.png",
+"love13.png",
+"love14.png",
+"love15.png",
+"love16.png",
+"love17.png",
+"love18.png",
+"love19.png",
+"love20.png",
+"love21.png",
+"love22.png",
+"love23.png"
 ],
 "anchor": [
-115,
-233
+131,
+190
 ],
-"d": 1,
+"d": 2,
 "size": [
-169,
-283
-]
-},
-"impact": {
-"files": [
-"impact00.png",
-"impact01.png",
-"impact02.png",
-"impact03.png",
-"impact04.png",
-"impact05.png",
-"impact06.png",
-"impact07.png",
-"impact08.png",
-"impact09.png",
-"impact10.png",
-"impact11.png",
-"impact12.png",
-"impact13.png",
-"impact14.png",
-"impact15.png",
-"impact16.png",
-"impact17.png",
-"impact18.png",
-"impact19.png",
-"impact20.png",
-"impact21.png",
-"impact22.png",
-"impact23.png",
-"impact24.png",
-"impact25.png",
-"impact26.png",
-"impact27.png",
-"impact28.png",
-"impact29.png"
-],
-"anchor": [
-192,
-159
-],
-"d": 1,
-"size": [
-385,
-197
-]
-},
-"smug": {
-"files": [
-"smug00.png",
-"smug01.png",
-"smug02.png",
-"smug03.png",
-"smug04.png",
-"smug05.png",
-"smug06.png",
-"smug07.png",
-"smug08.png",
-"smug09.png",
-"smug10.png",
-"smug11.png",
-"smug12.png",
-"smug13.png",
-"smug14.png",
-"smug15.png",
-"smug16.png",
-"smug17.png",
-"smug18.png",
-"smug19.png",
-"smug20.png",
-"smug21.png",
-"smug22.png",
-"smug23.png",
-"smug24.png",
-"smug25.png",
-"smug26.png",
-"smug27.png",
-"smug28.png",
-"smug29.png",
-"smug30.png",
-"smug31.png",
-"smug32.png",
-"smug33.png",
-"smug34.png",
-"smug35.png",
-"smug36.png",
-"smug37.png",
-"smug38.png",
-"smug39.png"
-],
-"anchor": [
-125,
-159
-],
-"d": 1,
-"size": [
-251,
-172
-]
-},
-"rage": {
-"files": [
-"rage00.png",
-"rage01.png",
-"rage02.png",
-"rage03.png",
-"rage04.png",
-"rage05.png",
-"rage06.png",
-"rage07.png",
-"rage08.png",
-"rage09.png",
-"rage10.png",
-"rage11.png",
-"rage12.png",
-"rage13.png",
-"rage14.png",
-"rage15.png",
-"rage16.png",
-"rage17.png",
-"rage18.png",
-"rage19.png",
-"rage20.png",
-"rage21.png",
-"rage22.png",
-"rage23.png",
-"rage24.png",
-"rage25.png",
-"rage26.png",
-"rage27.png",
-"rage28.png",
-"rage29.png",
-"rage30.png",
-"rage31.png",
-"rage32.png",
-"rage33.png",
-"rage34.png",
-"rage35.png",
-"rage36.png",
-"rage37.png",
-"rage38.png",
-"rage39.png"
-],
-"anchor": [
-114,
-160
-],
-"d": 1,
-"size": [
-237,
-173
+258,
+211
 ]
 },
 "tantrum": {
@@ -1375,13 +1383,13 @@
 "tantrum47.png"
 ],
 "anchor": [
-108,
-100
+127,
+176
 ],
 "d": 1,
 "size": [
-243,
-137
+251,
+203
 ]
 },
 "cry": {
@@ -1405,44 +1413,16 @@
 "cry16.png",
 "cry17.png",
 "cry18.png",
-"cry19.png",
-"cry20.png",
-"cry21.png",
-"cry22.png",
-"cry23.png",
-"cry24.png",
-"cry25.png",
-"cry26.png",
-"cry27.png",
-"cry28.png",
-"cry29.png",
-"cry30.png",
-"cry31.png",
-"cry32.png",
-"cry33.png",
-"cry34.png",
-"cry35.png",
-"cry36.png",
-"cry37.png",
-"cry38.png",
-"cry39.png",
-"cry40.png",
-"cry41.png",
-"cry42.png",
-"cry43.png",
-"cry44.png",
-"cry45.png",
-"cry46.png",
-"cry47.png"
+"cry19.png"
 ],
 "anchor": [
-90,
-159
+122,
+170
 ],
-"d": 1,
+"d": 2,
 "size": [
-208,
-173
+219,
+187
 ]
 },
 "beg": {
@@ -1466,44 +1446,16 @@
 "beg16.png",
 "beg17.png",
 "beg18.png",
-"beg19.png",
-"beg20.png",
-"beg21.png",
-"beg22.png",
-"beg23.png",
-"beg24.png",
-"beg25.png",
-"beg26.png",
-"beg27.png",
-"beg28.png",
-"beg29.png",
-"beg30.png",
-"beg31.png",
-"beg32.png",
-"beg33.png",
-"beg34.png",
-"beg35.png",
-"beg36.png",
-"beg37.png",
-"beg38.png",
-"beg39.png",
-"beg40.png",
-"beg41.png",
-"beg42.png",
-"beg43.png",
-"beg44.png",
-"beg45.png",
-"beg46.png",
-"beg47.png"
+"beg19.png"
 ],
 "anchor": [
-78,
-146
+135,
+181
 ],
-"d": 1,
+"d": 2,
 "size": [
-203,
-160
+242,
+202
 ]
 }
 }

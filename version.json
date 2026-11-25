@@ -1,9 +1,9 @@
 {
-  "version": "3.2",
-  "date": "2026-11-25",
+  "version": "3.3",
+  "date": "2026-11-26",
   "notes": [
-    "Thêm nhân vật mới CỔ LONG – hắc long thái cổ: 28 động tác, 1053 khung hình vẽ theo khung xương nên chuyển động mượt",
-    "Chiêu riêng: Long hống, Hắc viêm long tức, Long trảo liên hoàn, Thần vĩ trảm, Phong dực, Chấn địa, Lôi long giáng thế, Tụ long khí, Hắc nhật diệt thế, Thiên long trụy, full combo Thái cổ long hoàng quyết",
-    "Chọn nhân vật trong tab Nhân vật; mỗi nhân vật nhớ bộ gán chuột, tên gọi riêng"
+    "Cổ Long làm lại hoàn toàn từ bảng sprite rồng đen vảy vàng của bạn (bỏ con rồng vẽ bằng code)",
+    "Đủ 14 nhóm: đi, bay lượn, cuộn thân, phun lửa, phun sấm sét, lao xuống đập đất, lôi điện quanh thân, treo lơ lửng, biểu cảm, gầm rú, hoá rồng mini, Long uy, hắc hoá, ngủ",
+    "Hoạt cảnh 25 hình/giây: chuyển động liên tục giữa các khung, lôi điện đan xen, chớp loá khi ra đòn; đòn nhanh thì nhanh, nghỉ thì chậm"
   ]
 }

@@ -30,22 +30,22 @@ def run():
     app.switch_pack("builtin:CoLong")
     s = app.store.s
     check(app.pet.pack.name == "Cổ Long" and s["pet_name"] == "Cổ Long", "đổi sang Cổ Long, tên gọi đổi theo")
-    check(s["triggers"]["L3"]["act"] == "LongBa_FullCombo" and s["drop_action"] == "LongPhi_ThienLongTruy",
+    check(s["triggers"]["L3"]["act"] == "LongBa_FullCombo" and s["drop_action"] == "LongPhi_LaoXuongDapDat",
           "Cổ Long dùng bộ gán chuột riêng")
-    check(C.beh_label("LongKy_HacViem").startswith("Hắc viêm") and C.beh_group("LongKy_Trao") == "Long kỹ",
+    check(C.beh_label("LongKy_PhunLua") == "Phun lửa" and C.beh_group("LongKy_PhunSamSet") == "Long kỹ",
           "tên chiêu / nhóm hiện tiếng Việt")
     eng = app.pet.engine
     check(len(eng.fly_poses()) == 6 and eng.fly_poses()[0].img.startswith("flydash"), "lao tới chỗ bấm dùng tư thế bay lướt")
-    check(eng.drop_parts("LongPhi_ThienLongTruy") == ("BoNhao", ["VaDat"]), "thả rơi = Thiên long trụy (bổ nhào tạo hố)")
+    check(eng.drop_parts("LongPhi_LaoXuongDapDat") == ("LaoXuong", ["DapDat"]), "thả rơi = Lao xuống & đập đất")
     tr = dict(s["triggers"])
-    tr["R2"] = {"act": "LongKy_ChanDia", "cmd": ""}
+    tr["R2"] = {"act": "LongKy_CuonThan", "cmd": ""}
     app.set_setting("triggers", tr)
     app.switch_pack("")
     s = app.store.s
     check(app.pet.pack.name == "Áo Đen" and s["triggers"]["L3"]["act"] == "TrangThai_NanNi" and s["pet_name"] == "Đen Đủi",
           "quay về Áo Đen: lấy lại đúng bộ gán và tên cũ")
     app.switch_pack("builtin:CoLong")
-    check(app.store.s["triggers"]["R2"]["act"] == "LongKy_ChanDia", "sang lại Cổ Long: giữ chỉnh sửa trước đó")
+    check(app.store.s["triggers"]["R2"]["act"] == "LongKy_CuonThan", "sang lại Cổ Long: giữ chỉnh sửa trước đó")
 
     pet, eng = app.pet, app.pet.engine
     a = pet.env.area_at(eng.ax, eng.ay)
@@ -74,7 +74,7 @@ def run():
     eng.end_drag()
     for _ in range(400):
         eng.tick()
-    check(pet.env.on_floor(eng.ax, eng.ay) is not None, "xách lên thả ra -> bổ nhào xuống đất")
+    check(pet.env.on_floor(eng.ax, eng.ay) is not None, "xách lên thả ra -> lao xuống đập đất")
     n1 = os.path.getsize(C.ERR_FILE) if os.path.exists(C.ERR_FILE) else 0
     check(n1 == n0, "không phát sinh lỗi khi chạy")
     finish(app, C)

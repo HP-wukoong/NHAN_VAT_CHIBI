@@ -4,6 +4,9 @@ import datetime as dt
 from common import load, make_app, check, finish
 
 C = load()
+if dt.datetime.now().hour < 2:                  # gần nửa đêm: "giờ hiện tại - 62 phút" lùi sang hôm trước -> cố định giờ trưa
+    _off = dt.datetime.now().replace(hour=12) - dt.datetime.now()
+    C.now = lambda: dt.datetime.now() + _off
 st = C.Store(C.DATA_FILE)
 st.tasks.append(C.new_task("Việc quan trọng", "07:00", "daily"))
 st.save()
