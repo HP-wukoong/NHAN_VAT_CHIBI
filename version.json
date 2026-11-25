@@ -1,10 +1,9 @@
 {
-  "version": "3.4",
+  "version": "3.5",
   "date": "2026-11-26",
   "notes": [
-    "Hiệu ứng gõ / xoá thay toàn bộ bằng 26 mẫu cắt từ ảnh hiệu ứng của bạn (sấm sét vàng tím, nổ, lôi long, ma trảo, đầu lâu, phi kiếm, bỉ ngạn hoa...)",
-    "Cổ Long: quăng đập tường rơi xuống thì tức giận (gân đỏ, dậm chân, thét)",
-    "Cổ Long: thả rơi từ trên cao, chạm đất nổ tung một vùng bằng ảnh nổ của bạn",
-    "Sửa phím gõ đầu tiên bị khựng (nạp sẵn hiệu ứng khi mở app)"
+    "Sửa lỗi hiệu ứng gõ chữ mới không hiện (cập nhật từ bản cũ bị thiếu thư mục ảnh HieuUng) – bản này tải bổ sung đủ ảnh",
+    "Trình cập nhật chép mọi thư mục có trong gói, bản sau thêm thư mục mới cũng không bị thiếu",
+    "Tự phát hiện thiếu ảnh hiệu ứng: tự tải bổ sung và báo rõ trong Cài đặt"
   ]
 }

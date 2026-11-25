@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.4"
+APP_VER = "3.5"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -3783,15 +3783,27 @@ def make_net_frames(size, seed):
 # ── hiệu ứng từ ảnh của người dùng (thư mục HieuUng/, cắt bằng tools/cat_hieu_ung.py) ──
 FX_DIR = os.path.join(BASE_DIR, "HieuUng")
 _FX_SRC = {}
+FX_MISSING = set()                                   # ảnh hiệu ứng không tìm thấy (để báo trên giao diện)
 
 
 def fx_src(name):
-    if name not in _FX_SRC:
+    im = _FX_SRC.get(name)
+    if im is None:
         try:
-            _FX_SRC[name] = Image.open(os.path.join(FX_DIR, name + ".png")).convert("RGBA")
+            im = Image.open(os.path.join(FX_DIR, name + ".png")).convert("RGBA")
+            _FX_SRC[name] = im
+            FX_MISSING.discard(name)
         except Exception:
-            _FX_SRC[name] = None
-    return _FX_SRC[name]
+            FX_MISSING.add(name)                     # không nhớ lỗi: lần sau (sau khi tải bổ sung) đọc lại
+    return im
+
+
+def fx_assets_ok():
+    """Đủ ảnh hiệu ứng chưa (máy cập nhật từ bản cũ có thể thiếu thư mục HieuUng)."""
+    try:
+        return len([f for f in os.listdir(FX_DIR) if f.endswith(".png")]) >= 60
+    except Exception:
+        return False
 
 
 def _fx_tone(im, bright=1.0, alpha=1.0):
@@ -3819,7 +3831,7 @@ def make_sprite_fx(names, style="burst", mult=1.2, frames=None):
         srcs = [fx_src(n) for n in names]
         srcs = [x for x in srcs if x is not None]
         if not srcs:
-            return make_bolt_frames(size, seed)              # thiếu ảnh -> dùng hiệu ứng vẽ sẵn
+            return make_bolt_frames(size, seed)              # thiếu ảnh -> tạm dùng sét vẽ sẵn (giao diện báo thiếu)
         n = frames or {"burst": 9, "ground": 11, "pillar": 9, "strike": 9, "seq": 0, "rise": 0}[style]
         if not n:
             n = len(srcs) * 2 + 4
@@ -3964,7 +3976,10 @@ class FxPlayer:
             vs = []
             for seed in range(self.VARIANTS):
                 vs.append([(im.convert("RGBa").tobytes("raw", "BGRa"), im.width, im.height) for im in maker(size, seed)])
-            self.cache[k] = vs
+            if not FX_MISSING:
+                self.cache[k] = vs                        # thiếu ảnh -> không lưu, tải bổ sung xong là dùng ảnh thật
+            else:
+                return vs
             while len(self.cache) > 16:
                 self.cache.pop(next(iter(self.cache)))
         return self.cache[k]
@@ -4625,6 +4640,8 @@ class App:
         self.gmouse.start()
         self.keyfx = KeyFx(self)
         self.updater = Updater(self)
+        if not fx_assets_ok():
+            self.root.after(4000, lambda: self.updater.check(manual=False, install=True))   # tự tải bổ sung ảnh hiệu ứng
         self.root.bind_all("<F5>", lambda e: self.updater.check(manual=True, install=True))
         self._last = now().timestamp()
         self.root.after(50, self.anim_loop)
@@ -6207,6 +6224,9 @@ class Manager:
         txt = "Vị trí hiệu ứng lần gõ gần nhất: " + (kf.last_info or "chưa gõ")
         if kf.stats:
             txt += "\n" + " • ".join("%s: %s" % (app_name(e) if e != "?" else "?", h) for e, h in list(kf.stats.items())[-5:])
+        if not fx_assets_ok():
+            txt = ("⚠ THIẾU ẢNH HIỆU ỨNG (thư mục HieuUng) – đang tạm dùng sét vẽ sẵn. Bấm F5 để tải bổ sung, "
+                   "hoặc giải nén lại bản .zip đầy đủ.\n") + txt
         self.kdiag.config(text=txt)
         self.win.after(1000, self.kdiag_loop)
 
@@ -6418,6 +6438,7 @@ UPDATE_BRANCH = "main"
 URL_VERSION = "https://raw.githubusercontent.com/%s/%s/version.json" % (UPDATE_REPO, UPDATE_BRANCH)
 URL_ZIP = "https://github.com/%s/archive/refs/heads/%s.zip" % (UPDATE_REPO, UPDATE_BRANCH)
 URL_PAGE = "https://github.com/%s" % UPDATE_REPO
+SKIP_ITEMS = ("ChibiData", "__pycache__")
 INSTALL_ITEMS = ["ChibiNhacViec.pyw", "ChayChibi.bat", "README.md", "version.json", "NhanVat", "HieuUng", "tests", "tools"]
 UPDATE_MODES = [("notify", "Báo khi có bản mới (hỏi trước khi cập nhật)"), ("auto", "Tự động cập nhật"),
                 ("off", "Tắt kiểm tra tự động")]
@@ -6478,6 +6499,10 @@ class Updater:
         self.busy = False
         self.app.store.s["last_update_check"] = iso(now())
         latest = str(info.get("version", "0"))
+        if ver_tuple(latest) <= ver_tuple(APP_VER) and not fx_assets_ok():
+            self.set_status("Thiếu ảnh hiệu ứng – đang tải bổ sung...")
+            self.download_install(info)                   # cài lại đủ bộ (bản cũ cập nhật thiếu thư mục HieuUng)
+            return
         if ver_tuple(latest) <= ver_tuple(APP_VER):
             self.set_status("Đang dùng bản mới nhất v%s ✓" % APP_VER)
             if manual:
@@ -6552,7 +6577,10 @@ class Updater:
         olds = sorted(d for d in os.listdir(BACKUP_DIR) if os.path.isdir(os.path.join(BACKUP_DIR, d)))
         for d in olds[:-3]:
             shutil.rmtree(os.path.join(BACKUP_DIR, d), ignore_errors=True)
-        for it in INSTALL_ITEMS:
+        # chép MỌI thứ trong gói (thư mục mới ở bản sau cũng được chép), trừ dữ liệu người dùng
+        items = list(INSTALL_ITEMS) + [n for n in os.listdir(root) if n not in INSTALL_ITEMS and n not in SKIP_ITEMS
+                                       and not n.startswith(".")]
+        for it in items:
             sp = os.path.join(root, it)
             dp = os.path.join(BASE_DIR, it)
             if os.path.isdir(sp):

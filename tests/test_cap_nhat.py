@@ -21,6 +21,8 @@ with zipfile.ZipFile(buf, "w") as z:
     z.writestr("NHAN_VAT_CHIBI-main/ChibiNhacViec.pyw", new_src)
     z.writestr("NHAN_VAT_CHIBI-main/version.json", json.dumps({"version": "9.9"}))
     z.writestr("NHAN_VAT_CHIBI-main/NhanVat/NhanVatAoDen/test_moi.txt", "x")
+    z.writestr("NHAN_VAT_CHIBI-main/ThuMucMoi/anh.txt", "y")              # thư mục bản sau mới thêm
+    z.writestr("NHAN_VAT_CHIBI-main/ChibiData/settings.json", "{}")       # không được đè dữ liệu người dùng
 open(os.path.join(srv_dir, "main.zip"), "wb").write(buf.getvalue())
 json.dump({"version": "9.9", "notes": ["Thử nghiệm"]}, open(os.path.join(srv_dir, "version.json"), "w"))
 
@@ -61,6 +63,19 @@ def s3():
     check(restarted, "F5: tải, cài xong và khởi động lại")
     check('APP_VER = "9.9"' in open(target, encoding="utf-8").read(), "file chương trình đã được thay bản mới")
     check(os.path.exists(os.path.join(C.BASE_DIR, "NhanVat", "NhanVatAoDen", "test_moi.txt")), "chép cả thư mục nhân vật")
+    check(os.path.exists(os.path.join(C.BASE_DIR, "ThuMucMoi", "anh.txt")),
+          "chép cả thư mục mới có trong gói (lỗi thiếu HieuUng ở bản 3.4)")
+    check(not os.path.exists(os.path.join(C.BASE_DIR, "ChibiData", "settings.json")), "không đè dữ liệu người dùng ChibiData")
+    import shutil
+    hu = os.path.join(C.BASE_DIR, "HieuUng")
+    shutil.move(hu, hu + "_tam")
+    C._FX_SRC.clear()
+    check(not C.fx_assets_ok(), "phát hiện thiếu thư mục HieuUng")
+    fr = C.FX_BY_KEY["kimtinh"][2](120, 0)
+    check(fr and "kimtinh1" in C.FX_MISSING, "thiếu ảnh -> ghi nhận để báo trên giao diện")
+    shutil.move(hu + "_tam", hu)
+    check(C.fx_assets_ok() and C.fx_src("kimtinh1") is not None and "kimtinh1" not in C.FX_MISSING,
+          "có lại ảnh -> đọc lại được ngay, không nhớ lỗi cũ")
     bk = os.listdir(C.BACKUP_DIR)
     check(len(bk) == 1 and os.path.exists(os.path.join(C.BACKUP_DIR, bk[0], "ChibiNhacViec.pyw")), "đã sao lưu bản cũ")
     check(app.store.s.get("just_updated") == "9.9", "ghi nhớ để chào sau khi khởi động lại")
