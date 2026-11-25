@@ -33,7 +33,24 @@ def run():
     check(fx.bolt.played - n0 == 2 and fx.last_pos == (400, 300), "hiệu ứng đặt đúng vị trí con trỏ nhập")
     fx.on_key("D")
     check(fx.slash.played == 1, "xoá -> loạn đao chém")
-    check(len(fx.bolt.variants) == fx.bolt.VARIANTS and len(fx.bolt.variants[0]) == 6, "lôi điện: 5 biến thể x 6 khung")
+    check(len(fx.bolt.variants("bolt", fx.size())) == fx.bolt.VARIANTS, "lôi điện: 5 biến thể")
+    for key, name, maker, anchor in C.FX_EFFECTS:
+        fr = maker(120, 7)
+        ok = len(fr) >= 6 and len({f.size for f in fr}) == 1 and any(f.getbbox() for f in fr)
+        check(ok, "mẫu hiệu ứng '%s': %d khung, cùng cỡ, có hình" % (name, len(fr)))
+    app.store.s["key_fx_type"], app.store.s["key_fx_del"] = "thunder", "hammer"
+    fx.t_last = {"T": 0, "D": 0}
+    fx.on_key("T")
+    fx.on_key("D")
+    check(fx.bolt.last_key == "thunder" and fx.slash.last_key == "hammer", "chọn mẫu riêng cho gõ / xoá")
+    app.store.s["key_fx_type"] = "random"
+    got = set()
+    for _ in range(30):
+        fx.t_last["T"] = 0
+        fx.on_key("T")
+        got.add(fx.bolt.last_key)
+    check(len(got) >= 4, "ngẫu nhiên: đổi mẫu mỗi lần (%d mẫu khác nhau)" % len(got))
+    app.store.s["key_fx_type"], app.store.s["key_fx_del"] = "bolt", "slash"
     C.caret_info = lambda: ((400, 300), True)
     p = fx.bolt.played
     fx.t_last["T"] = 0
@@ -50,7 +67,8 @@ def run():
     app.store.s["key_fx"] = True
     C.caret_info = lambda: ((500, 300), False)
     calls.clear()
-    fx.hist["T"].clear()
+    fx.hist = {"T": [], "D": []}
+    fx.cool = {"T": 0.0, "D": 0.0}
     for _ in range(25):
         fx.on_key("T")
     check(("force", app.store.s["triggers"]["E_TYPING"]["act"]) in calls, "gõ liên tục -> nhân vật nạp năng lượng")

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CHIBI NHẮC VIỆC  v2.3
+CHIBI NHẮC VIỆC  v2.4
 Robot chibi nhắc việc chạy trên màn hình Windows 10/11.
 - Đi lại tự do toàn màn hình (hỗ trợ nhiều màn hình), kéo thả, đổi kích thước, đổi nhân vật
 - Nhắc việc: một lần / hằng ngày / T2-T6 / chọn thứ / lặp mỗi N phút, hoãn, báo trước
@@ -67,7 +67,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "2.3"
+APP_VER = "2.4"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -316,7 +316,7 @@ DEFAULT_SETTINGS = {
     "pack": "", "free_master": True, "free": {}, "assigned_no_free": True, "walk_windows": True, "jump_icons": True,
     "auto_jump": True, "climb": True, "smooth": True, "triggers": None, "screen_mode": "desktop",
     "update_mode": "notify", "last_update_check": "", "just_updated": "",
-    "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0,
+    "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0, "key_fx_type": "bolt", "key_fx_del": "slash",
 }
 
 
@@ -1370,6 +1370,18 @@ class Engine:
         return True
 
     def fly_poses(self):
+        # ưu tiên tư thế "lao vút" hl_hover (người thẳng, vệt lửa dưới chân)
+        hov = []
+        seen = set()
+        for sp in self.pack.actions.values():
+            for p in sp.poses:
+                if p.img.lower().startswith("hl_hover") and p.img not in seen:
+                    seen.add(p.img)
+                    q = Pose()
+                    q.img, q.imgr, q.ax, q.ay, q.vx, q.vy, q.dur = p.img, p.imgr, p.ax, p.ay, 0.0, 0.0, 1
+                    hov.append(q)
+        if hov:
+            return sorted(hov, key=lambda q: q.img)
         for nm in ("HL_Bay", "Fly", "Flying"):
             sp = self.pack.actions.get(nm)
             if sp and sp.poses:
@@ -2273,15 +2285,484 @@ def make_slash_frames(size, seed):
     return frames
 
 
+def _fx_new(W, H):
+    from PIL import ImageDraw
+    core = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    return core, glow, ImageDraw.Draw(core), ImageDraw.Draw(glow)
+
+
+def _fx_merge(core, glow, blur):
+    from PIL import ImageFilter
+    if blur > 0:
+        glow = glow.filter(ImageFilter.GaussianBlur(blur))
+    glow.alpha_composite(core)
+    return glow
+
+
+def _jagged(p0, p1, segs, amp, rnd):
+    pts = [p0]
+    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
+    L = math.hypot(dx, dy) or 1
+    nx, ny = -dy / L, dx / L
+    for i in range(1, segs):
+        t = i / float(segs)
+        j = rnd.uniform(-1, 1) * amp
+        pts.append((p0[0] + dx * t + nx * j, p0[1] + dy * t + ny * j))
+    pts.append(p1)
+    return pts
+
+
+def make_thunder_frames(size, seed):
+    """Lôi đình giáng xuống: sét đánh từ trên xuống chữ, chớp sáng chỗ chạm."""
+    rnd = random.Random(seed + 2000)
+    W, H = size, int(size * 1.8)
+    hit = (W / 2.0, H * 0.9)
+    top = (W / 2.0 + rnd.uniform(-0.25, 0.25) * W, 0)
+    main = _jagged(top, hit, 10, W * 0.09, rnd)
+    branches = []
+    for _ in range(rnd.randint(2, 3)):
+        k = rnd.randint(2, 7)
+        bx, by = main[k]
+        branches.append(_jagged((bx, by), (bx + rnd.uniform(-0.4, 0.4) * W, by + rnd.uniform(0.12, 0.28) * H), 4, W * 0.04, rnd))
+    frames = []
+    for f in range(7):
+        core, glow, dc, dg = _fx_new(W, H)
+        if f == 0:                                           # tia dẫn mờ
+            dc.line(main[:6], fill=(200, 200, 255, 150), width=max(1, int(W * 0.01)))
+        else:
+            fade = (1, 1, 1, 0.8, 0.55, 0.3, 0.12)[f]
+            if f <= 3:
+                for b in branches:
+                    dg.line(b, fill=(110, 130, 255, int(170 * fade)), width=max(2, int(W * 0.04)))
+                    dc.line(b, fill=(230, 235, 255, int(230 * fade)), width=max(1, int(W * 0.012)))
+                dg.line(main, fill=(90, 120, 255, int(230 * fade)), width=max(4, int(W * 0.11)))
+                dc.line(main, fill=(200, 215, 255, int(255 * fade)), width=max(2, int(W * 0.035)))
+                dc.line(main, fill=(255, 255, 255, int(255 * fade)), width=max(1, int(W * 0.014)))
+            r = min(W * (0.10 + 0.05 * f), W * 0.28)
+            dg.ellipse((hit[0] - r * 1.6, hit[1] - r * 0.6, hit[0] + r * 1.6, hit[1] + r * 0.4),
+                       fill=(120, 150, 255, int(200 * fade)))
+            if f <= 2:
+                rr = W * 0.08
+                dc.ellipse((hit[0] - rr, hit[1] - rr * 0.6, hit[0] + rr, hit[1] + rr * 0.6), fill=(255, 255, 255, 255))
+            for _ in range(6):                                # tia lửa bắn ngang
+                a = rnd.uniform(math.pi * 1.05, math.pi * 1.95)
+                d = W * rnd.uniform(0.1, 0.45) * min(1, f / 2.0)
+                x, y = hit[0] + math.cos(a) * d, hit[1] + math.sin(a) * d * 0.5
+                q = max(1, W * 0.012)
+                dc.ellipse((x - q, y - q, x + q, y + q), fill=(220, 230, 255, int(255 * fade)))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.035)))
+    return frames
+
+
+def make_holy_frames(size, seed):
+    """Thần quang vàng: hào quang toả tia, vòng sáng lan ra."""
+    rnd = random.Random(seed + 3000)
+    W = H = size
+    c = (W / 2.0, H / 2.0)
+    n = rnd.randint(10, 14)
+    rot = rnd.uniform(0, math.pi)
+    lens = [rnd.uniform(0.32, 0.5) for _ in range(n)]
+    frames = []
+    for f in range(8):
+        core, glow, dc, dg = _fx_new(W, H)
+        fade = (0.7, 1, 1, 0.9, 0.7, 0.5, 0.3, 0.12)[f]
+        grow = min(1.0, (f + 1) / 3.0)
+        for i in range(n):
+            a = rot + i * 2 * math.pi / n + f * 0.04
+            L = lens[i] * W * grow
+            wdt = W * 0.035
+            tip = (c[0] + math.cos(a) * L, c[1] + math.sin(a) * L)
+            s1 = (c[0] + math.cos(a + math.pi / 2) * wdt, c[1] + math.sin(a + math.pi / 2) * wdt)
+            s2 = (c[0] + math.cos(a - math.pi / 2) * wdt, c[1] + math.sin(a - math.pi / 2) * wdt)
+            dg.polygon([s1, tip, s2], fill=(255, 200, 40, int(190 * fade)))
+            dc.line([c, tip], fill=(255, 245, 190, int(230 * fade)), width=max(1, int(W * 0.01)))
+        r = W * (0.12 + 0.36 * f / 7.0)
+        dc.ellipse((c[0] - r, c[1] - r, c[0] + r, c[1] + r), outline=(255, 220, 90, int(220 * fade)),
+                   width=max(1, int(W * 0.015)))
+        rc = W * (0.12 if f < 3 else 0.08)
+        dg.ellipse((c[0] - rc * 2, c[1] - rc * 2, c[0] + rc * 2, c[1] + rc * 2), fill=(255, 210, 60, int(200 * fade)))
+        dc.ellipse((c[0] - rc, c[1] - rc, c[0] + rc, c[1] + rc), fill=(255, 252, 230, int(255 * fade)))
+        for _ in range(4):                                    # lấp lánh hình chữ thập
+            a = rnd.uniform(0, 2 * math.pi)
+            d = rnd.uniform(0.2, 0.45) * W * grow
+            x, y = c[0] + math.cos(a) * d, c[1] + math.sin(a) * d
+            q = W * 0.03
+            dc.line([(x - q, y), (x + q, y)], fill=(255, 250, 200, int(255 * fade)), width=1)
+            dc.line([(x, y - q), (x, y + q)], fill=(255, 250, 200, int(255 * fade)), width=1)
+        frames.append(_fx_merge(core, glow, max(1, W * 0.03)))
+    return frames
+
+
+def _draw_skull(dc, dg, cx, cy, r, al, glowc):
+    dg.ellipse((cx - r * 1.7, cy - r * 1.6, cx + r * 1.7, cy + r * 1.9), fill=glowc + (int(170 * al),))
+    bone = (232, 236, 222, int(255 * al))
+    dc.ellipse((cx - r, cy - r, cx + r, cy + r * 0.85), fill=bone)
+    dc.rounded_rectangle((cx - r * 0.55, cy + r * 0.45, cx + r * 0.55, cy + r * 1.15), radius=max(1, r * 0.2), fill=bone)
+    e = r * 0.33
+    for sx in (-1, 1):
+        ex = cx + sx * r * 0.4
+        dc.ellipse((ex - e, cy - e * 0.6, ex + e, cy + e * 1.2), fill=(25, 0, 35, int(255 * al)))
+        dc.ellipse((ex - e * 0.35, cy + e * 0.05, ex + e * 0.35, cy + e * 0.6), fill=glowc + (int(255 * al),))
+    dc.polygon([(cx, cy + r * 0.4), (cx - r * 0.12, cy + r * 0.62), (cx + r * 0.12, cy + r * 0.62)],
+               fill=(25, 0, 35, int(255 * al)))
+    for i in (-1, 0, 1):
+        x = cx + i * r * 0.2
+        dc.line([(x, cy + r * 0.8), (x, cy + r * 1.1)], fill=(60, 50, 70, int(255 * al)), width=1)
+
+
+def make_skull_frames(size, seed):
+    """Đầu lâu ma quái li ti bay lên, mắt xanh ma trơi."""
+    rnd = random.Random(seed + 4000)
+    W, H = size, int(size * 1.4)
+    sk = []
+    for _ in range(rnd.randint(2, 3)):
+        sk.append((W / 2.0 + rnd.uniform(-0.25, 0.25) * W, rnd.uniform(0.07, 0.11) * W, rnd.uniform(0, 6.3),
+                   rnd.choice(((90, 255, 160), (180, 100, 255), (120, 230, 255)))))
+    frames = []
+    for f in range(10):
+        core, glow, dc, dg = _fx_new(W, H)
+        t = f / 9.0
+        al = min(1.0, (f + 1) / 2.0) * (1 - max(0, t - 0.55) / 0.45)
+        for x0, r, ph, col in sk:
+            cy = H * 0.85 - t * H * 0.7
+            cx = x0 + math.sin(ph + f * 0.8) * W * 0.06
+            for k in range(1, 4):                              # vệt khói ma phía dưới
+                ty = cy + r * (1.2 + k * 0.9)
+                tx = x0 + math.sin(ph + (f - k * 0.6) * 0.8) * W * 0.06
+                q = r * (0.7 - k * 0.15)
+                dg.ellipse((tx - q, ty - q, tx + q, ty + q), fill=col + (int(110 * al / k),))
+            _draw_skull(dc, dg, cx, cy, r * (0.8 + 0.2 * min(1, f / 2.0)), max(0, al), col)
+        frames.append(_fx_merge(core, glow, max(1, W * 0.025)))
+    return frames
+
+
+def make_darkflame_frames(size, seed):
+    """Hắc diễm: lưỡi lửa đen viền tím đỏ bùng lên."""
+    rnd = random.Random(seed + 5000)
+    W, H = size, int(size * 1.3)
+    tongues = [(W / 2.0 + rnd.uniform(-0.22, 0.22) * W, rnd.uniform(0.35, 0.65) * H, rnd.uniform(0.06, 0.1) * W,
+                rnd.uniform(0, 6)) for _ in range(rnd.randint(4, 6))]
+    frames = []
+    for f in range(8):
+        core, glow, dc, dg = _fx_new(W, H)
+        fade = (0.6, 1, 1, 1, 0.85, 0.6, 0.35, 0.15)[f]
+        grow = min(1.0, (f + 1) / 3.0)
+        base = H * 0.85
+        for x0, L, w, ph in tongues:
+            L2 = L * grow * (0.85 + 0.15 * math.sin(ph + f * 1.7))
+            sway = math.sin(ph + f * 1.3) * w * 0.8
+            tip = (x0 + sway, base - L2)
+            pts = [(x0 - w, base)]
+            for k in range(1, 6):
+                t = k / 6.0
+                pts.append((x0 - w * (1 - t) + sway * t + math.sin(ph + k + f) * w * 0.2, base - L2 * t))
+            pts.append(tip)
+            for k in range(5, 0, -1):
+                t = k / 6.0
+                pts.append((x0 + w * (1 - t) + sway * t + math.sin(ph - k + f) * w * 0.2, base - L2 * t))
+            pts.append((x0 + w, base))
+            dg.polygon(pts, fill=(150, 40, 255, int(210 * fade)))
+            dc.polygon(pts, fill=(25, 5, 35, int(235 * fade)), outline=(255, 60, 110, int(255 * fade)))
+        dg.ellipse((W * 0.2, base - W * 0.06, W * 0.8, base + W * 0.06), fill=(255, 40, 90, int(200 * fade)))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.04)))
+    return frames
+
+
+def make_ice_frames(size, seed):
+    """Băng tinh: mảnh băng sắc bắn ra, tuyết lấp lánh."""
+    rnd = random.Random(seed + 6000)
+    W = H = size
+    c = (W / 2.0, H / 2.0)
+    shards = [(rnd.uniform(0, 2 * math.pi), rnd.uniform(0.18, 0.3) * W, rnd.uniform(0.03, 0.05) * W)
+              for _ in range(rnd.randint(6, 9))]
+    frames = []
+    for f in range(7):
+        core, glow, dc, dg = _fx_new(W, H)
+        fade = (1, 1, 1, 0.8, 0.6, 0.35, 0.15)[f]
+        d0 = W * (0.05 + 0.06 * f)
+        for a, L, w in shards:
+            ca, sa = math.cos(a), math.sin(a)
+            p0 = (c[0] + ca * d0, c[1] + sa * d0)
+            p1 = (c[0] + ca * (d0 + L), c[1] + sa * (d0 + L))
+            m = ((p0[0] + p1[0]) / 2 - sa * w, (p0[1] + p1[1]) / 2 + ca * w)
+            n = ((p0[0] + p1[0]) / 2 + sa * w, (p0[1] + p1[1]) / 2 - ca * w)
+            dg.polygon([p0, m, p1, n], fill=(80, 200, 255, int(180 * fade)))
+            dc.polygon([p0, m, p1, n], fill=(200, 240, 255, int(235 * fade)), outline=(255, 255, 255, int(255 * fade)))
+        if f < 3:
+            r = W * 0.1
+            dg.ellipse((c[0] - r * 2, c[1] - r * 2, c[0] + r * 2, c[1] + r * 2), fill=(120, 220, 255, 200))
+        for _ in range(6):
+            x, y = c[0] + rnd.uniform(-0.45, 0.45) * W, c[1] + rnd.uniform(-0.45, 0.45) * H
+            q = W * 0.018
+            dc.line([(x - q, y), (x + q, y)], fill=(255, 255, 255, int(255 * fade)))
+            dc.line([(x, y - q), (x, y + q)], fill=(255, 255, 255, int(255 * fade)))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.025)))
+    return frames
+
+
+def _star(cx, cy, r, rot=0.0):
+    pts = []
+    for i in range(8):
+        a = rot + i * math.pi / 4
+        rr = r if i % 2 == 0 else r * 0.28
+        pts.append((cx + math.cos(a) * rr, cy + math.sin(a) * rr))
+    return pts
+
+
+def make_star_frames(size, seed):
+    """Tinh tú lấp lánh: sao bốn cánh nhấp nháy."""
+    rnd = random.Random(seed + 7000)
+    W = H = size
+    stars = [(W / 2.0 + rnd.uniform(-0.38, 0.38) * W, H / 2.0 + rnd.uniform(-0.38, 0.38) * H, rnd.uniform(0.07, 0.13) * W,
+              rnd.uniform(0, 3), rnd.choice(((255, 230, 120), (255, 180, 230), (180, 220, 255), (255, 255, 255))))
+             for _ in range(rnd.randint(7, 10))]
+    frames = []
+    for f in range(8):
+        core, glow, dc, dg = _fx_new(W, H)
+        for x, y, r, ph, col in stars:
+            k = 0.35 + 0.65 * abs(math.sin(ph + f * 0.9))      # luôn sáng, nhấp nháy so le
+            al = k * (1 - f / 9.0) * min(1.0, (f + 1) / 2.0)
+            rr = r * (0.5 + 0.5 * k)
+            dg.ellipse((x - rr, y - rr, x + rr, y + rr), fill=col + (int(150 * al),))
+            dc.polygon(_star(x, y, rr, math.pi / 4 * (f % 2)), fill=col + (int(255 * al),))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.03)))
+    return frames
+
+
+def make_shock_frames(size, seed):
+    """Sóng xung kích: vòng sóng kép lan ra."""
+    rnd = random.Random(seed + 8000)
+    W = H = size
+    c = (W / 2.0, H / 2.0)
+    col = rnd.choice(((90, 220, 255), (200, 120, 255), (255, 120, 90)))
+    frames = []
+    for f in range(7):
+        core, glow, dc, dg = _fx_new(W, H)
+        fade = 1 - f / 7.0
+        for k, lag in ((1.0, 0), (0.7, 1.5)):
+            r = W * 0.48 * max(0.05, (f - lag) / 6.0)
+            if r <= 2:
+                continue
+            dg.ellipse((c[0] - r, c[1] - r * 0.75, c[0] + r, c[1] + r * 0.75), outline=col + (int(255 * fade),),
+                       width=max(3, int(W * 0.08 * k)))
+            dc.ellipse((c[0] - r, c[1] - r * 0.75, c[0] + r, c[1] + r * 0.75), outline=col + (int(255 * fade),),
+                       width=max(2, int(W * 0.03 * k)))
+            dc.ellipse((c[0] - r, c[1] - r * 0.75, c[0] + r, c[1] + r * 0.75), outline=(255, 255, 255, int(255 * fade)),
+                       width=max(1, int(W * 0.012)))
+        if f < 2:
+            q = W * 0.08
+            dg.ellipse((c[0] - q * 2, c[1] - q * 1.5, c[0] + q * 2, c[1] + q * 1.5), fill=col + (230,))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.03)))
+    return frames
+
+
+def _hammer_img(L):
+    """Búa chiến khắc rune (búa sấm chung, không theo thiết kế của hãng nào)."""
+    from PIL import ImageDraw
+    im = Image.new("RGBA", (int(L), int(L)), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    cx = L / 2.0
+    hw, hh = L * 0.44, L * 0.24
+    d.rectangle((cx - L * 0.045, L * 0.24, cx + L * 0.045, L * 0.95), fill=(95, 60, 40, 255), outline=(40, 25, 15, 255))
+    for i in range(6):                                        # quấn da tay cầm
+        y = L * (0.45 + i * 0.07)
+        d.line([(cx - L * 0.045, y), (cx + L * 0.045, y + L * 0.03)], fill=(60, 35, 20, 255), width=max(1, int(L * 0.012)))
+    d.ellipse((cx - L * 0.06, L * 0.91, cx + L * 0.06, L * 0.99), fill=(150, 155, 165, 255), outline=(60, 60, 70, 255))
+    d.rounded_rectangle((cx - hw / 2, L * 0.04, cx + hw / 2, L * 0.04 + hh), radius=L * 0.03,
+                        fill=(165, 172, 185, 255), outline=(55, 58, 70, 255), width=max(1, int(L * 0.015)))
+    d.rectangle((cx - hw / 2, L * 0.04 + hh * 0.42, cx + hw / 2, L * 0.04 + hh * 0.58), fill=(120, 126, 140, 255))
+    for i in (-1, 1):                                         # rune phát sáng
+        x = cx + i * hw * 0.22
+        d.line([(x, L * 0.08), (x - L * 0.02, L * 0.14), (x + L * 0.02, L * 0.18), (x, L * 0.24)],
+               fill=(120, 200, 255, 255), width=max(1, int(L * 0.012)))
+    return im
+
+
+def make_hammer_frames(size, seed):
+    """Búa sấm lao tới đập vỡ chữ: búa bay vào, nện xuống, nứt toác, mảnh vỡ văng ra."""
+    rnd = random.Random(seed + 9000)
+    W, H = int(size * 1.5), int(size * 1.3)
+    hit = (W / 2.0, H * 0.65)
+    side = rnd.choice((-1, 1))
+    hl = size * 0.55
+    hammer = _hammer_img(hl).rotate(180)                     # đầu búa xuống dưới để nện vào chữ
+    head_off = hl * 0.34                                       # tâm đầu búa cách tâm ảnh
+    cracks = []
+    for _ in range(rnd.randint(5, 7)):
+        a = rnd.uniform(0, 2 * math.pi)
+        cracks.append(_jagged(hit, (hit[0] + math.cos(a) * size * rnd.uniform(0.25, 0.45),
+                                    hit[1] + math.sin(a) * size * rnd.uniform(0.15, 0.3)), 5, size * 0.03, rnd))
+    debris = [(rnd.uniform(0, 2 * math.pi), rnd.uniform(4, 9), rnd.uniform(0.015, 0.035) * size) for _ in range(10)]
+    frames = []
+    # vị trí TÂM ĐẦU BÚA theo từng khung; góc âm/dương để cán nghiêng về phía búa bay tới
+    hy = hit[1] - hl * 0.1
+    path = [(hit[0] + side * W * 0.40, hy - H * 0.55, -side * 70), (hit[0] + side * W * 0.24, hy - H * 0.33, -side * 48),
+            (hit[0] + side * W * 0.09, hy - H * 0.12, -side * 20), (hit[0], hy, -side * 4)]
+    for f in range(10):
+        core, glow, dc, dg = _fx_new(W, H)
+        if f >= 3:                                            # va chạm
+            k = f - 3
+            fade = max(0, 1 - k / 6.5)
+            if k <= 1:
+                r = size * (0.18 + 0.1 * k)
+                dg.ellipse((hit[0] - r * 1.5, hit[1] - r, hit[0] + r * 1.5, hit[1] + r), fill=(170, 210, 255, 230))
+                dc.ellipse((hit[0] - r * 0.6, hit[1] - r * 0.4, hit[0] + r * 0.6, hit[1] + r * 0.4), fill=(255, 255, 255, 255))
+            for cr in cracks:
+                dc.line(cr, fill=(255, 255, 255, int(255 * fade)), width=max(1, int(size * 0.012)))
+                dg.line(cr, fill=(120, 190, 255, int(200 * fade)), width=max(2, int(size * 0.035)))
+            for a, sp, q in debris:
+                x = hit[0] + math.cos(a) * sp * k * size / 60.0
+                y = hit[1] + math.sin(a) * sp * k * size / 60.0 + 0.6 * k * k * size / 60.0
+                dc.polygon([(x - q, y), (x, y - q), (x + q * 0.8, y + q * 0.6)], fill=(150, 160, 180, int(255 * fade)))
+            if k <= 2:
+                for _ in range(4):                            # tia sét nhỏ quanh búa
+                    a = rnd.uniform(0, 2 * math.pi)
+                    p1 = (hit[0] + math.cos(a) * size * 0.35, hit[1] + math.sin(a) * size * 0.25)
+                    dc.line(_jagged(hit, p1, 4, size * 0.03, rnd), fill=(210, 230, 255, 255), width=1)
+        if f <= 5:                                            # búa bay vào rồi nằm tại chỗ va chạm
+            px, py, ang = path[min(f, 3)]
+            if f > 3:
+                py -= (f - 3) * size * 0.05                    # nảy nhẹ lên sau cú nện
+            al = 1.0 if f <= 4 else 0.5
+            hm = hammer.rotate(ang, resample=Image.BICUBIC, expand=True)
+            if al < 1:
+                hm.putalpha(hm.split()[3].point(lambda v: int(v * al)))
+            if 0 < f <= 3:                                    # vệt bay
+                qx, qy, _ = path[f - 1]
+                dg.line([(qx, qy), (px, py)], fill=(150, 200, 255, 170), width=max(3, int(hl * 0.35)))
+            th = math.radians(ang)
+            ox, oy = head_off * math.sin(th), head_off * math.cos(th)
+            x0 = int(px - hm.width / 2.0 - ox)
+            y0 = int(py - hm.height / 2.0 - oy)
+            if x0 + hm.width > 0 and y0 + hm.height > 0:
+                tmp = Image.new("RGBA", core.size, (0, 0, 0, 0))
+                tmp.paste(hm, (x0, y0), hm)
+                core.alpha_composite(tmp)
+        frames.append(_fx_merge(core, glow, max(1, size * 0.03)))
+    return frames
+
+
+def make_shatter_frames(size, seed):
+    """Vỡ vụn: nứt rồi vỡ tung thành mảnh kính."""
+    rnd = random.Random(seed + 10000)
+    W = H = size
+    c = (W / 2.0, H / 2.0)
+    n = rnd.randint(7, 10)
+    angs = sorted(rnd.uniform(0, 2 * math.pi) for _ in range(n))
+    R = W * 0.22
+    frames = []
+    for f in range(8):
+        core, glow, dc, dg = _fx_new(W, H)
+        fade = 1 - max(0, f - 2) / 6.0
+        for i in range(n):
+            a0, a1 = angs[i], angs[(i + 1) % n] + (2 * math.pi if i == n - 1 else 0)
+            am = (a0 + a1) / 2
+            push = 0 if f < 2 else (f - 1) * W * 0.05
+            dx, dy = math.cos(am) * push, math.sin(am) * push + (0 if f < 2 else (f - 1) ** 2 * W * 0.008)
+            tri = [(c[0] + dx, c[1] + dy), (c[0] + math.cos(a0) * R + dx, c[1] + math.sin(a0) * R + dy),
+                   (c[0] + math.cos(a1) * R + dx, c[1] + math.sin(a1) * R + dy)]
+            if f >= 2:
+                dc.polygon(tri, fill=(200, 215, 235, int(120 * fade)), outline=(255, 255, 255, int(255 * fade)))
+            else:
+                dc.line([tri[0], tri[1]], fill=(255, 255, 255, 255), width=max(1, int(W * 0.012)))
+                dg.line([tri[0], tri[1]], fill=(150, 200, 255, 200), width=max(2, int(W * 0.03)))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.02)))
+    return frames
+
+
+def make_blackhole_frames(size, seed):
+    """Hố đen nuốt chữ: xoáy tím cam, hạt sáng bị hút vào tâm."""
+    rnd = random.Random(seed + 11000)
+    W = H = size
+    c = (W / 2.0, H / 2.0)
+    parts = [(rnd.uniform(0, 2 * math.pi), rnd.uniform(0.25, 0.48) * W) for _ in range(14)]
+    frames = []
+    for f in range(9):
+        core, glow, dc, dg = _fx_new(W, H)
+        t = f / 8.0
+        size_k = math.sin(t * math.pi)                       # nở ra rồi sụp lại
+        R = W * 0.3 * size_k
+        if R > 2:
+            for k in range(3):
+                rr = R * (1 - k * 0.22)
+                st = (f * 50 + k * 70) % 360
+                dg.arc((c[0] - rr, c[1] - rr * 0.55, c[0] + rr, c[1] + rr * 0.55), st, st + 250,
+                       fill=(255, 130, 40, 220) if k == 0 else (170, 70, 255, 220), width=max(2, int(W * 0.05)))
+                dc.arc((c[0] - rr, c[1] - rr * 0.55, c[0] + rr, c[1] + rr * 0.55), st, st + 200,
+                       fill=(255, 220, 160, 230) if k == 0 else (220, 180, 255, 230), width=max(1, int(W * 0.012)))
+            hr = R * 0.38
+            dc.ellipse((c[0] - hr, c[1] - hr, c[0] + hr, c[1] + hr), fill=(5, 0, 10, 255), outline=(255, 160, 80, 255))
+        for a, d in parts:
+            aa = a + t * 4
+            dd = d * (1 - t)
+            x, y = c[0] + math.cos(aa) * dd, c[1] + math.sin(aa) * dd * 0.6
+            q = max(1, W * 0.012)
+            dc.ellipse((x - q, y - q, x + q, y + q), fill=(255, 230, 200, int(255 * (1 - t * 0.7))))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.03)))
+    return frames
+
+
+def make_explode_frames(size, seed):
+    """Nổ tung: cầu lửa, khói, tia lửa."""
+    rnd = random.Random(seed + 12000)
+    W = H = size
+    c = (W / 2.0, H / 2.0)
+    puffs = [(rnd.uniform(0, 2 * math.pi), rnd.uniform(0.05, 0.22) * W, rnd.uniform(0.09, 0.16) * W) for _ in range(7)]
+    sparks = [(rnd.uniform(0, 2 * math.pi), rnd.uniform(0.3, 0.5) * W) for _ in range(10)]
+    frames = []
+    for f in range(8):
+        core, glow, dc, dg = _fx_new(W, H)
+        t = f / 7.0
+        fade = 1 - max(0, t - 0.3) / 0.7
+        for a, d, r in puffs:
+            dd = d * (0.4 + t)
+            x, y = c[0] + math.cos(a) * dd, c[1] + math.sin(a) * dd - t * W * 0.08
+            rr = r * (0.6 + t * 0.8)
+            colr = (255, int(200 - 150 * t), int(60 - 50 * t)) if t < 0.5 else (90, 80, 85)
+            dg.ellipse((x - rr * 1.2, y - rr * 1.2, x + rr * 1.2, y + rr * 1.2), fill=(255, 120, 30, int(180 * fade)))
+            dc.ellipse((x - rr, y - rr, x + rr, y + rr), fill=colr + (int(235 * fade),))
+        if f < 3:
+            r = W * (0.1 + f * 0.05)
+            dc.ellipse((c[0] - r, c[1] - r, c[0] + r, c[1] + r), fill=(255, 255, 220, 255))
+        for a, L in sparks:
+            d0, d1 = L * t * 0.7, L * min(1, t + 0.15)
+            dc.line([(c[0] + math.cos(a) * d0, c[1] + math.sin(a) * d0), (c[0] + math.cos(a) * d1, c[1] + math.sin(a) * d1)],
+                    fill=(255, 230, 140, int(255 * fade)), width=max(1, int(W * 0.012)))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.035)))
+    return frames
+
+
+# (khoá, tên hiển thị, hàm tạo, điểm neo trong khung: tỉ lệ x, y)
+FX_EFFECTS = [
+    ("bolt", "Lôi điện tỏa", make_bolt_frames, (0.5, 0.5)),
+    ("thunder", "Lôi đình giáng xuống", make_thunder_frames, (0.5, 0.9)),
+    ("holy", "Thần quang vàng", make_holy_frames, (0.5, 0.5)),
+    ("skull", "Đầu lâu ma quái bay lên", make_skull_frames, (0.5, 0.85)),
+    ("darkflame", "Hắc diễm bùng cháy", make_darkflame_frames, (0.5, 0.85)),
+    ("ice", "Băng tinh nổ", make_ice_frames, (0.5, 0.5)),
+    ("star", "Tinh tú lấp lánh", make_star_frames, (0.5, 0.5)),
+    ("shock", "Sóng xung kích", make_shock_frames, (0.5, 0.5)),
+    ("slash", "Loạn đao chém", make_slash_frames, (0.5, 0.5)),
+    ("hammer", "Búa sấm đập vỡ chữ", make_hammer_frames, (0.5, 0.65)),
+    ("shatter", "Vỡ vụn", make_shatter_frames, (0.5, 0.5)),
+    ("blackhole", "Hố đen nuốt chữ", make_blackhole_frames, (0.5, 0.5)),
+    ("explode", "Nổ tung", make_explode_frames, (0.5, 0.5)),
+]
+FX_BY_KEY = {e[0]: e for e in FX_EFFECTS}
+FX_CHOICES = [("random", "★ Ngẫu nhiên (đổi mỗi lần)")] + [(e[0], e[1]) for e in FX_EFFECTS]
+
+
 class FxPlayer:
     """Cửa sổ hiệu ứng trong suốt, chuột bấm xuyên qua, không bao giờ lấy focus của ô đang gõ."""
     VARIANTS = 5
 
-    def __init__(self, app, maker):
-        self.app, self.maker = app, maker
-        self.size = None
-        self.variants = []
+    def __init__(self, app, default_key):
+        self.app = app
+        self.default_key = default_key
+        self.cache = {}                          # (mẫu, cỡ) -> danh sách biến thể
         self.seq, self.i, self.pos, self.job = [], 0, (0, 0), None
+        self.last_key = None
         self.played = 0
         self.lw = None
         if IS_WIN:
@@ -2297,19 +2778,25 @@ class FxPlayer:
                 log_error()
                 self.lw = None
 
-    def build(self, size):
-        self.size = size
-        self.variants = []
-        for seed in range(self.VARIANTS):
-            fr = []
-            for im in self.maker(size, seed):
-                fr.append((im.convert("RGBa").tobytes("raw", "BGRa"), im.width, im.height))
-            self.variants.append(fr)
+    def variants(self, key, size):
+        k = (key, size)
+        if k not in self.cache:
+            maker = FX_BY_KEY[key][2]
+            vs = []
+            for seed in range(self.VARIANTS):
+                vs.append([(im.convert("RGBa").tobytes("raw", "BGRa"), im.width, im.height) for im in maker(size, seed)])
+            self.cache[k] = vs
+            while len(self.cache) > 8:
+                self.cache.pop(next(iter(self.cache)))
+        return self.cache[k]
 
-    def play(self, x, y, size):
-        if size != self.size:
-            self.build(size)
-        self.seq = random.choice(self.variants)
+    def play(self, x, y, size, key=None):
+        key = key or self.default_key
+        if key == "random" or key not in FX_BY_KEY:
+            key = random.choice([e[0] for e in FX_EFFECTS])
+        self.last_key = key
+        self.seq = random.choice(self.variants(key, size))
+        self.anchor = FX_BY_KEY[key][3]
         self.i = 0
         self.pos = (int(x), int(y))
         self.played += 1
@@ -2325,7 +2812,8 @@ class FxPlayer:
         data, w, h = self.seq[self.i]
         if self.lw:
             try:
-                self.lw.update(self.pos[0] - w // 2, self.pos[1] - h // 2, w, h, data)
+                ax, ay = self.anchor
+                self.lw.update(self.pos[0] - int(w * ax), self.pos[1] - int(h * ay), w, h, data)
             except Exception:
                 log_error()
         self.i += 1
@@ -2335,8 +2823,8 @@ class FxPlayer:
 class KeyFx:
     def __init__(self, app):
         self.app = app
-        self.bolt = FxPlayer(app, make_bolt_frames)
-        self.slash = FxPlayer(app, make_slash_frames)
+        self.bolt = FxPlayer(app, "bolt")         # kênh hiệu ứng khi gõ
+        self.slash = FxPlayer(app, "slash")       # kênh hiệu ứng khi xoá
         self.t_last = {"T": 0.0, "D": 0.0}
         self.hist = {"T": [], "D": []}
         self.cool = {"T": 0.0, "D": 0.0}
@@ -2359,7 +2847,10 @@ class KeyFx:
         self.last_pos = pos
         if t - self.t_last[kind] >= (0.07 if kind == "T" else 0.09):     # gõ nhanh / giữ phím: gộp bớt
             self.t_last[kind] = t
-            (self.bolt if kind == "T" else self.slash).play(pos[0], pos[1], self.size())
+            if kind == "T":
+                self.bolt.play(pos[0], pos[1], self.size(), s.get("key_fx_type", "bolt"))
+            else:
+                self.slash.play(pos[0], pos[1], self.size(), s.get("key_fx_del", "slash"))
         if not s.get("key_fx_pet", True) or self.app.hidden:
             return
         h = self.hist[kind]
@@ -4280,23 +4771,44 @@ class Manager:
         def kfx_toggle():
             self.app.set_setting("key_fx", self.kfx_v.get())
             self.app.gmouse.set_keyboard(self.kfx_v.get())
-        ttk.Checkbutton(kf, text="Lôi điện khi gõ ký tự, loạn đao chém khi xoá", variable=self.kfx_v,
+        ttk.Checkbutton(kf, text="Bật hiệu ứng khi gõ ký tự và khi xoá", variable=self.kfx_v,
                         command=kfx_toggle).grid(row=1, column=0, columnspan=2, sticky="w")
         ttk.Checkbutton(kf, text="Nhân vật phản ứng khi gõ / xoá liên tục (gán chiêu ở tab Điều khiển)",
                         variable=self.kpet_v, command=lambda: self.app.set_setting("key_fx_pet", self.kpet_v.get())
-                        ).grid(row=2, column=0, columnspan=3, sticky="w")
+                        ).grid(row=2, column=0, columnspan=2, sticky="w")
         ttk.Label(kf, text="Cỡ hiệu ứng:").grid(row=3, column=0, sticky="w", pady=4)
         self.kfs_v = tk.DoubleVar(value=s.get("key_fx_size", 1.0))
-        ksc = ttk.Scale(kf, from_=0.5, to=2.0, variable=self.kfs_v, length=180)
-        ksc.grid(row=3, column=1, sticky="w")
+        ksc = ttk.Scale(kf, from_=0.5, to=2.0, variable=self.kfs_v, length=200)
+        ksc.grid(row=3, column=1, sticky="w", padx=6)
         ksc.bind("<ButtonRelease-1>", lambda e: self.app.set_setting("key_fx_size", round(self.kfs_v.get(), 2)))
-        ttk.Button(kf, text="⚡ Thử gõ", style="Small.TButton",
-                   command=lambda: self._kfx_demo("T")).grid(row=3, column=2, padx=6)
-        ttk.Button(kf, text="✕ Thử xoá", style="Small.TButton",
-                   command=lambda: self._kfx_demo("D")).grid(row=3, column=3)
-        ttk.Label(kf, text="App chỉ nhận biết 'vừa gõ' hay 'vừa xoá', không ghi lại phím nào. Tự tắt ở ô mật khẩu và khi trình "
-                           "chiếu. Tắt mục này là gỡ hẳn chức năng bắt phím.", style="Muted.TLabel", wraplength=760,
-                  justify="left").grid(row=4, column=0, columnspan=4, sticky="w")
+        fxl = [b for _, b in FX_CHOICES]
+        lab2k = {b: k for k, b in FX_CHOICES}
+        ttk.Label(kf, text="Khi gõ ký tự:").grid(row=4, column=0, sticky="w", pady=3)
+        self.fxt = ttk.Combobox(kf, state="readonly", width=30, values=fxl)
+        self.fxt.set(dict(FX_CHOICES).get(s.get("key_fx_type", "bolt")))
+        self.fxt.grid(row=4, column=1, sticky="w", padx=6)
+        ttk.Label(kf, text="Khi xoá:").grid(row=5, column=0, sticky="w", pady=3)
+        self.fxd = ttk.Combobox(kf, state="readonly", width=30, values=fxl)
+        self.fxd.set(dict(FX_CHOICES).get(s.get("key_fx_del", "slash")))
+        self.fxd.grid(row=5, column=1, sticky="w", padx=6)
+        self.fxt.bind("<<ComboboxSelected>>", lambda e: (self.app.set_setting("key_fx_type", lab2k[self.fxt.get()]),
+                                                         self.fx_preview_set(lab2k[self.fxt.get()])))
+        self.fxd.bind("<<ComboboxSelected>>", lambda e: (self.app.set_setting("key_fx_del", lab2k[self.fxd.get()]),
+                                                         self.fx_preview_set(lab2k[self.fxd.get()])))
+        tb = ttk.Frame(kf)
+        tb.grid(row=6, column=0, columnspan=2, sticky="w", pady=4)
+        ttk.Button(tb, text="⚡ Thử gõ trên màn hình", style="Small.TButton",
+                   command=lambda: self._kfx_demo("T")).pack(side="left")
+        ttk.Button(tb, text="✕ Thử xoá trên màn hình", style="Small.TButton",
+                   command=lambda: self._kfx_demo("D")).pack(side="left", padx=6)
+        ttk.Label(kf, text="App chỉ nhận biết 'vừa gõ' hay 'vừa xoá', không ghi lại phím nào. Tự tắt ở ô mật khẩu và khi "
+                           "trình chiếu. Tắt mục này là gỡ hẳn chức năng bắt phím.", style="Muted.TLabel", wraplength=470,
+                  justify="left").grid(row=7, column=0, columnspan=2, sticky="w")
+        self.fxprev = tk.Canvas(kf, width=260, height=220, bg="#120d1c", highlightthickness=1, highlightbackground=C_ACC2)
+        self.fxprev.grid(row=1, column=2, rowspan=7, padx=(18, 0), sticky="n")
+        self._fxp = {"key": s.get("key_fx_type", "bolt"), "frames": [], "i": 0, "n": 0}
+        self.fx_preview_set(self._fxp["key"])
+        self.fx_preview_loop()
 
         # ── cập nhật ──
         uf = ttk.Frame(f)
@@ -4320,11 +4832,43 @@ class Manager:
         self.ustat.grid(row=3, column=0, columnspan=4, sticky="w")
         self.app.updater.on_status = lambda t: self.alive() and self.ustat.config(text=t)
 
+    def fx_preview_set(self, key):
+        self._fxp.update(key=key, frames=[], i=0)
+
+    def fx_preview_loop(self):
+        """Ô xem trước: phát lặp mẫu đang chọn trên nền tối, có dòng chữ giả làm chỗ gõ."""
+        if not self.alive():
+            return
+        try:
+            p = self._fxp
+            if not p["frames"] or p["i"] >= len(p["frames"]) + 6:
+                key = p["key"]
+                if key == "random" or key not in FX_BY_KEY:
+                    key = random.choice([e[0] for e in FX_EFFECTS])
+                e = FX_BY_KEY[key]
+                frames = e[2](150, random.randint(0, 99))
+                p.update(frames=frames, i=0, anchor=e[3], name=e[1])
+            cv = self.fxprev
+            cv.delete("all")
+            cv.create_text(130, 150, text="Nhắc việc|", fill="#cfc6e6", font=(FONT, 13))
+            cv.create_text(130, 14, text=p.get("name", ""), fill=C_GOLD, font=(FONT, 9, "bold"))
+            if p["i"] < len(p["frames"]):
+                im = p["frames"][p["i"]]
+                ax, ay = p["anchor"]
+                self._fxp_img = ImageTk.PhotoImage(im)
+                cv.create_image(178 - im.width * ax, 150 - im.height * ay, image=self._fxp_img, anchor="nw")
+            p["i"] += 1
+        except Exception:
+            log_error()
+        self.win.after(45, self.fx_preview_loop)
+
     def _kfx_demo(self, kind):
         x, y = self.win.winfo_pointerxy()
+        s = self.app.store.s
         player = self.app.keyfx.bolt if kind == "T" else self.app.keyfx.slash
+        key = s.get("key_fx_type", "bolt") if kind == "T" else s.get("key_fx_del", "slash")
         for i in range(4 if kind == "T" else 2):
-            self.win.after(i * 160, lambda i=i: player.play(x - 60 + i * 40, y - 80, self.app.keyfx.size()))
+            self.win.after(i * 220, lambda i=i: player.play(x - 60 + i * 40, y - 80, self.app.keyfx.size(), key))
 
     def backup(self):
         p = filedialog.asksaveasfilename(parent=self.win, defaultextension=".json",

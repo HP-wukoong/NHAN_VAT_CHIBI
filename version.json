@@ -1,10 +1,9 @@
 {
-  "version": "2.3",
+  "version": "2.4",
   "date": "2026-11-25",
   "notes": [
-    "Hiệu ứng gõ phím ở mọi phần mềm: lôi điện khi gõ, loạn đao chém khi xoá",
-    "Nhân vật nạp năng lượng khi gõ liên tục, lao tới chém khi xoá liên tục",
-    "Không ghi lại phím nào; tự tắt ở ô mật khẩu và khi trình chiếu",
-    "Tab Cài đặt cuộn được"
+    "Bay tới chỗ bấm bằng động tác lao vút mới (hl_hover), nhanh và gọn hơn",
+    "13 mẫu hiệu ứng gõ / xoá để chọn: Lôi đình giáng xuống, Thần quang vàng, Đầu lâu ma quái, Búa sấm đập vỡ chữ, Hắc diễm, Băng tinh, Tinh tú, Sóng xung kích, Vỡ vụn, Hố đen, Nổ tung...",
+    "Chọn riêng mẫu khi gõ và khi xoá, hoặc Ngẫu nhiên; ô xem trước trong Cài đặt"
   ]
 }

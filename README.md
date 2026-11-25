@@ -24,7 +24,7 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 | Môi trường | Đi và đứng trên mép cửa sổ đang mở. Thấy cửa sổ hay biểu tượng thư mục/file cao hơn phía trước thì nhảy lên. Bước hụt mép thì rơi |
 | Chuột trên nhân vật | Trái/phải × (1 lần, 2 lần, liên tục, giữ), lăn lên, lăn xuống, nhấn con lăn. Mỗi thao tác gán 1 chiêu và/hoặc 1 lệnh. Kéo để túm, thả ra để ném |
 | Chuột trên màn hình | Bấm 1 lần, 2 lần, chuột phải, lăn, nhấn con lăn tại bất kỳ điểm nào: nhân vật **lao tới ngay khi vừa nhấn chuột** (~0,16 giây, dù xa cỡ nào) rồi tung chiêu. Phím **Ctrl + Alt + X** gọi nhân vật tới chỗ con trỏ |
-| Hiệu ứng gõ phím | Ở **mọi phần mềm**: gõ ký tự thì **lôi điện** nảy ra tại con trỏ nhập, xoá thì **loạn đao chém**. Gõ liên tục thì nhân vật nạp năng lượng; xoá liên tục thì nhân vật lao tới chỗ xoá. Chỉnh được cỡ, tắt được trong Cài đặt |
+| Hiệu ứng gõ phím | Ở **mọi phần mềm**, chọn riêng mẫu khi gõ và khi xoá (hoặc ngẫu nhiên) trong **13 mẫu**: Lôi điện tỏa, Lôi đình giáng xuống, Thần quang vàng, Đầu lâu ma quái bay lên, Hắc diễm, Băng tinh, Tinh tú, Sóng xung kích, Loạn đao chém, Búa sấm đập vỡ chữ, Vỡ vụn, Hố đen nuốt chữ, Nổ tung. Gõ liên tục thì nhân vật nạp năng lượng; xoá liên tục thì nhân vật lao tới chỗ xoá. Chỉnh được cỡ, tắt được trong Cài đặt |
 | Cập nhật | Tự kiểm tra bản mới trên GitHub khi mở app và mỗi 6 giờ. Có thể chọn tự cài hoặc hỏi trước. **F5** trong bảng quản lý để cập nhật ngay. Cập nhật từ file `.zip` cho máy không mạng. Quay về bản trước |
 | Sự kiện | Gán chiêu khi báo nhắc, Xong, Hoãn, Bỏ qua, nghỉ mắt, chào buổi sáng, rời máy, quay lại |
 | Tự hoạt động | Bật/tắt từng động tác. Chiêu đã gán cho chuột trên nhân vật thì mặc định chỉ chạy khi bạn bấm |

@@ -52,6 +52,7 @@ def step4():
             break
     check(abs(eng.ax - 700 / z) < 1 and abs(eng.ay - 300 / z) < 1, "bay tới đúng điểm bấm")
     check(pet.env.temp is not None, "giữa không trung có nền tạm để đứng tung chiêu")
+    check(all(p.img.startswith("hl_hover") for p in eng.fly_poses()), "bay tới dùng động tác lao vút hl_hover")
     for _ in range(10):
         eng.tick()
     check(eng.cur == app.store.s["triggers"]["S_L1"]["act"], "đang tung đúng chiêu đã gán")
