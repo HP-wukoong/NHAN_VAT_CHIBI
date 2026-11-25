@@ -24,6 +24,7 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 | Môi trường | Đi và đứng trên mép cửa sổ đang mở. Thấy cửa sổ hay biểu tượng thư mục/file cao hơn phía trước thì nhảy lên. Bước hụt mép thì rơi |
 | Chuột trên nhân vật | Trái/phải × (1 lần, 2 lần, liên tục, giữ), lăn lên, lăn xuống, nhấn con lăn. Mỗi thao tác gán 1 chiêu và/hoặc 1 lệnh. Kéo để túm, thả ra để ném |
 | Chuột trên màn hình | Bấm 1 lần, 2 lần, chuột phải, lăn, nhấn con lăn tại bất kỳ điểm nào: nhân vật **lao tới ngay khi vừa nhấn chuột** (~0,16 giây, dù xa cỡ nào) rồi tung chiêu. Phím **Ctrl + Alt + X** gọi nhân vật tới chỗ con trỏ |
+| Hiệu ứng gõ phím | Ở **mọi phần mềm**: gõ ký tự thì **lôi điện** nảy ra tại con trỏ nhập, xoá thì **loạn đao chém**. Gõ liên tục thì nhân vật nạp năng lượng; xoá liên tục thì nhân vật lao tới chỗ xoá. Chỉnh được cỡ, tắt được trong Cài đặt |
 | Cập nhật | Tự kiểm tra bản mới trên GitHub khi mở app và mỗi 6 giờ. Có thể chọn tự cài hoặc hỏi trước. **F5** trong bảng quản lý để cập nhật ngay. Cập nhật từ file `.zip` cho máy không mạng. Quay về bản trước |
 | Sự kiện | Gán chiêu khi báo nhắc, Xong, Hoãn, Bỏ qua, nghỉ mắt, chào buổi sáng, rời máy, quay lại |
 | Tự hoạt động | Bật/tắt từng động tác. Chiêu đã gán cho chuột trên nhân vật thì mặc định chỉ chạy khi bạn bấm |
@@ -53,6 +54,15 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 | Ctrl + lăn | Đổi kích thước |
 
 Đổi tất cả trong **Bảng quản lý → Điều khiển**. Mở bảng quản lý bằng cách nhấp đúp vào nhân vật.
+
+## Hiệu ứng gõ phím & quyền riêng tư
+
+- App chỉ nhận biết **"vừa gõ ký tự"** hay **"vừa xoá"**. Không ghi lại, không lưu, không gửi đi phím nào (xem hàm `classify_key` trong mã nguồn).
+- Tắt trong **Cài đặt → Hiệu ứng gõ phím** là app gỡ hẳn chức năng bắt phím của Windows.
+- Tự tắt ở ô mật khẩu của phần mềm Windows và khi trình chiếu / toàn màn hình. Ô mật khẩu trên trình duyệt web thì app không nhận biết được.
+- Bỏ qua phím do Unikey/EVKey tự gửi khi bỏ dấu, nên không hiện hiệu ứng chém nhầm.
+- Vị trí hiệu ứng: đúng con trỏ nhập ở phần lớn phần mềm Windows kiểu cũ. Với Chrome, Edge, Zalo (không báo vị trí con trỏ nhập) thì hiệu ứng hiện cạnh con trỏ chuột.
+- Phần mềm diệt virus có thể cảnh báo vì app dùng kỹ thuật bắt phím toàn hệ thống. Mã nguồn công khai ở repo này để kiểm chứng.
 
 ## Cập nhật phiên bản
 
@@ -90,6 +100,7 @@ python test_nhac_viec.py
 python test_chuot_man_hinh.py
 python test_dong_tac.py
 python test_cap_nhat.py
+python test_go_phim.py
 ```
 
 Trên Linux chạy bằng `xvfb-run python3 tests/<tên file>`. Mỗi bộ test chạy trong thư mục tạm, không đụng dữ liệu thật, và in `PASS`/`FAIL` cho từng mục.

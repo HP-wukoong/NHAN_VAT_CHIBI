@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CHIBI NHẮC VIỆC  v2.2
+CHIBI NHẮC VIỆC  v2.3
 Robot chibi nhắc việc chạy trên màn hình Windows 10/11.
 - Đi lại tự do toàn màn hình (hỗ trợ nhiều màn hình), kéo thả, đổi kích thước, đổi nhân vật
 - Nhắc việc: một lần / hằng ngày / T2-T6 / chọn thứ / lặp mỗi N phút, hoãn, báo trước
@@ -67,7 +67,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "2.2"
+APP_VER = "2.3"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -316,6 +316,7 @@ DEFAULT_SETTINGS = {
     "pack": "", "free_master": True, "free": {}, "assigned_no_free": True, "walk_windows": True, "jump_icons": True,
     "auto_jump": True, "climb": True, "smooth": True, "triggers": None, "screen_mode": "desktop",
     "update_mode": "notify", "last_update_check": "", "just_updated": "",
+    "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0,
 }
 
 
@@ -1709,7 +1710,7 @@ class Bubble:
 class LayeredWin:
     """Vẽ ảnh RGBA thẳng lên màn hình bằng UpdateLayeredWindow: giữ nguyên hào quang, viền mờ, bóng."""
 
-    def __init__(self, root):
+    def __init__(self, root, extra_ex=0):
         u32, g32 = ctypes.windll.user32, ctypes.windll.gdi32
         _win_api_setup()
         u32.GetDC.restype = wintypes.HDC
@@ -1730,7 +1731,7 @@ class LayeredWin:
         root.update_idletasks()
         self.hwnd = u32.GetAncestor(root.winfo_id(), 2) or root.winfo_id()
         ex = u32.GetWindowLongW(self.hwnd, -20)
-        u32.SetWindowLongW(self.hwnd, -20, ex | 0x80000 | 0x80)      # WS_EX_LAYERED | WS_EX_TOOLWINDOW
+        u32.SetWindowLongW(self.hwnd, -20, ex | 0x80000 | 0x80 | extra_ex)      # WS_EX_LAYERED | WS_EX_TOOLWINDOW
         self.hdc_screen = u32.GetDC(None)
         self.hdc_mem = g32.CreateCompatibleDC(self.hdc_screen)
 
@@ -1775,6 +1776,8 @@ EVENTS = [
     ("E_REMIND", "Khi báo nhắc việc"), ("E_DONE", "Khi bấm Xong việc"), ("E_SNOOZE", "Khi bấm Hoãn"),
     ("E_SKIP", "Khi bấm Bỏ qua"), ("E_BREAK", "Khi nhắc nghỉ mắt"), ("E_GREET", "Khi chào buổi sáng"),
     ("E_SLEEP", "Khi bạn rời máy / giờ yên lặng (lặp lại)"), ("E_WAKE", "Khi bạn quay lại máy"),
+    ("E_TYPING", "Khi gõ phím liên tục (~25 phím / 8 giây)"),
+    ("E_DELETING", "Khi xoá liên tục (~8 lần / 3 giây) – lao tới chỗ xoá"),
 ]
 SCREEN_TRIGGERS = [
     ("S_L1", "Màn hình – chuột trái 1 lần"), ("S_L2", "Màn hình – chuột trái 2 lần"),
@@ -1801,6 +1804,7 @@ DEFAULT_TRIGGERS = {
     "E_REMIND": {"act": "BaKhi_NoKhi"}, "E_DONE": {"act": "BieuCam_CuoiMaQuai"}, "E_SNOOZE": {"act": "TrangThai_AnVa"},
     "E_SKIP": {"act": "TrangThai_NgoiKhoc"}, "E_BREAK": {"act": "NghiNgoi_Ngoi"}, "E_GREET": {"act": "BieuCam_HoaCuong"},
     "E_SLEEP": {"act": "NghiNgoi_Ngu"}, "E_WAKE": {"act": "BaKhi_NoKhi"},
+    "E_TYPING": {"act": "BaKhi_NapNang"}, "E_DELETING": {"act": "ChienDau_LaoChem"},
     "S_L1": {"act": "ChienDau_DamThep"}, "S_L2": {"act": "ChienDau_KiemKhi"},
     "S_R1": {"act": "ChienDau_LaoChem"}, "S_R2": {"act": "BaKhi_FullCombo"},
     "S_WU": {"act": "ChienDau_DamSongAm"}, "S_WD": {"act": "NghiNgoi_Ngoi"},
@@ -1925,6 +1929,13 @@ class GlobalMouse:
             return
         threading.Thread(target=self._run, daemon=True).start()
 
+    def set_keyboard(self, on):
+        if self.tid:
+            try:
+                ctypes.windll.user32.PostThreadMessageW(self.tid, 0x8001 if on else 0x8002, 0, 0)
+            except Exception:
+                log_error()
+
     def stop(self):
         if self.tid:
             try:
@@ -1962,10 +1973,41 @@ class GlobalMouse:
             hook = u32.SetWindowsHookExW(14, self._proc, k32.GetModuleHandleW(None), 0)
             hot = u32.RegisterHotKey(None, 1, 0x0002 | 0x0001 | 0x4000, ord("X"))   # Ctrl+Alt+X
             self.ok = bool(hook)
+
+            class KBLL(ctypes.Structure):
+                _fields_ = [("vkCode", wintypes.DWORD), ("scanCode", wintypes.DWORD), ("flags", wintypes.DWORD),
+                            ("time", wintypes.DWORD), ("extra", ctypes.c_size_t)]
+
+            def kproc(code, wp, lp):
+                # chỉ phân loại GÕ / XOÁ rồi bỏ vào hàng đợi – không lưu, không chặn phím nào
+                if code == 0 and wp in (0x100, 0x104):
+                    try:
+                        k = ctypes.cast(lp, ctypes.POINTER(KBLL)).contents
+                        kind = classify_key(k.vkCode, bool(k.flags & 0x10),
+                                            bool(u32.GetAsyncKeyState(0x11) & 0x8000),
+                                            bool(k.flags & 0x20) or bool(u32.GetAsyncKeyState(0x12) & 0x8000),
+                                            bool((u32.GetAsyncKeyState(0x5B) | u32.GetAsyncKeyState(0x5C)) & 0x8000))
+                        if kind:
+                            self.q.put(("K", kind))
+                    except Exception:
+                        pass
+                return u32.CallNextHookEx(None, code, wp, lp)
+
+            self._kproc = Proc(kproc)
+            khook = None
+            if self.app.store.s.get("key_fx", True):
+                khook = u32.SetWindowsHookExW(13, self._kproc, k32.GetModuleHandleW(None), 0)
             msg = wintypes.MSG()
             while u32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
                 if msg.message == 0x0312:
                     self.q.put(("HK",))
+                elif msg.message == 0x8001 and not khook:            # bật hiệu ứng gõ phím -> cài hook bàn phím
+                    khook = u32.SetWindowsHookExW(13, self._kproc, k32.GetModuleHandleW(None), 0)
+                elif msg.message == 0x8002 and khook:                # tắt -> gỡ hẳn hook
+                    u32.UnhookWindowsHookEx(khook)
+                    khook = None
+            if khook:
+                u32.UnhookWindowsHookEx(khook)
             if hook:
                 u32.UnhookWindowsHookEx(hook)
             if hot:
@@ -2023,6 +2065,9 @@ class GlobalMouse:
             if self.app.hidden or self.app.fs_hidden:
                 continue
             k = ev[0]
+            if k == "K":
+                self.app.keyfx.on_key(ev[1])
+                continue
             if k == "HK":
                 x, y = self.app.root.winfo_pointerxy()
                 self.fire("S_HK", x, y)
@@ -2064,6 +2109,275 @@ class GlobalMouse:
         if key != "S_HK" and not m.get("act"):
             return
         self.app.pet.engine.fly_and_act(x, y, m.get("act") or "")
+
+
+# ───────────────────────── Hiệu ứng gõ phím: lôi điện khi gõ, loạn đao khi xoá ─────────────────────────
+def classify_key(vk, injected, ctrl, alt, win):
+    """'T' = gõ ký tự, 'D' = xoá, None = bỏ qua. Không lưu lại phím nào."""
+    if injected:
+        return "T" if vk == 0xE7 else None      # phím giả lập (Unikey/EVKey bỏ dấu): chỉ tính ký tự Unicode
+    if vk in (0x08, 0x2E):                      # Backspace, Delete (kể cả Ctrl+Backspace)
+        return "D"
+    if ctrl or alt or win:
+        return None                             # phím tắt Ctrl+C, Alt+Tab... không tính
+    if (vk in (0x20, 0x0D, 0xE2, 0xE5) or 0x30 <= vk <= 0x39 or 0x41 <= vk <= 0x5A or 0x60 <= vk <= 0x6F
+            or 0xBA <= vk <= 0xC0 or 0xDB <= vk <= 0xDF):
+        return "T"
+    return None
+
+
+def caret_info():
+    """(vị trí con trỏ nhập trên màn hình hoặc None, đang ở ô mật khẩu?)"""
+    if not IS_WIN:
+        return None, False
+    try:
+        u32 = ctypes.windll.user32
+
+        class GTI(ctypes.Structure):
+            _fields_ = [("cbSize", wintypes.DWORD), ("flags", wintypes.DWORD), ("hwndActive", wintypes.HWND),
+                        ("hwndFocus", wintypes.HWND), ("hwndCapture", wintypes.HWND), ("hwndMenuOwner", wintypes.HWND),
+                        ("hwndMoveSize", wintypes.HWND), ("hwndCaret", wintypes.HWND), ("rcCaret", wintypes.RECT)]
+        fg = u32.GetForegroundWindow()
+        if not fg:
+            return None, False
+        tid = u32.GetWindowThreadProcessId(fg, None)
+        gi = GTI()
+        gi.cbSize = ctypes.sizeof(GTI)
+        if not u32.GetGUIThreadInfo(tid, ctypes.byref(gi)):
+            return None, False
+        pw = False
+        if gi.hwndFocus:
+            cls = _class_name(gi.hwndFocus).lower()
+            if "edit" in cls and u32.GetWindowLongW(gi.hwndFocus, -16) & 0x20:     # ES_PASSWORD
+                pw = True
+        if gi.hwndCaret:
+            r = gi.rcCaret
+            pt = wintypes.POINT(r.left, (r.top + r.bottom) // 2)
+            u32.ClientToScreen(gi.hwndCaret, ctypes.byref(pt))
+            return (pt.x, pt.y), pw
+        return None, pw
+    except Exception:
+        return None, False
+
+
+def _bezier(p0, p1, p2, n=18):
+    out = []
+    for i in range(n + 1):
+        t = i / float(n)
+        a, b, c = (1 - t) ** 2, 2 * (1 - t) * t, t * t
+        out.append((a * p0[0] + b * p1[0] + c * p2[0], a * p0[1] + b * p1[1] + c * p2[1]))
+    return out
+
+
+def make_bolt_frames(size, seed):
+    """Lôi điện tím xanh toả ra từ con trỏ nhập: 6 khung (~0,24 giây)."""
+    from PIL import ImageDraw, ImageFilter
+    rnd = random.Random(seed)
+    W = H = size
+    c = (W / 2.0, H / 2.0)
+    bolts = []
+    for _ in range(rnd.randint(2, 3)):
+        ang = rnd.uniform(0, 2 * math.pi)
+        bolts.append((ang, rnd.uniform(0.32, 0.47) * W))
+    frames = []
+    for f in range(6):
+        fade = (1.0, 1.0, 0.9, 0.65, 0.4, 0.18)[f]
+        grow = min(1.0, (f + 1) / 2.0)
+        core = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        dc, dg = ImageDraw.Draw(core), ImageDraw.Draw(glow)
+        for ang, L in bolts:
+            pts = [c]
+            seg = 7
+            for i in range(1, seg + 1):
+                t = i / float(seg) * grow
+                j = rnd.uniform(-1, 1) * W * 0.07
+                pts.append((c[0] + math.cos(ang) * L * t - math.sin(ang) * j,
+                            c[1] + math.sin(ang) * L * t + math.cos(ang) * j))
+            lines = [pts]
+            if len(pts) > 4 and rnd.random() < 0.75:          # nhánh rẽ
+                k = rnd.randint(2, len(pts) - 2)
+                a2 = ang + rnd.choice((-1, 1)) * rnd.uniform(0.5, 1.0)
+                bx, by = pts[k]
+                br = [(bx, by)]
+                for i in range(1, 4):
+                    t = i / 3.0 * L * 0.35
+                    br.append((bx + math.cos(a2) * t + rnd.uniform(-1, 1) * W * 0.03,
+                               by + math.sin(a2) * t + rnd.uniform(-1, 1) * W * 0.03))
+                lines.append(br)
+            for n_, ln in enumerate(lines):
+                k_ = 1.0 if n_ == 0 else 0.6
+                dg.line(ln, fill=(120, 60, 255, int(210 * fade)), width=max(3, int(W * 0.07 * k_)))
+                dc.line(ln, fill=(185, 165, 255, int(255 * fade)), width=max(2, int(W * 0.024 * k_)))
+                dc.line(ln, fill=(255, 255, 255, int(255 * fade)), width=max(1, int(W * 0.01 * k_)))
+        if f < 3:                                            # chớp sáng tại tâm
+            r = W * (0.09 - f * 0.02)
+            dg.ellipse((c[0] - r * 2, c[1] - r * 2, c[0] + r * 2, c[1] + r * 2), fill=(140, 90, 255, int(160 * fade)))
+            dc.ellipse((c[0] - r, c[1] - r, c[0] + r, c[1] + r), fill=(255, 255, 255, int(240 * fade)))
+        for _ in range(rnd.randint(3, 6)):                   # tia lửa
+            a = rnd.uniform(0, 2 * math.pi)
+            rr = rnd.uniform(0.08, 0.42) * W * grow
+            x, y = c[0] + math.cos(a) * rr, c[1] + math.sin(a) * rr
+            q = max(1, W * 0.012)
+            dc.ellipse((x - q, y - q, x + q, y + q), fill=(225, 215, 255, int(255 * fade)))
+        glow = glow.filter(ImageFilter.GaussianBlur(max(1, W * 0.03)))
+        glow.alpha_composite(core)
+        frames.append(glow)
+    return frames
+
+
+def make_slash_frames(size, seed):
+    """Loạn đao chém: 3–5 nhát lưỡi liềm đỏ trắng xuất hiện liên tiếp rồi tan, 8 khung (~0,32 giây)."""
+    from PIL import ImageDraw, ImageFilter
+    rnd = random.Random(seed + 1000)
+    W = H = size
+    c = (W / 2.0, H / 2.0)
+    cuts = []
+    for _ in range(rnd.randint(3, 5)):
+        ang = rnd.uniform(0, math.pi)
+        off = (rnd.uniform(-0.12, 0.12) * W, rnd.uniform(-0.12, 0.12) * H)
+        cuts.append((ang, off, rnd.uniform(0.6, 0.85) * W, rnd.choice((-1, 1)) * rnd.uniform(0.08, 0.16) * W))
+    frames = []
+    for f in range(8):
+        core = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        dc, dg = ImageDraw.Draw(core), ImageDraw.Draw(glow)
+        for idx, (ang, off, L, bulge) in enumerate(cuts):
+            age = f - idx
+            if age < 0:
+                continue
+            al = max(0.0, 1.0 - age * 0.24)
+            if al <= 0:
+                continue
+            reach = min(1.0, 0.45 + age * 0.55)              # nhát chém vươn dài ra
+            cx, cy = c[0] + off[0], c[1] + off[1]
+            dx, dy = math.cos(ang) * L / 2 * reach, math.sin(ang) * L / 2 * reach
+            nx, ny = -math.sin(ang), math.cos(ang)
+            p0, p2 = (cx - dx, cy - dy), (cx + dx, cy + dy)
+            outer = _bezier(p0, (cx + nx * bulge, cy + ny * bulge), p2)
+            inner = _bezier(p0, (cx + nx * bulge * 0.45, cy + ny * bulge * 0.45), p2)
+            blade = outer + inner[::-1]
+            dg.polygon(blade, fill=(255, 10, 40, int(235 * al)))
+            dg.line(outer, fill=(255, 20, 50, int(220 * al)), width=max(3, int(W * 0.07)))
+            dc.polygon(blade, fill=(255, 55, 80, int(255 * al)))
+            dc.line(outer, fill=(255, 255, 255, int(255 * al)), width=max(1, int(W * 0.014)))
+            if age == 0:                                     # tia lửa văng ra ở mũi đao
+                for _ in range(3):
+                    q = max(1, W * 0.012)
+                    x = p2[0] + rnd.uniform(-1, 1) * W * 0.08
+                    y = p2[1] + rnd.uniform(-1, 1) * W * 0.08
+                    dc.ellipse((x - q, y - q, x + q, y + q), fill=(255, 220, 120, 255))
+        glow = glow.filter(ImageFilter.GaussianBlur(max(1, W * 0.035)))
+        glow.alpha_composite(core)
+        frames.append(glow)
+    return frames
+
+
+class FxPlayer:
+    """Cửa sổ hiệu ứng trong suốt, chuột bấm xuyên qua, không bao giờ lấy focus của ô đang gõ."""
+    VARIANTS = 5
+
+    def __init__(self, app, maker):
+        self.app, self.maker = app, maker
+        self.size = None
+        self.variants = []
+        self.seq, self.i, self.pos, self.job = [], 0, (0, 0), None
+        self.played = 0
+        self.lw = None
+        if IS_WIN:
+            try:
+                self.win = tk.Toplevel(app.root)
+                self.win.overrideredirect(True)
+                self.win.attributes("-topmost", True)
+                self.win.geometry("1x1+-50+-50")
+                # WS_EX_TRANSPARENT (bấm xuyên) | WS_EX_NOACTIVATE (không giành focus)
+                self.lw = LayeredWin(self.win, extra_ex=0x20 | 0x08000000)
+                self.lw.update(-50, -50, 1, 1, b"\0\0\0\0")
+            except Exception:
+                log_error()
+                self.lw = None
+
+    def build(self, size):
+        self.size = size
+        self.variants = []
+        for seed in range(self.VARIANTS):
+            fr = []
+            for im in self.maker(size, seed):
+                fr.append((im.convert("RGBa").tobytes("raw", "BGRa"), im.width, im.height))
+            self.variants.append(fr)
+
+    def play(self, x, y, size):
+        if size != self.size:
+            self.build(size)
+        self.seq = random.choice(self.variants)
+        self.i = 0
+        self.pos = (int(x), int(y))
+        self.played += 1
+        if self.job is None:
+            self._step()
+
+    def _step(self):
+        if self.i >= len(self.seq):
+            self.job = None
+            if self.lw:
+                self.lw.update(-50, -50, 1, 1, b"\0\0\0\0")
+            return
+        data, w, h = self.seq[self.i]
+        if self.lw:
+            try:
+                self.lw.update(self.pos[0] - w // 2, self.pos[1] - h // 2, w, h, data)
+            except Exception:
+                log_error()
+        self.i += 1
+        self.job = self.app.root.after(40, self._step)
+
+
+class KeyFx:
+    def __init__(self, app):
+        self.app = app
+        self.bolt = FxPlayer(app, make_bolt_frames)
+        self.slash = FxPlayer(app, make_slash_frames)
+        self.t_last = {"T": 0.0, "D": 0.0}
+        self.hist = {"T": [], "D": []}
+        self.cool = {"T": 0.0, "D": 0.0}
+        self.last_pos = None
+
+    def size(self):
+        return int(150 * float(self.app.store.s.get("key_fx_size", 1.0)) * self.app.dpi)
+
+    def on_key(self, kind):
+        s = self.app.store.s
+        if not s.get("key_fx", True) or self.app.fs_hidden:
+            return
+        t = time_now()
+        pos, pw = caret_info()
+        if pw:
+            return                                   # ô mật khẩu: không hiệu ứng
+        if pos is None:
+            px, py = self.app.root.winfo_pointerxy()
+            pos = (px + 14, py + 18)                 # phần mềm không báo vị trí con trỏ nhập -> cạnh chuột
+        self.last_pos = pos
+        if t - self.t_last[kind] >= (0.07 if kind == "T" else 0.09):     # gõ nhanh / giữ phím: gộp bớt
+            self.t_last[kind] = t
+            (self.bolt if kind == "T" else self.slash).play(pos[0], pos[1], self.size())
+        if not s.get("key_fx_pet", True) or self.app.hidden:
+            return
+        h = self.hist[kind]
+        h.append(t)
+        span, need = (8.0, 25) if kind == "T" else (3.0, 8)
+        while h and t - h[0] > span:
+            h.pop(0)
+        if len(h) >= need and t > self.cool[kind]:
+            self.cool[kind] = t + (30 if kind == "T" else 20)
+            h.clear()
+            key = "E_TYPING" if kind == "T" else "E_DELETING"
+            act = ((s.get("triggers") or {}).get(key) or {}).get("act")
+            if act:
+                eng = self.app.pet.engine
+                if kind == "D":
+                    eng.fly_and_act(pos[0], pos[1] + 40, act)
+                else:
+                    eng.force(act)
 
 
 # ───────────────────────── Nhân vật trên màn hình ─────────────────────────
@@ -2530,6 +2844,7 @@ class App:
         self.learner = Learner(self)
         self.gmouse = GlobalMouse(self)
         self.gmouse.start()
+        self.keyfx = KeyFx(self)
         self.updater = Updater(self)
         self.root.bind_all("<F5>", lambda e: self.updater.check(manual=True, install=True))
         self._last = now().timestamp()
@@ -3886,8 +4201,20 @@ class Manager:
 
     # ── tab cài đặt ──
     def build_settings(self, nb):
-        f = ttk.Frame(nb, padding=12)
-        nb.add(f, text="  Cài đặt  ")
+        outer = ttk.Frame(nb)
+        nb.add(outer, text="  Cài đặt  ")
+        cv = tk.Canvas(outer, highlightthickness=0, bg=C_BG)
+        sb = ttk.Scrollbar(outer, orient="vertical", command=cv.yview)
+        f = ttk.Frame(cv, padding=12)
+        f.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
+        cv.create_window((0, 0), window=f, anchor="nw")
+        cv.configure(yscrollcommand=sb.set)
+        cv.pack(side="left", fill="both", expand=True)
+        sb.pack(side="left", fill="y")
+        cv.bind_all("<MouseWheel>", lambda e: cv.yview_scroll(int(-e.delta / 120), "units")
+                    if str(e.widget).startswith(str(cv)) else None, add="+")
+        cv.bind_all("<Button-4>", lambda e: cv.yview_scroll(-3, "units") if str(e.widget).startswith(str(cv)) else None, add="+")
+        cv.bind_all("<Button-5>", lambda e: cv.yview_scroll(3, "units") if str(e.widget).startswith(str(cv)) else None, add="+")
         s = self.app.store.s
         self.svars = {}
 
@@ -3943,6 +4270,34 @@ class Manager:
                  "Bấm 'Xong' / 'Bỏ qua' khi được nhắc và dùng 'Ghi nhận việc vừa làm' để chibi học thói quen của bạn.\n"
                  "Dữ liệu: " + DATA_FILE)
         ttk.Label(f, text=help_, foreground=C_MUTED, justify="left").grid(row=12, column=0, columnspan=3, sticky="w", pady=(16, 0))
+        # ── hiệu ứng gõ phím ──
+        kf = ttk.Frame(f)
+        kf.grid(row=11, column=0, columnspan=3, sticky="we", pady=(14, 0))
+        ttk.Label(kf, text="⚡  Hiệu ứng gõ phím (mọi phần mềm)", style="H.TLabel").grid(row=0, column=0, columnspan=4, sticky="w")
+        self.kfx_v = tk.BooleanVar(value=s.get("key_fx", True))
+        self.kpet_v = tk.BooleanVar(value=s.get("key_fx_pet", True))
+
+        def kfx_toggle():
+            self.app.set_setting("key_fx", self.kfx_v.get())
+            self.app.gmouse.set_keyboard(self.kfx_v.get())
+        ttk.Checkbutton(kf, text="Lôi điện khi gõ ký tự, loạn đao chém khi xoá", variable=self.kfx_v,
+                        command=kfx_toggle).grid(row=1, column=0, columnspan=2, sticky="w")
+        ttk.Checkbutton(kf, text="Nhân vật phản ứng khi gõ / xoá liên tục (gán chiêu ở tab Điều khiển)",
+                        variable=self.kpet_v, command=lambda: self.app.set_setting("key_fx_pet", self.kpet_v.get())
+                        ).grid(row=2, column=0, columnspan=3, sticky="w")
+        ttk.Label(kf, text="Cỡ hiệu ứng:").grid(row=3, column=0, sticky="w", pady=4)
+        self.kfs_v = tk.DoubleVar(value=s.get("key_fx_size", 1.0))
+        ksc = ttk.Scale(kf, from_=0.5, to=2.0, variable=self.kfs_v, length=180)
+        ksc.grid(row=3, column=1, sticky="w")
+        ksc.bind("<ButtonRelease-1>", lambda e: self.app.set_setting("key_fx_size", round(self.kfs_v.get(), 2)))
+        ttk.Button(kf, text="⚡ Thử gõ", style="Small.TButton",
+                   command=lambda: self._kfx_demo("T")).grid(row=3, column=2, padx=6)
+        ttk.Button(kf, text="✕ Thử xoá", style="Small.TButton",
+                   command=lambda: self._kfx_demo("D")).grid(row=3, column=3)
+        ttk.Label(kf, text="App chỉ nhận biết 'vừa gõ' hay 'vừa xoá', không ghi lại phím nào. Tự tắt ở ô mật khẩu và khi trình "
+                           "chiếu. Tắt mục này là gỡ hẳn chức năng bắt phím.", style="Muted.TLabel", wraplength=760,
+                  justify="left").grid(row=4, column=0, columnspan=4, sticky="w")
+
         # ── cập nhật ──
         uf = ttk.Frame(f)
         uf.grid(row=10, column=0, columnspan=3, sticky="we", pady=(16, 0))
@@ -3964,6 +4319,12 @@ class Manager:
         self.ustat = ttk.Label(uf, text=self.app.updater.status, style="Muted.TLabel")
         self.ustat.grid(row=3, column=0, columnspan=4, sticky="w")
         self.app.updater.on_status = lambda t: self.alive() and self.ustat.config(text=t)
+
+    def _kfx_demo(self, kind):
+        x, y = self.win.winfo_pointerxy()
+        player = self.app.keyfx.bolt if kind == "T" else self.app.keyfx.slash
+        for i in range(4 if kind == "T" else 2):
+            self.win.after(i * 160, lambda i=i: player.play(x - 60 + i * 40, y - 80, self.app.keyfx.size()))
 
     def backup(self):
         p = filedialog.asksaveasfilename(parent=self.win, defaultextension=".json",

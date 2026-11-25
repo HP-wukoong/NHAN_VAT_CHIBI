@@ -1,9 +1,10 @@
 {
-  "version": "2.2",
+  "version": "2.3",
   "date": "2026-11-25",
   "notes": [
-    "Thêm chế độ thao tác chuột Mọi nơi (kể cả vùng an toàn)",
-    "Nhân vật lao tới ngay khi vừa nhấn chuột, tới nơi trong ~0,16 giây",
-    "Tự động cập nhật từ GitHub, phím F5, cập nhật từ file .zip, quay về bản trước"
+    "Hiệu ứng gõ phím ở mọi phần mềm: lôi điện khi gõ, loạn đao chém khi xoá",
+    "Nhân vật nạp năng lượng khi gõ liên tục, lao tới chém khi xoá liên tục",
+    "Không ghi lại phím nào; tự tắt ở ô mật khẩu và khi trình chiếu",
+    "Tab Cài đặt cuộn được"
   ]
 }
