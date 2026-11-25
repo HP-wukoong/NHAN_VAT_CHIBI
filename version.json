@@ -1,9 +1,9 @@
 {
-  "version": "2.4",
+  "version": "2.5",
   "date": "2026-11-25",
   "notes": [
-    "Bay tới chỗ bấm bằng động tác lao vút mới (hl_hover), nhanh và gọn hơn",
-    "13 mẫu hiệu ứng gõ / xoá để chọn: Lôi đình giáng xuống, Thần quang vàng, Đầu lâu ma quái, Búa sấm đập vỡ chữ, Hắc diễm, Băng tinh, Tinh tú, Sóng xung kích, Vỡ vụn, Hố đen, Nổ tung...",
-    "Chọn riêng mẫu khi gõ và khi xoá, hoặc Ngẫu nhiên; ô xem trước trong Cài đặt"
+    "Kéo xách nhân vật rồi thả: lao cắm đầu xuống theo đà tay, chạm đất nện tạo hố (Rơi tạo hố)",
+    "Thả sát đất thì tiếp đất bình thường",
+    "Đổi kiểu rơi khi thả ở tab Điều khiển"
   ]
 }

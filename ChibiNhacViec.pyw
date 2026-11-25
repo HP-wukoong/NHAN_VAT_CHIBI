@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CHIBI NHẮC VIỆC  v2.4
+CHIBI NHẮC VIỆC  v2.5
 Robot chibi nhắc việc chạy trên màn hình Windows 10/11.
 - Đi lại tự do toàn màn hình (hỗ trợ nhiều màn hình), kéo thả, đổi kích thước, đổi nhân vật
 - Nhắc việc: một lần / hằng ngày / T2-T6 / chọn thứ / lặp mỗi N phút, hoãn, báo trước
@@ -67,7 +67,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "2.4"
+APP_VER = "2.5"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -317,6 +317,7 @@ DEFAULT_SETTINGS = {
     "auto_jump": True, "climb": True, "smooth": True, "triggers": None, "screen_mode": "desktop",
     "update_mode": "notify", "last_update_check": "", "just_updated": "",
     "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0, "key_fx_type": "bolt", "key_fx_del": "slash",
+    "drop_action": "VaCham_RoiHoDat",
 }
 
 
@@ -1460,6 +1461,46 @@ class Engine:
             self.env.temp = None
             self.env.platforms = [p for p in self.env.platforms if p.kind != "temp"]
 
+    def drop_parts(self, name):
+        """Tách một động tác dạng chuỗi thành (đoạn rơi, các đoạn sau khi chạm đất).
+        Ví dụ Rơi tạo hố = [nhảy vút] + RoiDauXuong (rơi) + HoDat (nện hố) -> (RoiDauXuong, [HoDat])."""
+        b = self.pack.behaviors.get(name)
+        spec = self.pack.actions.get(b.action if b else name)
+        if not spec or spec.type != "Sequence":
+            return None
+        for i, (rn, ra) in enumerate(spec.refs):
+            rs = self.pack.actions.get(rn)
+            if rs and rs.type == "Embedded" and rs.cls == "Fall":
+                return rn, [x for x, _ in spec.refs[i + 1:]]
+        return None
+
+    def drop_choices(self):
+        """Các động tác dùng được khi thả nhân vật: chuỗi có đoạn rơi."""
+        return [n for n in self.pack.user_behaviors() if self.drop_parts(n)]
+
+    def after_drop(self):
+        """Thả nhân vật đang bị xách: lao cắm đầu xuống theo đà tay rồi nện tạo hố."""
+        name = self.app.store.s.get("drop_action", "VaCham_RoiHoDat")
+        parts = self.drop_parts(name) if name else None
+        if not parts:
+            return False
+        a = self.env.area_at(self.ax, self.ay)
+        floor = self.env.landing(self.ax, self.ay, a[3] + 1)
+        if floor is None or floor.y - self.ay < 40:             # thả sát đất: tiếp đất bình thường
+            return False
+        fall_name, after = parts
+        self.cur = name
+        self.gen = self._drop_gen(fall_name, after)
+        return True
+
+    def _drop_gen(self, fall_name, after):
+        spec = self.pack.actions[fall_name]
+        yield from self.act_fall(spec, dict(spec.attrs))
+        if self.env.on_floor(self.ax, self.ay) is None:
+            return                                            # va vào tường -> để engine chuyển sang bám tường
+        for nm in after:
+            yield from self.run_action(nm)
+
     def start_drag(self):
         if "Dragged" not in self.pack.actions:
             return
@@ -1489,8 +1530,9 @@ class Engine:
             except StopIteration:
                 self.gen = None
                 if self.cur == "Dragged":
-                    sp = math.hypot(self.vx, self.vy)
-                    self.forced = "Thrown" if sp > 5 and "Thrown" in self.pack.actions else "Fall"
+                    if not self.after_drop():
+                        sp = math.hypot(self.vx, self.vy)
+                        self.forced = "Thrown" if sp > 5 and "Thrown" in self.pack.actions else "Fall"
             except Exception:
                 log_error()
                 self.gen = None
@@ -4607,7 +4649,13 @@ class Manager:
         for k, lab in TRIGGERS:
             self._ctrl_row(f, r, k, lab, with_cmd=True)
             r += 1
-        ttk.Label(f, text="(Kéo giữ chuột trái + di chuyển = túm nhân vật; thả ra = ném.  Ctrl + lăn chuột = đổi kích thước.)",
+        ttk.Label(f, text="Kéo xách nhân vật rồi thả ra").grid(row=r, column=0, sticky="w", pady=2)
+        self.dropcb = ttk.Combobox(f, state="readonly", width=28)
+        self.dropcb.grid(row=r, column=1, sticky="w", padx=6)
+        self.dropcb.bind("<<ComboboxSelected>>", lambda e: self.app.set_setting(
+            "drop_action", self._drop_map.get(self.dropcb.get(), "")))
+        r += 1
+        ttk.Label(f, text="(Kéo giữ chuột trái + di chuyển = túm nhân vật; thả ra = rơi theo đà tay.  Ctrl + lăn chuột = đổi kích thước.)",
                   foreground=C_MUTED).grid(row=r, column=0, columnspan=3, sticky="w", pady=(2, 8))
         r += 1
         ttk.Label(f, text="Thao tác chuột trên màn hình  →  nhân vật bay tới chỗ bấm và tung chiêu", style="H.TLabel"
@@ -4661,6 +4709,12 @@ class Manager:
 
     def fill_controls(self):
         tr = self.app.store.s.get("triggers") or {}
+        self._drop_map = {"Rơi thường (bị ném xoay tròn)": ""}
+        for n in self.app.pet.engine.drop_choices():
+            self._drop_map[beh_label(n)] = n
+        self.dropcb.config(values=list(self._drop_map))
+        cur = self.app.store.s.get("drop_action", "VaCham_RoiHoDat")
+        self.dropcb.set(next((k for k, v in self._drop_map.items() if v == cur), "Rơi thường (bị ném xoay tròn)"))
         self.smode.set(dict(SCREEN_MODES).get(self.app.store.s.get("screen_mode", "desktop"), SCREEN_MODES[0][1]))
         names = self.beh_names()
         cmdl = dict(COMMANDS)
