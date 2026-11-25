@@ -15,6 +15,7 @@ def load():
     tmp = tempfile.mkdtemp(prefix="chibi_test_")
     shutil.copy(os.path.join(ROOT, "ChibiNhacViec.pyw"), os.path.join(tmp, "chibi.py"))
     shutil.copytree(os.path.join(ROOT, "NhanVat"), os.path.join(tmp, "NhanVat"))
+    shutil.copytree(os.path.join(ROOT, "HieuUng"), os.path.join(tmp, "HieuUng"))
     sys.argv = [os.path.join(tmp, "chibi.py")]
     sys.path.insert(0, tmp)
     import chibi

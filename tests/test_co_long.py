@@ -34,6 +34,7 @@ def run():
           "Cổ Long dùng bộ gán chuột riêng")
     check(C.beh_label("LongKy_PhunLua") == "Phun lửa" and C.beh_group("LongKy_PhunSamSet") == "Long kỹ",
           "tên chiêu / nhóm hiện tiếng Việt")
+    check(s["wall_hit_action"] == "LongTinh_TucGian", "quăng đập tường -> tức giận")
     eng = app.pet.engine
     check(len(eng.fly_poses()) == 6 and eng.fly_poses()[0].img.startswith("flydash"), "lao tới chỗ bấm dùng tư thế bay lướt")
     check(eng.drop_parts("LongPhi_LaoXuongDapDat") == ("LaoXuong", ["DapDat"]), "thả rơi = Lao xuống & đập đất")

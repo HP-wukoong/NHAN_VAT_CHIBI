@@ -24,7 +24,7 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 | Môi trường | Đi và đứng trên mép cửa sổ đang mở. Thấy cửa sổ hay biểu tượng thư mục/file cao hơn phía trước thì nhảy lên. Bước hụt mép thì rơi |
 | Chuột trên nhân vật | Trái/phải × (1 lần, 2 lần, liên tục, giữ), lăn lên, lăn xuống, nhấn con lăn. Mỗi thao tác gán 1 chiêu và/hoặc 1 lệnh. Kéo để xách; thả ra thì nhân vật **lao cắm đầu xuống và nện tạo hố**; quăng **đập vào tường** thì rơi xuống **ăn vạ** (đổi được cả hai) |
 | Chuột trên màn hình | Bấm 1 lần, 2 lần, chuột phải, lăn, nhấn con lăn tại bất kỳ điểm nào: nhân vật **lao tới ngay khi vừa nhấn chuột** (~0,16 giây, dù xa cỡ nào) rồi tung chiêu. Phím **Ctrl + Alt + X** gọi nhân vật tới chỗ con trỏ |
-| Hiệu ứng gõ phím | Ở **mọi phần mềm**, chọn riêng mẫu khi gõ và khi xoá (hoặc ngẫu nhiên, hoặc **ngẫu nhiên hệ Lôi**) trong **24 mẫu**. **Hệ Lôi (11 mẫu)**: Lôi điện tỏa, Lôi đình giáng xuống, Lôi long sấm sét chạy trên chữ, **Lôi xích liên hoàn, Lôi cầu plasma, Lôi vân giáng thế, Lôi thương xuyên chữ, Lôi trảo xé chữ, Huyết lôi diệt thế, Thiên phạt lôi trụ, Lôi võng thu lưới**. Các mẫu khác: Thần quang vàng, Đầu lâu ma quái, **Lửa địa ngục (lam hoả)**, Hắc diễm, Băng tinh, Tinh tú, Sóng xung kích, Loạn đao chém, Búa sấm đập vỡ chữ, **Vạn kiếm đâm vỡ chữ**, Vỡ vụn, Hố đen nuốt chữ, Nổ tung. Gõ liên tục thì nhân vật nạp năng lượng; xoá liên tục thì nhân vật lao tới chỗ xoá. Cỡ hiệu ứng **tự theo cỡ chữ** của phần mềm đang gõ (có hệ số chỉnh thêm). Tắt được trong Cài đặt |
+| Hiệu ứng gõ phím | Ở **mọi phần mềm**, chọn riêng mẫu khi gõ và khi xoá (hoặc ngẫu nhiên / ngẫu nhiên hệ Lôi) trong **26 mẫu cắt từ ảnh hiệu ứng của bạn** (thư mục `HieuUng/`): 21 mẫu hệ Lôi (lôi tinh bạo phát, kim lôi tinh, lôi bạo, lôi hoàn, lốc xoáy, lôi châu, địa lôi nổ vàng / vàng tím / tím, địa chấn lôi, lôi điện giáng, lôi phạt, lôi kiếp, lôi quang, lôi ấn, thiên lôi trụ, lôi thương, sấm sét liên hồi, lôi long, kim long cuộn, tử lôi xà) + Ma trảo, Ma độc long, Bỉ ngạn hoa nở, Đầu lâu ma quỷ bay lên, Dòng phi kiếm bay vút. Mỗi mẫu bùng ra – loé sáng – tan dần ngay chỗ con trỏ nhập; cỡ tự theo cỡ chữ. Gõ liên tục thì nhân vật nạp năng lượng; xoá liên tục thì nhân vật lao tới chỗ xoá. Tắt được trong Cài đặt |
 | Cập nhật | Tự kiểm tra bản mới trên GitHub khi mở app và mỗi 6 giờ. Có thể chọn tự cài hoặc hỏi trước. **F5** trong bảng quản lý để cập nhật ngay. Cập nhật từ file `.zip` cho máy không mạng. Quay về bản trước |
 | Sự kiện | Gán chiêu khi báo nhắc, Xong, Hoãn, Bỏ qua, nghỉ mắt, chào buổi sáng, rời máy, quay lại |
 | Tự hoạt động | Bật/tắt từng động tác. Chiêu đã gán cho chuột trên nhân vật thì mặc định chỉ chạy khi bạn bấm |
@@ -75,12 +75,12 @@ Dựng từ bảng sprite của bạn (`tools/co_long_nguon.png`, 14 nhóm độ
 | Tuyệt kỹ | Long uy (lốc vàng + sét trời), Hắc hoá (quả cầu tím → cột hắc khí), FULL COMBO (gầm → cuộn thân → sấm sét → lửa → lôi điện → Long uy) |
 | Bay | Bay vút, bay theo chuột, Lao xuống & đập đất (nổ tung, hố, đá văng) |
 | Biến hoá | Hoá rồng mini (chớp + khói, nhảy tưng tưng rồi biến lại) |
-| Biểu cảm | Hoài nghi (???), Yêu thích (tim bay), Ăn vạ, Khóc, Nằn nì |
+| Biểu cảm | Tức giận (gân đỏ, dậm chân, thét), Hoài nghi (???), Yêu thích (tim bay), Ăn vạ, Khóc, Nằn nì |
 | Nghỉ | Nằm nghỉ, Ngủ khò khò (chữ Z) |
 
 Gán mặc định:
 - **Trên nhân vật:** trái 1 lần = Phun sấm sét, trái 3 lần = Full combo, giữ trái = Lôi điện, phải 2 lần = Hắc hoá, nhấn con lăn = Hoá rồng mini.
-- **Rơi / va chạm:** thả rơi = Lao xuống & đập đất, đập tường = Ăn vạ.
+- **Rơi / va chạm:** thả rơi từ trên cao = lao xuống, chạm đất **nổ tung một vùng** (ảnh nổ của bạn); quăng đập tường = rơi xuống rồi **tức giận**.
 - **Trên màn hình:** trái 2 lần = Phun lửa, phải 2 lần = Long uy.
 
 Muốn chỉnh:
@@ -120,7 +120,8 @@ ChayChibi.bat          Trình khởi động: tìm Python, cài Pillow, chạy k
 version.json           Số phiên bản mới nhất + ghi chú (app đọc file này để biết có bản mới)
 NhanVat/NhanVatAoDen/  Nhân vật gốc: ảnh + conf/actions.xml + conf/behaviors.xml (định dạng Shimeji-ee)
 NhanVat/CoLong/        Nhân vật Cổ Long (dựng từ bảng sprite của bạn) + conf/chibi.json (tên chiêu, gán mặc định)
-tools/                 Bảng sprite gốc + công cụ dựng Cổ Long (dung_co_long.py)
+HieuUng/               Ảnh hiệu ứng gõ phím / tiếp đất (cắt từ ảnh của bạn bằng tools/cat_hieu_ung.py)
+tools/                 Ảnh gốc + công cụ dựng Cổ Long (dung_co_long.py) và cắt hiệu ứng (cat_hieu_ung.py)
 ThuVien/               Để bộ cài Pillow .whl cho máy không có mạng
 tests/                 Kiểm thử tự động
 ChibiData/             (tự tạo khi chạy) dữ liệu người dùng – không đưa lên git

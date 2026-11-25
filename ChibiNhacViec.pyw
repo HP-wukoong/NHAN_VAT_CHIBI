@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.3"
+APP_VER = "3.4"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -367,6 +367,10 @@ class Store:
             if k not in tr:
                 tr[k] = copy.deepcopy(v)
         s["triggers"] = tr
+        # mẫu hiệu ứng gõ phím đã bỏ ở bản mới -> về mặc định
+        for k, dflt in (("key_fx_type", "bolt"), ("key_fx_del", "slash")):
+            if s.get(k) not in FX_BY_KEY and s.get(k) not in ("random", "random_thunder"):
+                s[k] = dflt
 
     def load(self):
         self._bak_ts = 0
@@ -3776,34 +3780,144 @@ def make_net_frames(size, seed):
     return frames
 
 
+# ── hiệu ứng từ ảnh của người dùng (thư mục HieuUng/, cắt bằng tools/cat_hieu_ung.py) ──
+FX_DIR = os.path.join(BASE_DIR, "HieuUng")
+_FX_SRC = {}
+
+
+def fx_src(name):
+    if name not in _FX_SRC:
+        try:
+            _FX_SRC[name] = Image.open(os.path.join(FX_DIR, name + ".png")).convert("RGBA")
+        except Exception:
+            _FX_SRC[name] = None
+    return _FX_SRC[name]
+
+
+def _fx_tone(im, bright=1.0, alpha=1.0):
+    if bright == 1.0 and alpha >= 0.999:
+        return im
+    r, g, b, a = im.split()
+    if bright != 1.0:
+        lut = [min(255, int(v * bright + (bright - 1) * 40)) for v in range(256)]
+        r, g, b = r.point(lut), g.point(lut), b.point(lut)
+    if alpha < 0.999:
+        a = a.point(lambda v: int(v * alpha))
+    return Image.merge("RGBA", (r, g, b, a))
+
+
+def make_sprite_fx(names, style="burst", mult=1.2, frames=None):
+    """Hoạt cảnh từ ảnh hiệu ứng:
+    burst  – bùng ra từ con trỏ, xoay nhẹ, loé sáng rồi tan
+    ground – nổ trên mặt chữ: bốc lên từ dưới, đổi khung liên tục
+    pillar – cột sét giáng xuống chữ: loé hẹp -> bung rộng, chớp nháy
+    strike – sấm sét liên hồi: mỗi nhịp một tia khác nhau đánh xuống
+    seq    – chạy lần lượt các khung (vuốt, rồng, hoa nở, phi kiếm)
+    rise   – chạy khung và bay dần lên (đầu lâu)"""
+    def maker(size, seed):
+        rnd = random.Random(seed * 7919 + len(names))
+        srcs = [fx_src(n) for n in names]
+        srcs = [x for x in srcs if x is not None]
+        if not srcs:
+            return make_bolt_frames(size, seed)              # thiếu ảnh -> dùng hiệu ứng vẽ sẵn
+        n = frames or {"burst": 9, "ground": 11, "pillar": 9, "strike": 9, "seq": 0, "rise": 0}[style]
+        if not n:
+            n = len(srcs) * 2 + 4
+        k = size * mult / float(max(max(x.size) for x in srcs)) * rnd.uniform(0.92, 1.08)
+        mw = max(x.width for x in srcs) * k
+        mh = max(x.height for x in srcs) * k
+        flip = rnd.random() < 0.5 and style not in ("rise",)
+        if style == "burst":
+            W = H = int(math.hypot(mw, mh) * 1.1) + 4
+        else:
+            W, H = int(mw * 1.2) + 4, int(mh * (1.35 if style == "rise" else 1.1)) + 4
+        rot0 = rnd.uniform(-25, 25)
+        out = []
+        for f in range(n):
+            t = f / float(max(1, n - 1))
+            if style in ("seq", "rise"):
+                src = srcs[min(len(srcs) - 1, f // 2)]
+            elif style == "strike":
+                src = srcs[rnd.randrange(len(srcs))]
+            else:
+                src = srcs[(f // 2 + seed) % len(srcs)] if style in ("ground", "pillar") else srcs[seed % len(srcs)]
+            grow = 1 - (1 - min(1.0, (f + 1) / 3.0)) ** 2
+            sx = sy = 1.0
+            bright = 1.55 if f == 0 else (1.25 if f == 1 else 1.0)
+            fade = 1.0 if t < 0.5 else max(0.08, 1 - (t - 0.5) / 0.55)
+            if style == "burst":
+                sx = sy = 0.45 + 0.55 * grow + (0.05 if f == 3 else 0)
+            elif style == "ground":
+                sx, sy = 0.65 + 0.35 * grow, 0.25 + 0.75 * grow
+            elif style == "pillar":
+                sx = 0.25 if f == 0 else (1.15 if f == 1 else 1.0)
+                fade *= 1.0 if f % 2 == 0 else 0.78
+                bright = 1.8 if f == 0 else (1.35 if f == 1 else (1.12 if f % 2 == 0 else 1.0))
+            elif style == "strike":
+                sx = sy = rnd.uniform(0.75, 1.05)
+                fade *= 1.0 if f % 2 == 0 else 0.7
+            else:
+                sx = sy = 0.85 + 0.15 * grow
+            w = max(1, int(src.width * k * sx))
+            h = max(1, int(src.height * k * sy))
+            im = src.resize((w, h), Image.BILINEAR)
+            if flip:
+                im = im.transpose(Image.FLIP_LEFT_RIGHT)
+            if style == "burst":
+                im = im.rotate(rot0 + f * 4, resample=Image.BILINEAR, expand=True)
+            im = _fx_tone(im, bright, fade)
+            fr = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            if style == "burst":
+                x, y = (W - im.width) // 2, (H - im.height) // 2
+            elif style == "rise":
+                x, y = (W - im.width) // 2, int(H * 0.95) - im.height - int(H * 0.22 * t)
+            elif style == "strike":
+                x = (W - im.width) // 2 + rnd.randint(-int(W * 0.12), int(W * 0.12))
+                y = int(H * 0.95) - im.height
+            elif style == "seq":
+                x, y = (W - im.width) // 2, (H - im.height) // 2
+            else:
+                x, y = (W - im.width) // 2, int(H * 0.95) - im.height
+            fr.alpha_composite(im, (max(0, x), max(0, y)))
+            out.append(fr)
+        return out
+    return maker
+
+
+_B, _G, _P, _S, _Q, _R = (0.5, 0.5), (0.5, 0.86), (0.5, 0.93), (0.5, 0.92), (0.5, 0.5), (0.5, 0.88)
+_SET_IMGS = ["setvang%d" % k for k in range(1, 10)] + ["settim%d" % k for k in range(1, 6)]
 FX_EFFECTS = [
-    ("bolt", "⚡ Lôi điện tỏa", make_bolt_frames, (0.5, 0.5)),
-    ("thunder", "⚡ Lôi đình giáng xuống", make_thunder_frames, (0.5, 0.9)),
-    ("holy", "Thần quang vàng", make_holy_frames, (0.5, 0.5)),
-    ("skull", "Đầu lâu ma quái bay lên", make_skull_frames, (0.5, 0.86)),
-    ("dragon", "⚡ Lôi long sấm sét chạy trên chữ", make_dragon_frames, (0.9, 0.62)),
-    ("hellfire", "Lửa địa ngục (lam hoả)", make_hellfire_frames, (0.5, 0.86)),
-    ("darkflame", "Hắc diễm bùng cháy", make_darkflame_frames, (0.5, 0.85)),
-    ("ice", "Băng tinh nổ", make_ice_frames, (0.5, 0.5)),
-    ("star", "Tinh tú lấp lánh", make_star_frames, (0.5, 0.5)),
-    ("shock", "Sóng xung kích", make_shock_frames, (0.5, 0.5)),
-    ("slash", "Loạn đao chém", make_slash_frames, (0.5, 0.5)),
-    ("chain", "⚡ Lôi xích liên hoàn", make_chain_frames, (0.9, 0.62)),
-    ("plasma", "⚡ Lôi cầu plasma", make_plasma_frames, (0.5, 0.5)),
-    ("storm", "⚡ Lôi vân giáng thế", make_storm_frames, (0.5, 0.9)),
-    ("spear", "⚡ Lôi thương xuyên chữ", make_spear_frames, (0.85, 0.5)),
-    ("claw", "⚡ Lôi trảo xé chữ", make_claw_frames, (0.5, 0.5)),
-    ("bloodbolt", "⚡ Huyết lôi diệt thế", make_bloodbolt_frames, (0.5, 0.5)),
-    ("pillar", "⚡ Thiên phạt lôi trụ", make_pillar_frames, (0.5, 0.9)),
-    ("net", "⚡ Lôi võng thu lưới", make_net_frames, (0.5, 0.5)),
-    ("hammer", "Búa sấm đập vỡ chữ", make_hammer_frames, (0.5, 0.65)),
-    ("sword", "Vạn kiếm đâm vỡ chữ", make_sword_frames, (0.5, 0.55)),
-    ("shatter", "Vỡ vụn", make_shatter_frames, (0.5, 0.5)),
-    ("blackhole", "Hố đen nuốt chữ", make_blackhole_frames, (0.5, 0.5)),
-    ("explode", "Nổ tung", make_explode_frames, (0.5, 0.5)),
+    ("bolt", "⚡ Lôi tinh bạo phát", make_sprite_fx(["tia_chop"], "burst", 1.3), _B),
+    ("kimtinh", "⚡ Kim lôi tinh (vàng)", make_sprite_fx(["kimtinh1", "kimtinh2", "tinhvang"], "burst", 1.1), _B),
+    ("novang", "⚡ Lôi bạo vàng", make_sprite_fx(["no_vang"], "burst", 1.45), _B),
+    ("hoan", "⚡ Lôi hoàn (vòng sét)", make_sprite_fx(["vongvang", "hoanvang1", "hoanvang2"], "burst", 1.1), _B),
+    ("xoanvang", "⚡ Lốc xoáy vàng", make_sprite_fx(["xoanvang1", "xoanvang2"], "burst", 1.1), _B),
+    ("chau", "⚡ Lôi châu", make_sprite_fx(["chau"], "burst", 1.0), _B),
+    ("datno", "⚡ Địa lôi nổ (vàng)", make_sprite_fx(["no_dat"], "ground", 1.5), _G),
+    ("song", "⚡ Song lôi nổ (vàng tím)", make_sprite_fx(["no_vang_tim"], "ground", 1.5), _G),
+    ("tuno", "⚡ Tử lôi bùng nổ (tím)", make_sprite_fx(["tim_no"], "ground", 1.5), _G),
+    ("diachan", "⚡ Địa chấn lôi (nổ liên hoàn)",
+     make_sprite_fx(["datvang1", "datvang3", "datvang2", "datvang4", "vomvang", "bungvang"], "ground", 1.35), _G),
+    ("thunder", "⚡ Lôi điện giáng (tím)", make_sprite_fx(["loidien1", "loidien2", "loidien3"], "pillar", 1.5), _P),
+    ("loiphat", "⚡ Lôi phạt", make_sprite_fx(["loiphat1", "loiphat2", "loiphat3"], "pillar", 1.5), _P),
+    ("loikiep", "⚡ Lôi kiếp", make_sprite_fx(["loikiep"], "pillar", 1.5), _P),
+    ("loiquang", "⚡ Lôi quang (vàng)", make_sprite_fx(["loiquang"], "pillar", 1.5), _P),
+    ("loian", "⚡ Lôi ấn", make_sprite_fx(["loian"], "pillar", 1.5), _P),
+    ("cotvang", "⚡ Thiên lôi trụ (vàng)", make_sprite_fx(["cotvang1", "cotvang2", "truvong", "luatru"], "pillar", 1.5), _P),
+    ("gai", "⚡ Lôi thương (gai tím)", make_sprite_fx(["gaitim", "cottim"], "pillar", 1.35), _P),
+    ("settia", "⚡ Sấm sét liên hồi", make_sprite_fx(_SET_IMGS, "strike", 1.35), _S),
+    ("dragon", "⚡ Lôi long", make_sprite_fx(["loilong"], "seq", 1.45, frames=9), _Q),
+    ("longvang", "⚡ Kim long cuộn", make_sprite_fx(["longvang1", "longvang2", "longvang3", "vongran"], "seq", 1.3), _Q),
+    ("xatim", "⚡ Tử lôi xà", make_sprite_fx(["xoantim1", "xoantim2", "xoantim3", "xoantim4"], "seq", 1.3), _Q),
+    ("slash", "Ma trảo", make_sprite_fx(["matrao1", "matrao2", "matrao3"], "seq", 1.25), _Q),
+    ("madoc", "Ma độc long", make_sprite_fx(["madoc1", "madoc2", "madoc3"], "seq", 1.3), _Q),
+    ("bingan", "Bỉ ngạn hoa nở", make_sprite_fx(["bingan1", "bingan2", "bingan3", "bingan4"], "seq", 1.3), _Q),
+    ("skull", "Đầu lâu ma quỷ bay lên", make_sprite_fx(["daulau1", "daulau2", "daulau3"], "rise", 1.4), _R),
+    ("sword", "Dòng phi kiếm bay vút",
+     make_sprite_fx(["phikiem1", "phikiem2", "phikiem3", "phikiem4", "phikiem5"], "seq", 1.4), _Q),
 ]
 FX_BY_KEY = {e[0]: e for e in FX_EFFECTS}
-FX_THUNDER = ("bolt", "thunder", "dragon", "chain", "plasma", "storm", "spear", "claw", "bloodbolt", "pillar", "net")
+FX_THUNDER = tuple(e[0] for e in FX_EFFECTS if e[1].startswith("⚡"))
 
 
 def fx_resolve(key):
@@ -3894,6 +4008,10 @@ class KeyFx:
         self.cool = {"T": 0.0, "D": 0.0}
         self.last_pos = None
         self.finder = CaretFinder()
+        try:
+            app.root.after(2500, self.warm)
+        except Exception:
+            pass
         self.wait = None                          # (mã yêu cầu, loại, lúc hỏi, vị trí chuột dự phòng)
         self.rid = 0
         self.stats = {}                           # tên chương trình -> cách tìm con trỏ nhập lần gần nhất
@@ -3950,7 +4068,21 @@ class KeyFx:
             else:
                 self._note("cạnh chuột")
                 self._play(kind, self._pointer())
+            self.t_last[kind] = time_now()                  # lần đầu dựng hình có thể lâu -> tính mốc sau khi phát
         self._react(kind, t)
+
+    def warm(self):
+        """Nạp sẵn ảnh + dựng sẵn mẫu đang chọn khi máy rảnh, để phím đầu tiên không bị khựng."""
+        try:
+            s = self.app.store.s
+            if not s.get("key_fx", True):
+                return
+            sz = self.size()
+            for pl, k in ((self.bolt, s.get("key_fx_type", "bolt")), (self.slash, s.get("key_fx_del", "slash"))):
+                if k in FX_BY_KEY:
+                    pl.variants(k, sz)
+        except Exception:
+            log_error()
 
     def poll(self):
         """Gọi mỗi nhịp từ luồng chính: nhận kết quả tìm con trỏ nhập, quá hạn thì hiện cạnh chuột."""
@@ -4059,6 +4191,16 @@ class Pet:
             self.engine = None
             PACK_META.clear()
             PACK_META.update(pk.meta)
+            # nhân vật đổi cách thả rơi / đập tường ở bản mới (meta "rev" tăng) -> áp dụng mặc định mới một lần
+            rev = int(pk.meta.get("rev", 0) or 0)
+            pr = dict(s.get("pack_rev") or {})
+            kk = pack_key(s.get("pack") or "")
+            if rev and pr.get(kk, 0) < rev:
+                for k2 in ("drop_action", "wall_hit_action"):
+                    if pk.meta.get(k2):
+                        s[k2] = pk.meta[k2]
+                pr[kk] = rev
+                s["pack_rev"] = pr
         self.zoom = self.s_user * self.app.dpi
         self.env.zoom = self.zoom
         self.cache = {}
@@ -6276,7 +6418,7 @@ UPDATE_BRANCH = "main"
 URL_VERSION = "https://raw.githubusercontent.com/%s/%s/version.json" % (UPDATE_REPO, UPDATE_BRANCH)
 URL_ZIP = "https://github.com/%s/archive/refs/heads/%s.zip" % (UPDATE_REPO, UPDATE_BRANCH)
 URL_PAGE = "https://github.com/%s" % UPDATE_REPO
-INSTALL_ITEMS = ["ChibiNhacViec.pyw", "ChayChibi.bat", "README.md", "version.json", "NhanVat", "tests", "tools"]
+INSTALL_ITEMS = ["ChibiNhacViec.pyw", "ChayChibi.bat", "README.md", "version.json", "NhanVat", "HieuUng", "tests", "tools"]
 UPDATE_MODES = [("notify", "Báo khi có bản mới (hỏi trước khi cập nhật)"), ("auto", "Tự động cập nhật"),
                 ("off", "Tắt kiểm tra tự động")]
 BACKUP_DIR = os.path.join(DATA_DIR, "backup")

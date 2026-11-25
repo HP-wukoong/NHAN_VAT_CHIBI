@@ -3,7 +3,8 @@
  "desc": "Hắc long thái cổ (rồng đen vảy vàng) – bộ hình của người dùng, hiệu ứng lôi điện",
  "fly_prefix": "flydash",
  "drop_action": "LongPhi_LaoXuongDapDat",
- "wall_hit_action": "LongTinh_AnVa",
+ "wall_hit_action": "LongTinh_TucGian",
+ "rev": 2,
  "climb_behaviors": [
   "LongDi_BamVachTrai",
   "LongDi_BamVachPhai"
@@ -43,6 +44,7 @@
   "LongTinh_YeuThich": "Yêu thích (tim bay)",
   "LongTinh_AnVa": "Ăn vạ",
   "LongTinh_Khoc": "Khóc",
+  "LongTinh_TucGian": "Tức giận (gân đỏ, thét)",
   "LongTinh_NanNi": "Nằn nì",
   "LongTruy_DuoiChuot": "Đuổi theo chuột"
  },

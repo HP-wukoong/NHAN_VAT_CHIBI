@@ -42,6 +42,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -74,6 +75,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -106,6 +108,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -138,6 +141,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -170,6 +174,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -202,6 +207,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -234,6 +240,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -266,6 +273,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -298,6 +306,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -330,6 +339,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -362,6 +372,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -394,6 +405,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -426,6 +438,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -458,6 +471,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -490,6 +504,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -522,6 +537,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -554,6 +570,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -586,6 +603,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -618,6 +636,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -650,6 +669,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -682,6 +702,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -714,6 +735,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -746,6 +768,40 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongTinh_TucGian" Frequency="5">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="30"/>
+     <BehaviorReference Name="Dash" Frequency="15"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="24"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_GamRu" Frequency="9"/>
+     <BehaviorReference Name="LongKy_PhunLua" Frequency="8"/>
+     <BehaviorReference Name="LongKy_PhunSamSet" Frequency="8"/>
+     <BehaviorReference Name="LongKy_CuonThan" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiDien" Frequency="8"/>
+     <BehaviorReference Name="LongKy_TreoLoLung" Frequency="8"/>
+     <BehaviorReference Name="LongBa_LongUy" Frequency="3"/>
+     <BehaviorReference Name="LongBa_HacHoa" Frequency="4"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongBien_HoaMini" Frequency="5"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_LaoXuongDapDat" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -778,6 +834,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -810,6 +867,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -842,6 +900,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -874,6 +933,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -906,6 +966,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>
@@ -938,6 +999,7 @@
      <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
      <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
      <BehaviorReference Name="LongTinh_HoaiNghi" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_TucGian" Frequency="5"/>
      <BehaviorReference Name="LongTinh_YeuThich" Frequency="7"/>
      <BehaviorReference Name="LongTinh_AnVa" Frequency="4"/>
      <BehaviorReference Name="LongTinh_Khoc" Frequency="4"/>

@@ -840,13 +840,13 @@
 "impact35.png"
 ],
 "anchor": [
-206,
-192
+223,
+356
 ],
 "d": 1,
 "size": [
-413,
-262
+446,
+426
 ]
 },
 "aura": {
@@ -1327,7 +1327,72 @@
 ],
 "d": 2,
 "size": [
-258,
+256,
+210
+]
+},
+"angry": {
+"files": [
+"angry00.png",
+"angry01.png",
+"angry02.png",
+"angry03.png",
+"angry04.png",
+"angry05.png",
+"angry06.png",
+"angry07.png",
+"angry08.png",
+"angry09.png",
+"angry10.png",
+"angry11.png",
+"angry12.png",
+"angry13.png",
+"angry14.png",
+"angry15.png",
+"angry16.png",
+"angry17.png",
+"angry18.png",
+"angry19.png",
+"angry20.png",
+"angry21.png",
+"angry22.png",
+"angry23.png",
+"angry24.png",
+"angry25.png",
+"angry26.png",
+"angry27.png",
+"angry28.png",
+"angry29.png",
+"angry30.png",
+"angry31.png",
+"angry32.png",
+"angry33.png",
+"angry34.png",
+"angry35.png",
+"angry36.png",
+"angry37.png",
+"angry38.png",
+"angry39.png",
+"angry40.png",
+"angry41.png",
+"angry42.png",
+"angry43.png",
+"angry44.png",
+"angry45.png",
+"angry46.png",
+"angry47.png",
+"angry48.png",
+"angry49.png",
+"angry50.png",
+"angry51.png"
+],
+"anchor": [
+182,
+190
+],
+"d": 1,
+"size": [
+306,
 211
 ]
 },
@@ -1383,13 +1448,13 @@
 "tantrum47.png"
 ],
 "anchor": [
-127,
-176
+128,
+174
 ],
 "d": 1,
 "size": [
-251,
-203
+250,
+201
 ]
 },
 "cry": {

@@ -31,6 +31,7 @@ LABELS = [(8, 3, 188, 28), (793, 3, 1003, 28), (8, 150, 128, 175), (793, 150, 89
           (793, 290, 970, 313), (8, 432, 190, 452), (823, 446, 950, 465), (8, 593, 272, 614), (803, 593, 990, 614),
           (8, 742, 218, 763), (742, 752, 965, 774), (0, 880, 152, 907), (958, 885, 1120, 906)]
 MIRROR = {"st6", "st7"}
+PINK = {"emo5"}
 VIGNETTE = {"ult1", "ult2", "ult3", "ult4", "roar4", "aura3", "aura5"}
 # khung có nền vân sét vàng nhạt dày đặc -> lọc bớt điểm nhạt màu (chỉ giữ thân tối + vàng đậm)
 PALE = {"bolt1": 0.0, "bolt2": 0.0, "bolt3": 0.0, "bolt4": 0.0, "aura1": 0.3, "aura2": 0.3, "aura3": 0.3, "aura4": 0.3,
@@ -151,6 +152,12 @@ def cut(name):
     fy_ = np.minimum(np.arange(hh), np.arange(hh)[::-1])
     ramp = np.clip(np.minimum.outer(fy_, fx_) / 12.0, 0, 1)
     a = a * (0.25 + 0.75 * ramp) * np.where(ramp < 1, ramp ** 0.5, 1)
+    if name in PINK:                                         # bụi hồng rắc quanh (khung biểu cảm) -> bỏ
+        r_, g_, b_ = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+        pink = np.clip((r_ - g_ - 50) / 40.0, 0, 1) * np.clip((b_ - g_ + 10) / 40.0, 0, 1) * np.clip((r_ - 150) / 50.0, 0, 1)
+        a = a * (1 - pink)
+        dens = np.asarray(Image.fromarray((a * 255).astype(np.uint8)).filter(ImageFilter.BoxBlur(3))) / 255.0
+        a = np.where(dens < 0.3, a * np.clip((dens - 0.1) / 0.2, 0, 1), a)
     if name in VIGNETTE:                                     # vân năng lượng tràn khung -> bo thành hình elip mềm
         yy, xx = np.mgrid[0:hh, 0:ww]
         d = ((xx - ww / 2.0) / (ww / 2.0)) ** 2 + ((yy - hh * 0.55) / (hh * 0.55)) ** 2
@@ -215,8 +222,26 @@ KEYS = {}
 
 def key(name):
     if name not in KEYS:
-        KEYS[name] = flame_key() if name == "fx_fire" else Key(name)
+        if name == "fx_fire":
+            KEYS[name] = flame_key()
+        elif name.startswith("hu_"):
+            KEYS[name] = file_key(name)
+        else:
+            KEYS[name] = Key(name)
     return KEYS[name]
+
+
+def file_key(name):
+    """Ảnh hiệu ứng của người dùng trong HieuUng/ (chạy tools/cat_hieu_ung.py trước). Neo = giữa đáy."""
+    im = Image.open(os.path.join(os.path.dirname(HERE), "HieuUng", name[3:] + ".png")).convert("RGBA")
+    k = Key.__new__(Key)
+    k.name, k.im = name, im
+    k.anchor = (im.width / 2.0, im.height * 0.96)
+    k.center = (im.width / 2.0, im.height / 2.0)
+    k.mouth = k.center
+    k.pts = []
+    k._flash = {}
+    return k
 
 
 FLAME_POLY = [(862, 214), (905, 200), (960, 214), (1040, 232), (1137, 252), (1137, 287), (1060, 287), (950, 262), (862, 240)]
@@ -1062,6 +1087,25 @@ def S_impact():
     def f(F, i):
         a, b, m = seq[i]
         sx_, sy_ = shake(i, 3 * (1 - i / 14.0)) if i < 14 else (0, 0)
+        # nổ tung một vùng (ảnh nổ của người dùng): nổ mặt đất vàng phía sau, nổ vàng tím bung ra, loé tròn
+        grow = 1 - (1 - min(1.0, (i + 1) / 5.0)) ** 2
+        fade = 1.0 if i < 12 else max(0.0, 1 - (i - 12) / 10.0)
+        if fade > 0:
+            dz = 420.0 / key("hu_no_dat").im.width / SCALE
+            F.sprite("hu_no_dat", (0, 4), sx=dz * (0.5 + 0.55 * grow), sy=dz * (0.3 + 0.75 * grow), alpha=fade, pivot="anchor",
+                     layer="bg", flash=0.5 if i < 2 else 0)
+            F.placed.pop()
+        if 1 <= i <= 14:
+            k2 = (i - 1) / 13.0
+            dz = 340.0 / key("hu_no_vang_tim").im.width / SCALE
+            F.sprite("hu_no_vang_tim", (0, 2), sx=dz * (0.6 + 0.5 * k2), sy=dz * (0.6 + 0.5 * k2), alpha=1 - k2 ** 1.5,
+                     pivot="anchor", layer="fg")
+            F.placed.pop()
+        if i < 7:
+            dz = 300.0 / key("hu_no_vang").im.width / SCALE
+            F.sprite("hu_no_vang", (0, -40), sx=dz * (0.4 + 0.15 * i), sy=dz * (0.4 + 0.15 * i), rot=i * 6, alpha=1 - i / 7.0,
+                     pivot="center", layer="fg", flash=0.4 if i < 2 else 0)
+            F.placed.pop()
         info = pair(F, a, b, m, pos=(sx_, sy_), pivot="anchor", glow=kfv(i, [(0, 1.0), (20, 0.4), (36, 0.2)]),
                     flash=kfv(i, [(0, 0.8), (3, 0.0)]))
         r = random.Random(8)
@@ -1285,6 +1329,54 @@ def S_love():
     return build(T, f)
 
 
+def anger_mark(F, c, s, al):
+    """Dấu gân giận (4 nét cong đỏ) cạnh đầu."""
+    for k in range(4):
+        a = 45 + 90 * k
+        p0 = add(c, dirv(a - 20), s * 0.35)
+        p1 = add(c, dirv(a), s)
+        p2 = add(c, dirv(a + 20), s * 0.35)
+        F.line([p0, p1, p2], (255, 60, 60, int(255 * al)), 1.6)
+        F.line([p0, p1, p2], (255, 40, 40, int(150 * al)), 4, layer="fgg")
+
+
+@defset("angry")
+def S_angry():
+    segs = [("walk3", 4), ("emo5", 16), ("roar3", 14), ("emo5", 14), ("walk3", 4)]
+    T = 52
+    seq = tl(segs, 2)
+
+    def f(F, i):
+        a, b, m = seq[i]
+        hop = -6 * abs(math.sin(TAU * i / 8)) if 4 <= i < 20 else 0              # dậm chân bực bội
+        sh = shake(i, 1.6) if 4 <= i <= 48 else (0, 0)
+        sq = kfv(i, [(0, 0.86), (3, 1.0)])
+        info = pair(F, a, b, m, pos=(sh[0], hop + sh[1]), sy=sq, sx=2 - sq, pivot="anchor",
+                    glow=kfv(i, [(0, 0.3), (8, 0.8), (46, 0.8), (52, 0.2)]), glow_col=(255, 50, 40),
+                    flash=0.5 if i == 20 else 0)
+        M = info["mouth"]
+        r = random.Random(i * 19)
+        kk = info["key"]
+        head = info["fwd"]((kk.im.width * 0.32, kk.im.height * 0.02))
+        anger_mark(F, add(head, (6, -10)), 8 + 2 * math.sin(i * 1.3), 1.0 if 4 <= i <= 48 else 0.0)
+        for n in range(2):                                                    # phì khói nóng từ mũi
+            ph = ((i * 0.12 + n * 0.5) % 1.0)
+            F.ell(add(M, (6 - 10 * ph, -4 - 14 * ph)), 2 + 5 * ph, 2 + 4 * ph, fill=(170, 160, 160, int(170 * (1 - ph))), layer="fgg")
+        if 20 <= i <= 33:                                                     # thét giận: sóng âm đỏ + sét đỏ tím
+            for t0 in range(20, 34, 3):
+                a_ = i - t0
+                if 0 <= a_ < 8:
+                    pts = [add(M, dirv(120 + 120 * k / 16.0), 8 + a_ * 11) for k in range(17)]
+                    F.line(pts, (255, 60, 50, int(180 * (1 - a_ / 8.0))), 3.4, layer="fgg")
+                    F.line(pts, (255, 220, 210, int(230 * (1 - a_ / 8.0))), 1.0)
+            body_arcs(F, info, r, 3, 1.0, (255, 40, 60), (255, 190, 200))
+        if i == 20:
+            flash_burst(F, M, 24, 1.0, col=(255, 120, 100))
+        if 4 <= i < 20 and i % 4 == 0:
+            dust(F, (r.uniform(-20, 20), -2), 8, 0.7)
+    return build(T, f)
+
+
 @defset("tantrum")
 def S_tantrum():
     T = 48
@@ -1436,6 +1528,7 @@ ACTIONS = [
     _seq("LongPhi_BayTheoChuot", "CatCanh", "BayLen", "BayTheo", "LuonVong", "HaCanh", "Land"),
     _seq("LongPhi_LaoXuongDapDat", "CatCanh", "BayLen", "LaoXuong", "DapDat"),
     # cảm xúc
+    _anim("TucGian", "angry"), _seq("LongTinh_TucGian", "TucGian"),
     _anim("HoaiNghi", "doubt"), _anim("YeuThich", "love"), _anim("AnVa", "tantrum", typ="Stay"), _anim("Khoc", "cry", typ="Stay"),
     _anim("NanNi", "beg", typ="Stay"),
     _seq("LongTinh_HoaiNghi", "HoaiNghi"), _seq("LongTinh_YeuThich", "YeuThich"), _seq("LongTinh_AnVa", ("AnVa", {"Duration": "144"})),
@@ -1451,7 +1544,7 @@ FREQ = [("Stand", 80), ("StandAlt", 35), ("Walk", 100), ("Run", 30), ("Dash", 15
         ("LongKy_TreoLoLung", 8), ("LongBa_LongUy", 3), ("LongBa_HacHoa", 4), ("LongBa_FullCombo", 2), ("LongBien_HoaMini", 5),
         ("LongPhi_BayVut", 8), ("LongPhi_BayTheoChuot", 4), ("LongPhi_LaoXuongDapDat", 4),
         ("LongDi_BamVachTrai", 5), ("LongDi_BamVachPhai", 5),
-        ("LongTinh_HoaiNghi", 8), ("LongTinh_YeuThich", 7), ("LongTinh_AnVa", 4), ("LongTinh_Khoc", 4), ("LongTinh_NanNi", 6),
+        ("LongTinh_HoaiNghi", 8), ("LongTinh_TucGian", 5), ("LongTinh_YeuThich", 7), ("LongTinh_AnVa", 4), ("LongTinh_Khoc", 4), ("LongTinh_NanNi", 6),
         ("LongTruy_DuoiChuot", 4)]
 
 META = {
@@ -1459,7 +1552,8 @@ META = {
     "desc": "Hắc long thái cổ (rồng đen vảy vàng) – bộ hình của người dùng, hiệu ứng lôi điện",
     "fly_prefix": "flydash",
     "drop_action": "LongPhi_LaoXuongDapDat",
-    "wall_hit_action": "LongTinh_AnVa",
+    "wall_hit_action": "LongTinh_TucGian",
+    "rev": 2,
     "climb_behaviors": ["LongDi_BamVachTrai", "LongDi_BamVachPhai"],
     "groups": {"LongKy": "Long kỹ", "LongBa": "Tuyệt kỹ", "LongPhi": "Bay lượn", "LongTinh": "Biểu cảm",
                "LongNghi": "Nghỉ ngơi", "LongDi": "Di chuyển", "LongTruy": "Theo chuột", "LongBien": "Biến hoá"},
@@ -1473,7 +1567,7 @@ META = {
         "LongPhi_BayVut": "Bay vút lên trời", "LongPhi_BayTheoChuot": "Bay theo chuột",
         "LongPhi_LaoXuongDapDat": "Lao xuống & đập đất", "LongDi_BamVachTrai": "Leo vách trái", "LongDi_BamVachPhai": "Leo vách phải",
         "LongTinh_HoaiNghi": "Hoài nghi (???)", "LongTinh_YeuThich": "Yêu thích (tim bay)", "LongTinh_AnVa": "Ăn vạ",
-        "LongTinh_Khoc": "Khóc", "LongTinh_NanNi": "Nằn nì", "LongTruy_DuoiChuot": "Đuổi theo chuột",
+        "LongTinh_Khoc": "Khóc", "LongTinh_TucGian": "Tức giận (gân đỏ, thét)", "LongTinh_NanNi": "Nằn nì", "LongTruy_DuoiChuot": "Đuổi theo chuột",
     },
     "triggers": {
         "L1": {"act": "LongKy_PhunSamSet", "cmd": "upcoming"}, "L2": {"act": "", "cmd": "manager"},

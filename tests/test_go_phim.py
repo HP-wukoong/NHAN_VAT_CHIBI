@@ -38,11 +38,13 @@ def run():
         fr = maker(120, 7)
         ok = len(fr) >= 6 and len({f.size for f in fr}) == 1 and any(f.getbbox() for f in fr)
         check(ok, "mẫu hiệu ứng '%s': %d khung, cùng cỡ, có hình" % (name, len(fr)))
-    app.store.s["key_fx_type"], app.store.s["key_fx_del"] = "thunder", "hammer"
+    check(all(C.fx_src(n) is not None for n in ("tia_chop", "no_dat", "loilong", "matrao1", "daulau3", "phikiem5")),
+          "đọc được ảnh hiệu ứng của bạn trong HieuUng/")
+    app.store.s["key_fx_type"], app.store.s["key_fx_del"] = "thunder", "skull"
     fx.t_last = {"T": 0, "D": 0}
     fx.on_key("T")
     fx.on_key("D")
-    check(fx.bolt.last_key == "thunder" and fx.slash.last_key == "hammer", "chọn mẫu riêng cho gõ / xoá")
+    check(fx.bolt.last_key == "thunder" and fx.slash.last_key == "skull", "chọn mẫu riêng cho gõ / xoá")
     app.store.s["key_fx_type"] = "random"
     got = set()
     for _ in range(30):

@@ -1,9 +1,10 @@
 {
-  "version": "3.3",
+  "version": "3.4",
   "date": "2026-11-26",
   "notes": [
-    "Cổ Long làm lại hoàn toàn từ bảng sprite rồng đen vảy vàng của bạn (bỏ con rồng vẽ bằng code)",
-    "Đủ 14 nhóm: đi, bay lượn, cuộn thân, phun lửa, phun sấm sét, lao xuống đập đất, lôi điện quanh thân, treo lơ lửng, biểu cảm, gầm rú, hoá rồng mini, Long uy, hắc hoá, ngủ",
-    "Hoạt cảnh 25 hình/giây: chuyển động liên tục giữa các khung, lôi điện đan xen, chớp loá khi ra đòn; đòn nhanh thì nhanh, nghỉ thì chậm"
+    "Hiệu ứng gõ / xoá thay toàn bộ bằng 26 mẫu cắt từ ảnh hiệu ứng của bạn (sấm sét vàng tím, nổ, lôi long, ma trảo, đầu lâu, phi kiếm, bỉ ngạn hoa...)",
+    "Cổ Long: quăng đập tường rơi xuống thì tức giận (gân đỏ, dậm chân, thét)",
+    "Cổ Long: thả rơi từ trên cao, chạm đất nổ tung một vùng bằng ảnh nổ của bạn",
+    "Sửa phím gõ đầu tiên bị khựng (nạp sẵn hiệu ứng khi mở app)"
   ]
 }
