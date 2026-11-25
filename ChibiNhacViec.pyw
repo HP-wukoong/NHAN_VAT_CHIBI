@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CHIBI NHẮC VIỆC  v2.9
+CHIBI NHẮC VIỆC  v3.0
 Robot chibi nhắc việc chạy trên màn hình Windows 10/11.
 - Đi lại tự do toàn màn hình (hỗ trợ nhiều màn hình), kéo thả, đổi kích thước, đổi nhân vật
 - Nhắc việc: một lần / hằng ngày / T2-T6 / chọn thứ / lặp mỗi N phút, hoãn, báo trước
@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "2.9"
+APP_VER = "3.0"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -332,7 +332,7 @@ DEFAULT_SETTINGS = {
     "pack": "", "free_master": True, "free": {}, "assigned_no_free": True, "walk_windows": True, "jump_icons": True,
     "auto_jump": True, "climb": True, "smooth": True, "triggers": None, "screen_mode": "desktop",
     "update_mode": "notify", "last_update_check": "", "just_updated": "",
-    "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0, "key_fx_type": "bolt", "key_fx_del": "slash",
+    "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0, "key_fx_type": "bolt", "key_fx_del": "slash", "key_fx_autosize": True,
     "drop_action": "VaCham_RoiHoDat", "wall_hit_action": "TrangThai_AnVa",
 }
 
@@ -2217,9 +2217,9 @@ def classify_key(vk, injected, ctrl, alt, win):
 
 
 def caret_info():
-    """(vị trí con trỏ nhập trên màn hình hoặc None, đang ở ô mật khẩu?)"""
+    """(vị trí con trỏ nhập trên màn hình hoặc None, đang ở ô mật khẩu?, chiều cao con trỏ = cỡ chữ hoặc None)"""
     if not IS_WIN:
-        return None, False
+        return None, False, None
     try:
         u32 = ctypes.windll.user32
 
@@ -2229,12 +2229,12 @@ def caret_info():
                         ("hwndMoveSize", wintypes.HWND), ("hwndCaret", wintypes.HWND), ("rcCaret", wintypes.RECT)]
         fg = u32.GetForegroundWindow()
         if not fg:
-            return None, False
+            return None, False, None
         tid = u32.GetWindowThreadProcessId(fg, None)
         gi = GTI()
         gi.cbSize = ctypes.sizeof(GTI)
         if not u32.GetGUIThreadInfo(tid, ctypes.byref(gi)):
-            return None, False
+            return None, False, None
         pw = False
         if gi.hwndFocus:
             cls = _class_name(gi.hwndFocus).lower()
@@ -2244,10 +2244,10 @@ def caret_info():
             r = gi.rcCaret
             pt = wintypes.POINT(r.left, (r.top + r.bottom) // 2)
             u32.ClientToScreen(gi.hwndCaret, ctypes.byref(pt))
-            return (pt.x, pt.y), pw
-        return None, pw
+            return (pt.x, pt.y), pw, max(0, r.bottom - r.top)
+        return None, pw, None
     except Exception:
-        return None, False
+        return None, False, None
 
 
 # ── Tìm vị trí con trỏ nhập ở MỌI phần mềm: UI Automation (Chrome, Edge, Word, app mới), MSAA (Electron/Zalo) ──
@@ -2398,7 +2398,7 @@ class _CaretCore:
         if not rects:
             return None
         l, t, w, h = rects[-1]
-        return int(l + w), int(t + h / 2)
+        return int(l + w), int(t + h / 2), int(h)
 
     def _msaa(self):
         u32 = ctypes.windll.user32
@@ -2430,7 +2430,7 @@ class _CaretCore:
             hr = _vcall(acc, 22, [ctypes.POINTER(ctypes.c_long)] * 4 + [_VARIANT],
                         [ctypes.byref(l), ctypes.byref(t), ctypes.byref(w), ctypes.byref(h), child])
             if hr == 0 and (l.value or t.value) and h.value > 0:
-                return l.value + w.value, t.value + h.value // 2
+                return l.value + w.value, t.value + h.value // 2, h.value
         finally:
             _release(acc)
         return None
@@ -2450,8 +2450,8 @@ def caret_helper_main():
             pos, pw, how = core.find()
         except Exception:
             pos, pw, how = None, False, ""
-        x, y = pos if pos else (-99999, -99999)
-        out.write("%s %d %d %d %s\n" % (rid, x, y, 1 if pw else 0, how.replace(" ", "_") or "-"))
+        x, y, ch = pos if pos else (-99999, -99999, 0)
+        out.write("%s %d %d %d %s %d\n" % (rid, x, y, 1 if pw else 0, how.replace(" ", "_") or "-", ch))
         out.flush()
 
 
@@ -2488,7 +2488,8 @@ class CaretFinder:
                     x, y = int(parts[1]), int(parts[2])
                     pos = None if x == -99999 else (x, y)
                     how = parts[4].replace("_", " ")
-                    self.results.put((int(parts[0]), pos, parts[3] == "1", "" if how == "-" else how))
+                    ch = int(parts[5]) if len(parts) > 5 and int(parts[5]) > 0 else None
+                    self.results.put((int(parts[0]), pos, parts[3] == "1", "" if how == "-" else how, ch))
         except Exception:
             pass
         with self.lock:
@@ -3226,83 +3227,78 @@ def make_skull_frames(size, seed):
 
 
 def make_dragon_frames(size, seed):
-    """Kim long quấn quanh chữ: rồng vàng kim lượn xoắn dọc dòng chữ (đoạn sau chữ mờ đi), đầu ló ra ở chỗ gõ."""
+    """Lôi long: rồng sấm sét xanh trắng chạy dọc phía trên dòng chữ về chỗ gõ, sét con đánh xuống chữ, cuối cùng nổ chớp."""
     rnd = random.Random(seed + 13000)
-    W, H = int(size * 2.2), int(size * 0.95)
-    cy = H * 0.5
-    A = H * 0.26
-    turns = rnd.uniform(3.0, 3.6)
-    ph0 = rnd.uniform(0, 6.3)
-    x0, x1 = W * 0.04, W * 0.9
-
-    def P(u):
-        a = ph0 + u * turns * 2 * math.pi
-        return x0 + u * (x1 - x0), cy + A * math.sin(a), math.cos(a)
-
-    gold, rim, dark = (215, 160, 35), (255, 225, 110), (130, 85, 15)
-    F = 15
+    W, H = int(size * 2.2), int(size * 0.9)
+    base = H * 0.62                                          # đường chân chữ
+    x0, x1 = W * 0.04, W * 0.88
+    blen = W * 0.5
+    F = 13
     frames = []
+
+    def ypath(x, f):
+        return base - H * 0.2 + math.sin(x / (W * 0.09) + f * 0.9) * H * 0.07
+
     for f in range(F):
         core, glow, dc, dg = _fx_new(W, H)
-        u = min(1.0, (f + 1) / 11.0)
-        fade = 1.0 if f < F - 3 else (F - f) / 3.0
-        n = 40
-        body = [P(max(0.0, u - k * 0.018)) for k in range(n)]
-        thick = H * 0.05
-        segs = []
-        for k in range(n - 1, 0, -1):
-            (xa, ya, da), (xb, yb, db) = body[k], body[k - 1]
-            segs.append(((da + db) / 2, k, (xa, ya), (xb, yb)))
-        segs.sort(key=lambda s_: s_[0])                       # đoạn phía sau chữ vẽ trước, mờ hơn
-        for depth, k, pa, pb in segs:
-            front = depth > 0
-            w_ = thick * (0.3 + 0.7 * (1 - k / float(n))) * (1.0 if front else 0.8)
-            a_ = fade * (1.0 if front else 0.45)
-            dg.line([pa, pb], fill=(255, 190, 40, int(150 * a_)), width=max(3, int(w_ * 3)))
-            dc.line([pa, pb], fill=rim + (int(255 * a_),), width=max(2, int(w_ * 2.2)))
-            dc.line([pa, pb], fill=gold + (int(255 * a_),), width=max(1, int(w_ * 1.7)))
-            if k % 2 == 0:                                     # vảy
-                x, y = pa
-                dc.arc((x - w_ * 0.6, y - w_ * 0.6, x + w_ * 0.6, y + w_ * 0.6), 200, 340, fill=dark + (int(255 * a_),), width=1)
-            if k % 3 == 0 and front and k < n - 2:              # vây lưng đỏ cam
-                tx, ty = pb[0] - pa[0], pb[1] - pa[1]
-                L = math.hypot(tx, ty) or 1
-                nx, ny = -ty / L, tx / L
-                x, y = pa
-                dc.polygon([(x + nx * w_ * 0.5, y + ny * w_ * 0.5), (x + nx * w_ * 1.6 - tx / L * w_ * 0.4,
-                            y + ny * w_ * 1.6 - ty / L * w_ * 0.4), (x - tx / L * w_ * 0.8, y - ty / L * w_ * 0.8)],
-                           fill=(235, 90, 30, int(255 * a_)))
-        hx, hy, hd = body[0]
-        px, py, _ = body[1]
-        ang = math.atan2(hy - py, hx - px)
-        ca, sa = math.cos(ang), math.sin(ang)
+        tr = min(1.0, f / 9.0)
+        hx = x0 + (x1 - x0) * tr
+        hy = ypath(hx, f)
+        fade = 1.0 if f < F - 2 else 0.5
+        if f <= 10:
+            tail = max(x0, hx - blen)
+            for s_ in range(3):                              # 3 dải sét xoắn làm thân
+                pts = []
+                x = tail
+                while x <= hx:
+                    t = (x - tail) / max(1.0, hx - tail)
+                    off = math.sin(x / (W * 0.035) + s_ * 2.1 + f * 1.3) * H * 0.045 * (0.4 + 0.6 * t)
+                    pts.append((x, ypath(x, f) + off + rnd.uniform(-1, 1) * H * 0.02))
+                    x += max(3, W * 0.018)
+                pts.append((hx, hy))
+                for i in range(len(pts) - 1):
+                    t = i / float(len(pts))
+                    dg.line([pts[i], pts[i + 1]], fill=(70, 120, 255, int(190 * fade)), width=max(2, int(H * 0.07 * (0.3 + t))))
+                    dc.line([pts[i], pts[i + 1]], fill=(170, 205, 255, int(230 * fade)), width=max(1, int(H * 0.025 * (0.3 + t))))
+                    dc.line([pts[i], pts[i + 1]], fill=(255, 255, 255, int(255 * fade)), width=1)
+            for _ in range(2 if f % 2 else 1):               # sét con đánh xuống chữ
+                bx = rnd.uniform(max(x0, hx - blen), hx)
+                by = ypath(bx, f)
+                bolt = _jagged((bx, by), (bx + rnd.uniform(-0.03, 0.03) * W, base + H * 0.06), 4, H * 0.03, rnd)
+                dg.line(bolt, fill=(100, 150, 255, 200), width=max(2, int(H * 0.04)))
+                dc.line(bolt, fill=(235, 245, 255, 255), width=1)
+            hs = H * 0.17                                     # đầu rồng bằng nét sét, nhìn về phía con trỏ
 
-        def rot(dx, dy):
-            return hx + dx * ca - dy * sa, hy + dx * sa + dy * ca
-        hs = thick * 2.1
-        head = [rot(-hs * 0.5, -hs * 0.75), rot(hs * 0.6, -hs * 0.6), rot(hs * 1.7, -hs * 0.2), rot(hs * 1.8, hs * 0.15),
-                rot(hs * 0.8, hs * 0.55), rot(-hs * 0.5, hs * 0.7)]
-        dg.polygon(head, fill=(255, 200, 60, int(220 * fade)))
-        dc.polygon(head, fill=gold + (int(255 * fade),), outline=rim + (int(255 * fade),))
-        for s_ in (-1, 1):                                     # sừng hươu + râu rồng
-            hb = rot(-hs * 0.2, s_ * hs * 0.55)
-            ht = rot(-hs * 1.4, s_ * hs * 1.15)
-            dc.line([hb, ht], fill=(250, 235, 200, int(255 * fade)), width=max(1, int(hs * 0.16)))
-            mid = ((hb[0] + ht[0]) / 2, (hb[1] + ht[1]) / 2)
-            dc.line([mid, rot(-hs * 0.9, s_ * hs * 1.5)], fill=(250, 235, 200, int(255 * fade)), width=max(1, int(hs * 0.1)))
-            dc.line([rot(hs * 1.4, s_ * hs * 0.2), rot(hs * 0.6, s_ * hs * 1.3), rot(-hs * 0.8, s_ * hs * 1.7)],
-                    fill=(255, 230, 140, int(230 * fade)), width=1)
-        ex, ey = rot(hs * 0.6, -hs * 0.25)
-        q = max(1, hs * 0.17)
-        dg.ellipse((ex - q * 3, ey - q * 3, ex + q * 3, ey + q * 3), fill=(255, 40, 30, int(200 * fade)))
-        dc.ellipse((ex - q, ey - q, ex + q, ey + q), fill=(220, 20, 20, int(255 * fade)))
-        if f >= F - 4:                                         # tan thành bụi vàng
-            for _ in range(14):
-                x, y, _d = body[rnd.randint(0, n - 1)]
-                x += rnd.uniform(-1, 1) * H * 0.12
-                y += rnd.uniform(-1, 1) * H * 0.12
-                q = H * rnd.uniform(0.012, 0.025)
-                dc.ellipse((x - q, y - q, x + q, y + q), fill=(255, 220, 120, int(230 * fade)))
+            def J(a, b):
+                ln = _jagged(a, b, 3, hs * 0.08, rnd)
+                dg.line(ln, fill=(90, 140, 255, 220), width=max(2, int(hs * 0.35)))
+                dc.line(ln, fill=(235, 245, 255, 255), width=max(1, int(hs * 0.1)))
+            gape = hs * (0.35 + 0.2 * math.sin(f * 1.7))
+            snout = (hx + hs * 1.7, hy - hs * 0.15)
+            J((hx - hs * 0.3, hy - hs * 0.55), snout)                         # hàm trên
+            J((hx - hs * 0.2, hy + hs * 0.2), (hx + hs * 1.4, hy + gape))     # hàm dưới
+            J((hx - hs * 0.3, hy - hs * 0.55), (hx - hs * 1.3, hy - hs * 1.3))  # sừng
+            J((hx + hs * 0.2, hy - hs * 0.6), (hx - hs * 0.6, hy - hs * 1.5))
+            for k in range(3):                                                # bờm
+                J((hx - hs * 0.2 * k, hy - hs * 0.3), (hx - hs * (0.9 + 0.3 * k), hy + hs * (0.2 + 0.35 * k)))
+            for s2 in (-1, 1):                                                # râu điện
+                J((hx + hs * 1.2, hy + s2 * hs * 0.05), (hx + hs * 0.4, hy + s2 * hs * 1.1 + hs * 0.3))
+            ex, ey = hx + hs * 0.55, hy - hs * 0.3
+            q = max(1, hs * 0.16)
+            dg.ellipse((ex - q * 3, ey - q * 3, ex + q * 3, ey + q * 3), fill=(150, 200, 255, 230))
+            dc.ellipse((ex - q, ey - q, ex + q, ey + q), fill=(255, 255, 255, 255))
+        if f >= 9:                                           # nổ chớp tại chỗ gõ
+            k = f - 9
+            r = min(H * (0.1 + 0.05 * k), H * 0.22)
+            a_ = max(0.0, 1 - k / 4.0)
+            cx_, cy_ = x1, base - H * 0.12
+            dg.ellipse((cx_ - r * 1.6, cy_ - r, cx_ + r * 1.6, cy_ + r), fill=(110, 160, 255, int(230 * a_)))
+            if k < 2:
+                dc.ellipse((cx_ - r * 0.5, cy_ - r * 0.35, cx_ + r * 0.5, cy_ + r * 0.35), fill=(255, 255, 255, 255))
+            for _ in range(5):
+                a = rnd.uniform(0, 2 * math.pi)
+                ln = _jagged((cx_, cy_), (cx_ + math.cos(a) * r * 1.6, cy_ + math.sin(a) * r), 4, H * 0.025, rnd)
+                dc.line(ln, fill=(230, 240, 255, int(255 * a_)), width=1)
         frames.append(_fx_merge(core, glow, max(1, H * 0.035)))
     return frames
 
@@ -3388,7 +3384,7 @@ FX_EFFECTS = [
     ("thunder", "Lôi đình giáng xuống", make_thunder_frames, (0.5, 0.9)),
     ("holy", "Thần quang vàng", make_holy_frames, (0.5, 0.5)),
     ("skull", "Đầu lâu ma quái bay lên", make_skull_frames, (0.5, 0.86)),
-    ("dragon", "Kim long quấn quanh chữ", make_dragon_frames, (0.88, 0.5)),
+    ("dragon", "Lôi long sấm sét chạy trên chữ", make_dragon_frames, (0.9, 0.62)),
     ("hellfire", "Lửa địa ngục (lam hoả)", make_hellfire_frames, (0.5, 0.86)),
     ("darkflame", "Hắc diễm bùng cháy", make_darkflame_frames, (0.5, 0.85)),
     ("ice", "Băng tinh nổ", make_ice_frames, (0.5, 0.5)),
@@ -3438,7 +3434,7 @@ class FxPlayer:
             for seed in range(self.VARIANTS):
                 vs.append([(im.convert("RGBa").tobytes("raw", "BGRa"), im.width, im.height) for im in maker(size, seed)])
             self.cache[k] = vs
-            while len(self.cache) > 8:
+            while len(self.cache) > 16:
                 self.cache.pop(next(iter(self.cache)))
         return self.cache[k]
 
@@ -3487,21 +3483,31 @@ class KeyFx:
         self.stats = {}                           # tên chương trình -> cách tìm con trỏ nhập lần gần nhất
         self.last_info = ""
 
-    def size(self):
-        return int(150 * float(self.app.store.s.get("key_fx_size", 1.0)) * self.app.dpi)
+    def size(self, text_h=None):
+        """Cỡ hiệu ứng: theo cỡ chữ phần mềm (chiều cao con trỏ nhập) nếu bật, nhân thêm hệ số trên thanh trượt."""
+        s = self.app.store.s
+        k = float(s.get("key_fx_size", 1.0))
+        if s.get("key_fx_autosize", True) and text_h and 6 <= text_h <= 300:
+            base = text_h * 6.0
+        else:
+            base = 150 * self.app.dpi
+        return int(max(60, min(560, round(base * k / 20.0) * 20)))
 
     def _note(self, how):
         exe = get_foreground_exe() or "?"
         self.stats[exe] = how
         self.last_info = "%s → %s" % (app_name(exe) if exe != "?" else "?", how)
 
-    def _play(self, kind, pos):
+    def _play(self, kind, pos, text_h=None):
         s = self.app.store.s
         self.last_pos = pos
+        self.last_size = self.size(text_h)
+        if text_h:
+            self.last_info = self.last_info + " • cỡ chữ %dpx" % text_h
         if kind == "T":
-            self.bolt.play(pos[0], pos[1], self.size(), s.get("key_fx_type", "bolt"))
+            self.bolt.play(pos[0], pos[1], self.last_size, s.get("key_fx_type", "bolt"))
         else:
-            self.slash.play(pos[0], pos[1], self.size(), s.get("key_fx_del", "slash"))
+            self.slash.play(pos[0], pos[1], self.last_size, s.get("key_fx_del", "slash"))
 
     def _pointer(self):
         px, py = self.app.root.winfo_pointerxy()
@@ -3514,12 +3520,13 @@ class KeyFx:
         t = time_now()
         if t - self.t_last[kind] >= (0.07 if kind == "T" else 0.09):     # gõ nhanh / giữ phím: gộp bớt
             self.t_last[kind] = t
-            pos, pw = caret_info()                          # 1) con trỏ hệ thống: nhanh, làm ngay
+            r = caret_info()                                # 1) con trỏ hệ thống: nhanh, làm ngay
+            pos, pw, th = r[0], r[1], (r[2] if len(r) > 2 else None)
             if pw:
                 return                                      # ô mật khẩu: không hiệu ứng
             if pos is not None:
                 self._note("con trỏ hệ thống")
-                self._play(kind, pos)
+                self._play(kind, pos, th)
             elif self.finder.available():
                 self.rid += 1                               # 2) hỏi UI Automation / MSAA ở tiến trình phụ
                 self.wait = (self.rid, kind, t, self._pointer())
@@ -3533,9 +3540,11 @@ class KeyFx:
         """Gọi mỗi nhịp từ luồng chính: nhận kết quả tìm con trỏ nhập, quá hạn thì hiện cạnh chuột."""
         while True:
             try:
-                rid, pos, pw, how = self.finder.results.get_nowait()
+                res = self.finder.results.get_nowait()
             except Exception:
                 break
+            rid, pos, pw, how = res[:4]
+            th = res[4] if len(res) > 4 else None
             if self.wait and rid == self.wait[0]:
                 _, kind, _t, ptr = self.wait
                 self.wait = None
@@ -3543,7 +3552,7 @@ class KeyFx:
                     self._note("ô mật khẩu – bỏ qua")
                     continue
                 self._note(how or "cạnh chuột")
-                self._play(kind, pos or ptr)
+                self._play(kind, pos or ptr, th if pos else None)
         if self.wait and time_now() - self.wait[2] > 0.25:
             _, kind, _t, ptr = self.wait
             self.wait = None
@@ -5522,9 +5531,13 @@ class Manager:
         ttk.Checkbutton(kf, text="Nhân vật phản ứng khi gõ / xoá liên tục (gán chiêu ở tab Điều khiển)",
                         variable=self.kpet_v, command=lambda: self.app.set_setting("key_fx_pet", self.kpet_v.get())
                         ).grid(row=2, column=0, columnspan=2, sticky="w")
-        ttk.Label(kf, text="Cỡ hiệu ứng:").grid(row=3, column=0, sticky="w", pady=4)
+        self.kauto_v = tk.BooleanVar(value=s.get("key_fx_autosize", True))
+        ttk.Checkbutton(kf, text="Kích thước theo cỡ chữ của phần mềm (chữ to → hiệu ứng to)", variable=self.kauto_v,
+                        command=lambda: self.app.set_setting("key_fx_autosize", self.kauto_v.get())
+                        ).grid(row=9, column=0, columnspan=2, sticky="w")
+        ttk.Label(kf, text="Hệ số cỡ:").grid(row=3, column=0, sticky="w", pady=4)
         self.kfs_v = tk.DoubleVar(value=s.get("key_fx_size", 1.0))
-        ksc = ttk.Scale(kf, from_=0.5, to=2.0, variable=self.kfs_v, length=200)
+        ksc = ttk.Scale(kf, from_=0.4, to=2.5, variable=self.kfs_v, length=200)
         ksc.grid(row=3, column=1, sticky="w", padx=6)
         ksc.bind("<ButtonRelease-1>", lambda e: self.app.set_setting("key_fx_size", round(self.kfs_v.get(), 2)))
         fxl = [b for _, b in FX_CHOICES]

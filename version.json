@@ -1,9 +1,8 @@
 {
-  "version": "2.9",
+  "version": "3.0",
   "date": "2026-11-25",
   "notes": [
-    "Đầu lâu: nhiều đầu lâu nối nhau bay lên, cái sau to hơn, mỗi cái nhỏ rồi to dần",
-    "Kim long quấn quanh chữ: rồng vàng kim lượn xoắn dọc dòng chữ, đầu ló ra ở chỗ gõ",
-    "Vạn kiếm: 5–7 phi kiếm nhỏ bay xoáy rồi đâm chùm vào chữ"
+    "Cỡ hiệu ứng gõ / xoá tự theo cỡ chữ của phần mềm (chữ to → hiệu ứng to), có hệ số chỉnh thêm",
+    "Thay rồng bằng Lôi long: rồng sấm sét chạy dọc trên chữ, sét con đánh xuống chữ, nổ chớp ở chỗ gõ"
   ]
 }

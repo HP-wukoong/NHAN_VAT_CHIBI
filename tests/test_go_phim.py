@@ -101,6 +101,21 @@ def run():
     fx.poll()
     check(fx.wait is not None, "bỏ qua kết quả cũ không đúng yêu cầu")
     fx.wait = None
+    # cỡ hiệu ứng theo cỡ chữ
+    app.store.s["key_fx_autosize"], app.store.s["key_fx_size"] = True, 1.0
+    small, big = fx.size(12), fx.size(40)
+    check(small < big, "chữ nhỏ (12px) -> hiệu ứng nhỏ %d, chữ to (40px) -> to %d" % (small, big))
+    check(fx.size(None) == fx.size(), "phần mềm không báo cỡ chữ -> dùng cỡ cố định")
+    app.store.s["key_fx_size"] = 2.0
+    check(fx.size(12) > small, "hệ số cỡ nhân thêm")
+    app.store.s["key_fx_size"], app.store.s["key_fx_autosize"] = 1.0, False
+    check(fx.size(12) == fx.size(40), "tắt tự động -> mọi cỡ chữ cùng cỡ hiệu ứng")
+    app.store.s["key_fx_autosize"] = True
+    fx.wait = (950, "T", C.time_now(), (1, 1))
+    fx.finder.results.put((950, (300, 300), False, "UI Automation", 32))
+    fx.poll()
+    check(fx.last_size == fx.size(32), "cỡ chữ từ UI Automation được dùng để tính cỡ hiệu ứng")
+    fx.wait = None
     # tiến trình phụ: hỏi - đáp qua ống, sập thì chibi vẫn sống, tự mở lại, quá 3 lần thì thôi
     import time as _t
     fd = C.CaretFinder()
