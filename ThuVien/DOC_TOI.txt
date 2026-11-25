@@ -1,0 +1,2 @@
+Bo cai Pillow offline cho Python 3.9 - 3.13 (Windows 64-bit).
+Giai nen cac file .whl vao thu muc ThuVien canh ChayChibi.bat.

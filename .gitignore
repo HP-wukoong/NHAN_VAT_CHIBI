@@ -1,0 +1,5 @@
+ChibiData/
+__pycache__/
+*.pyc
+*.whl
+*.tmp

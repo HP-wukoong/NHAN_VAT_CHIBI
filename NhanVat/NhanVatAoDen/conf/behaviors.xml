@@ -1,0 +1,1393 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Mascot xmlns="http://www.group-finity.com/Mascot" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.group-finity.com/Mascot Mascot.xsd">
+ <BehaviorList>
+   <Behavior Name="Fall" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Land" Frequency="100"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Dragged" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Fall" Frequency="100"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Thrown" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Fall" Frequency="100"/>
+    </NextBehaviorList>
+   </Behavior>
+  <Condition Condition="#{mascot.environment.floor.isOn(mascot.anchor)}">
+   <Behavior Name="Stand" Frequency="80">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="StandAlt" Frequency="30">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Walk" Frequency="100">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Run" Frequency="40">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Dash" Frequency="25">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="NghiNgoi_Ngoi" Frequency="30">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="NghiNgoi_Ngu" Frequency="12">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ChienDau_DamLien" Frequency="16">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ChienDau_KiemKhi" Frequency="14">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ChienDau_LaoChem" Frequency="12">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ChienDau_NhayChem" Frequency="10">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ChienDau_DamThep" Frequency="14">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ChienDau_DamLienHoan" Frequency="12">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ChienDau_DamSongAm" Frequency="9">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="HacLong_NhayVut" Frequency="8">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="HacLong_BayTheoChuot" Frequency="5">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="DiChuyen_LuotTrai" Frequency="14">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="DiChuyen_LuotPhai" Frequency="14">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="DiChuyen_LaoNhanh" Frequency="12">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="DiChuyen_BamVachTrai" Frequency="6">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="DiChuyen_BamVachPhai" Frequency="6">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="VaCham_RoiHoDat" Frequency="6">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="TrangThai_NgoiKhoc" Frequency="10">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="TrangThai_AnVa" Frequency="8">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="TrangThai_NanNi" Frequency="8">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="BieuCam_CuoiMaQuai" Frequency="8">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="BieuCam_HoaCuong" Frequency="6">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="BaKhi_NapNang" Frequency="7">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="BaKhi_NoKhi" Frequency="7">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="BaKhi_FullCombo" Frequency="3">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="TapLuyen_DanhBong" Frequency="12">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="TapLuyen_ChayBo" Frequency="12">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="TapLuyen_LaoTapLuyen" Frequency="9">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ChuotThu_ChayTheoChuot" Frequency="5">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Land" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="30"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="40"/>
+     <BehaviorReference Name="Dash" Frequency="25"/>
+     <BehaviorReference Name="NghiNgoi_Ngoi" Frequency="30"/>
+     <BehaviorReference Name="NghiNgoi_Ngu" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamLien" Frequency="16"/>
+     <BehaviorReference Name="ChienDau_KiemKhi" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_LaoChem" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_NhayChem" Frequency="10"/>
+     <BehaviorReference Name="ChienDau_DamThep" Frequency="14"/>
+     <BehaviorReference Name="ChienDau_DamLienHoan" Frequency="12"/>
+     <BehaviorReference Name="ChienDau_DamSongAm" Frequency="9"/>
+     <BehaviorReference Name="HacLong_NhayVut" Frequency="8"/>
+     <BehaviorReference Name="HacLong_BayTheoChuot" Frequency="5"/>
+     <BehaviorReference Name="DiChuyen_LuotTrai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LuotPhai" Frequency="14"/>
+     <BehaviorReference Name="DiChuyen_LaoNhanh" Frequency="12"/>
+     <BehaviorReference Name="DiChuyen_BamVachTrai" Frequency="6"/>
+     <BehaviorReference Name="DiChuyen_BamVachPhai" Frequency="6"/>
+     <BehaviorReference Name="VaCham_RoiHoDat" Frequency="6"/>
+     <BehaviorReference Name="TrangThai_NgoiKhoc" Frequency="10"/>
+     <BehaviorReference Name="TrangThai_AnVa" Frequency="8"/>
+     <BehaviorReference Name="TrangThai_NanNi" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_CuoiMaQuai" Frequency="8"/>
+     <BehaviorReference Name="BieuCam_HoaCuong" Frequency="6"/>
+     <BehaviorReference Name="BaKhi_NapNang" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_NoKhi" Frequency="7"/>
+     <BehaviorReference Name="BaKhi_FullCombo" Frequency="3"/>
+     <BehaviorReference Name="TapLuyen_DanhBong" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_ChayBo" Frequency="12"/>
+     <BehaviorReference Name="TapLuyen_LaoTapLuyen" Frequency="9"/>
+     <BehaviorReference Name="ChuotThu_ChayTheoChuot" Frequency="5"/>
+    </NextBehaviorList>
+   </Behavior>
+  </Condition>
+  <Condition Condition="#{mascot.environment.wall.isOn(mascot.anchor)}">
+   <Behavior Name="GrabWall" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="ClimbWall" Frequency="100"/>
+     <BehaviorReference Name="GrabWall" Frequency="30"/>
+     <BehaviorReference Name="Fall" Frequency="15"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ClimbWall" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <Condition Condition="#{mascot.environment.ceiling.isOn(mascot.anchor)}"><BehaviorReference Name="GrabCeiling" Frequency="200"/></Condition>
+     <BehaviorReference Name="ClimbWall" Frequency="60"/>
+     <BehaviorReference Name="GrabWall" Frequency="30"/>
+     <BehaviorReference Name="Fall" Frequency="15"/>
+    </NextBehaviorList>
+   </Behavior>
+  </Condition>
+  <Condition Condition="#{mascot.environment.ceiling.isOn(mascot.anchor)}">
+   <Behavior Name="GrabCeiling" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="ClimbCeiling" Frequency="100"/>
+     <BehaviorReference Name="GrabCeiling" Frequency="30"/>
+     <BehaviorReference Name="TrangThai_BiTreo" Frequency="25"/>
+     <BehaviorReference Name="Fall" Frequency="15"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ClimbCeiling" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="ClimbCeiling" Frequency="100"/>
+     <BehaviorReference Name="GrabCeiling" Frequency="30"/>
+     <BehaviorReference Name="TrangThai_BiTreo" Frequency="25"/>
+     <BehaviorReference Name="Fall" Frequency="15"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="TrangThai_BiTreo" Frequency="0">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="GrabCeiling" Frequency="100"/>
+     <BehaviorReference Name="Fall" Frequency="30"/>
+    </NextBehaviorList>
+   </Behavior>
+  </Condition>
+ </BehaviorList>
+</Mascot>
