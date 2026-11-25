@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CHIBI NHẮC VIỆC  v2.8
+CHIBI NHẮC VIỆC  v2.9
 Robot chibi nhắc việc chạy trên màn hình Windows 10/11.
 - Đi lại tự do toàn màn hình (hỗ trợ nhiều màn hình), kéo thả, đổi kích thước, đổi nhân vật
 - Nhắc việc: một lần / hằng ngày / T2-T6 / chọn thứ / lặp mỗi N phút, hoãn, báo trước
@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "2.8"
+APP_VER = "2.9"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -3103,119 +3103,6 @@ def _horror_skull(r, jaw, al, seed=0):
     return im
 
 
-def make_skull_frames(size, seed):
-    """Đầu lâu ma quái kinh dị: sọ kim loại bạc, nanh dài, hàm há lập cập, khói tím đen, bay lên rồi tan."""
-    rnd = random.Random(seed + 4000)
-    W, H = size, int(size * 1.5)
-    skulls = [(W / 2.0, W * 0.2, 0.0)]
-    if rnd.random() < 0.6:
-        skulls.append((W / 2.0 + rnd.choice((-1, 1)) * W * 0.28, W * 0.11, 0.6))
-    cache = {}
-    frames = []
-    for f in range(11):
-        core, glow, dc, dg = _fx_new(W, H)
-        for i, (x0, r, delay) in enumerate(skulls):
-            t = max(0.0, (f - delay * 3) / 10.0)
-            pop = min(1.0, t * 4.5)
-            al = min(1.0, t * 5) * (1 - max(0, t - 0.6) / 0.4)
-            if al <= 0.02:
-                continue
-            rr = r * (0.55 + 0.45 * pop)
-            cy = H * 0.72 - t * H * 0.45
-            cx = x0 + math.sin(f * 0.9 + i) * W * 0.03
-            jaw = abs(math.sin(f * 1.6 + i))                # hàm lập cập
-            for k2 in range(1, 4):                             # khói ma
-                q = rr * (0.9 - k2 * 0.15)
-                ty = cy + rr * (1.1 + k2 * 0.8)
-                dg.ellipse((cx - q, ty - q, cx + q, ty + q), fill=(90, 30, 140, int(150 * al / k2)))
-            dg.ellipse((cx - rr * 1.5, cy - rr * 1.5, cx + rr * 1.5, cy + rr * 1.7), fill=(60, 0, 90, int(190 * al)))
-            key = (i, int(rr), round(jaw, 1), round(al, 1))
-            sk = cache.get(key)
-            if sk is None:
-                sk = _horror_skull(max(4, rr), jaw, al, seed + i)
-                cache[key] = sk
-            core.alpha_composite(sk, (int(cx - sk.width / 2), int(cy - rr * 1.05)))
-        frames.append(_fx_merge(core, glow, max(1, W * 0.04)))
-    return frames
-
-
-def make_dragon_frames(size, seed):
-    """Hắc long cuộn: rồng đen viền tím, gai đỏ, cuộn xoắn quanh chỗ gõ rồi tan thành khói."""
-    rnd = random.Random(seed + 13000)
-    W = H = int(size * 1.3)
-    c = (W / 2.0, H / 2.0)
-    R = W * 0.4
-    a0 = rnd.uniform(0, 2 * math.pi)
-    sgn = rnd.choice((-1, 1))
-
-    def P(t):                                              # đường xoắn ốc thu dần vào tâm
-        a = a0 + sgn * t * 3.6 * math.pi
-        rr = R * (1 - 0.55 * t)
-        return c[0] + math.cos(a) * rr, c[1] + math.sin(a) * rr * 0.8
-
-    F = 12
-    frames = []
-    for f in range(F):
-        core, glow, dc, dg = _fx_new(W, H)
-        th = min(1.0, 0.12 + f / (F - 3.0))
-        fade = 1.0 if f < F - 3 else (F - f) / 3.0
-        n = 26
-        body = [P(max(0.0, th - k * 0.016)) for k in range(n)]
-        thick = W * 0.055
-        for k in range(n - 1, 0, -1):                      # thân liền mạch: vẽ từng đốt từ đuôi lên đầu
-            w_ = thick * (0.3 + 0.7 * (1 - k / float(n)))
-            seg = [body[k], body[k - 1]]
-            dg.line(seg, fill=(140, 50, 255, int(170 * fade)), width=max(3, int(w_ * 3.0)))
-            dc.line(seg, fill=(180, 100, 255, int(255 * fade)), width=max(2, int(w_ * 2.3)))
-        for k in range(n - 1, 0, -1):
-            w_ = thick * (0.3 + 0.7 * (1 - k / float(n)))
-            dc.line([body[k], body[k - 1]], fill=(24, 17, 34, int(255 * fade)), width=max(1, int(w_ * 1.8)))
-        for k in range(n - 1, 0, -1):
-            x, y = body[k]
-            w_ = thick * (0.3 + 0.7 * (1 - k / float(n)))
-            if k % 3 == 0 and k < n - 2:                   # gai lưng đỏ
-                px, py = body[k + 1]
-                tx, ty = x - px, y - py
-                L = math.hypot(tx, ty) or 1
-                nx, ny = -ty / L, tx / L
-                dc.polygon([(x + nx * w_ * 0.6, y + ny * w_ * 0.6), (x + nx * w_ * 1.8 - tx / L * w_ * 0.5,
-                             y + ny * w_ * 1.8 - ty / L * w_ * 0.5), (x - tx / L * w_ * 0.8, y - ty / L * w_ * 0.8)],
-                           fill=(220, 30, 60, int(255 * fade)))
-            if k % 2 == 0:                                 # vảy
-                dc.arc((x - w_ * 0.6, y - w_ * 0.6, x + w_ * 0.6, y + w_ * 0.6), 200, 340,
-                       fill=(90, 70, 120, int(255 * fade)), width=1)
-        hx, hy = body[0]
-        px, py = body[1]
-        ang = math.atan2(hy - py, hx - px)
-        ca, sa = math.cos(ang), math.sin(ang)
-
-        def rot(dx, dy):
-            return hx + dx * ca - dy * sa, hy + dx * sa + dy * ca
-        hs = thick * 1.6
-        head = [rot(-hs * 0.5, -hs * 0.75), rot(hs * 0.6, -hs * 0.55), rot(hs * 1.6, -hs * 0.2), rot(hs * 1.7, hs * 0.15),
-                rot(hs * 0.8, hs * 0.55), rot(-hs * 0.5, hs * 0.7)]
-        dg.polygon(head, fill=(150, 60, 255, int(200 * fade)))
-        dc.polygon(head, fill=(25, 18, 36, int(255 * fade)), outline=(190, 110, 255, int(255 * fade)))
-        for s_ in (-1, 1):                                 # sừng + râu
-            dc.line([rot(-hs * 0.2, s_ * hs * 0.6), rot(-hs * 1.3, s_ * hs * 1.1)], fill=(200, 190, 210, int(255 * fade)),
-                    width=max(1, int(hs * 0.18)))
-            dc.line([rot(hs * 1.3, s_ * hs * 0.2), rot(hs * 0.4, s_ * hs * 1.3), rot(-hs * 0.6, s_ * hs * 1.6)],
-                    fill=(170, 120, 255, int(220 * fade)), width=1)
-        ex, ey = rot(hs * 0.55, -hs * 0.25)
-        q = max(1, hs * 0.18)
-        dg.ellipse((ex - q * 3, ey - q * 3, ex + q * 3, ey + q * 3), fill=(255, 20, 40, int(220 * fade)))
-        dc.ellipse((ex - q, ey - q, ex + q, ey + q), fill=(255, 60, 60, int(255 * fade)))
-        if f >= F - 4:                                     # tan thành khói
-            for _ in range(10):
-                x, y = body[rnd.randint(0, n - 1)]
-                x += rnd.uniform(-1, 1) * W * 0.06
-                y += rnd.uniform(-1, 1) * W * 0.06
-                q = W * rnd.uniform(0.015, 0.035)
-                dg.ellipse((x - q, y - q, x + q, y + q), fill=(80, 40, 120, int(160 * fade)))
-        frames.append(_fx_merge(core, glow, max(1, W * 0.03)))
-    return frames
-
-
 def make_hellfire_frames(size, seed):
     """Lửa địa ngục (lam hoả): sợi lửa xanh trong suốt, lõi trắng xanh, đầu lửa cuộn, tàn lửa cam bay lên."""
     rnd = random.Random(seed + 14000)
@@ -3290,29 +3177,159 @@ def _sword_img(L):
     return im
 
 
-def make_sword_frames(size, seed):
-    """Phi kiếm bay xoáy vòng rồi lao thẳng đâm vỡ chữ: chớp sáng, nứt toác, mảnh văng."""
-    rnd = random.Random(seed + 15000)
-    W = H = int(size * 1.6)
-    hit = (W / 2.0, H * 0.55)
-    L = size * 0.62
-    sword = _sword_img(L)
-    a0 = rnd.uniform(0, 2 * math.pi)
-    sgn = rnd.choice((-1, 1))
-    R = W * 0.36
-    cracks = []
-    for _ in range(rnd.randint(5, 7)):
-        a = rnd.uniform(0, 2 * math.pi)
-        cracks.append(_jagged(hit, (hit[0] + math.cos(a) * size * rnd.uniform(0.25, 0.45),
-                                    hit[1] + math.sin(a) * size * rnd.uniform(0.15, 0.35)), 5, size * 0.03, rnd))
-    shards = [(rnd.uniform(0, 2 * math.pi), rnd.uniform(4, 9), rnd.uniform(0.015, 0.03) * size) for _ in range(10)]
+def make_skull_frames(size, seed):
+    """Đầu lâu ma quái: 4–6 cái nối nhau bay lên, cái sau to hơn cái trước, mỗi cái nhỏ rồi to dần khi bay."""
+    rnd = random.Random(seed + 4000)
+    W, H = int(size * 1.3), int(size * 2.0)
+    n = rnd.randint(4, 6)
+    sk = []
+    for i in range(n):
+        final = W * (0.06 + 0.11 * i / max(1, n - 1))          # thứ tự: nhỏ -> to
+        side = (1 if i % 2 else -1) * rnd.uniform(0.05, 0.22)
+        sk.append((i * 2.0, final, side, rnd.uniform(0, 6.3)))
+    F = int(2 * n + 11)
+    base_cache = {}
 
-    def orbit(t):
-        a = a0 + sgn * t * 2.6 * math.pi
-        rr = R * (1 - 0.45 * t)
+    def skull(rq, jq):
+        k = (rq, jq)
+        if k not in base_cache:
+            base_cache[k] = _horror_skull(max(3, rq), jq / 3.0, 1.0, seed + rq)
+        return base_cache[k]
+
+    frames = []
+    for f in range(F):
+        core, glow, dc, dg = _fx_new(W, H)
+        for i, (start, final, side, ph) in enumerate(sk):
+            age = f - start
+            if age < 0:
+                continue
+            life = 11.0
+            t = age / life
+            if t > 1:
+                continue
+            al = min(1.0, age / 1.5) * (1 - max(0.0, t - 0.65) / 0.35)
+            rr = final * (0.3 + 0.7 * min(1.0, t * 1.6))             # nhỏ rồi to dần
+            cy = H * 0.86 - t * H * 0.7
+            cx = W / 2.0 + side * W * min(1.0, t * 2) + math.sin(ph + age * 0.8) * W * 0.02
+            for k2 in range(1, 4):                                   # khói ma
+                q = rr * (0.9 - k2 * 0.15)
+                ty = cy + rr * (1.1 + k2 * 0.8)
+                dg.ellipse((cx - q, ty - q, cx + q, ty + q), fill=(90, 30, 140, int(150 * al / k2)))
+            dg.ellipse((cx - rr * 1.5, cy - rr * 1.5, cx + rr * 1.5, cy + rr * 1.7), fill=(60, 0, 90, int(190 * al)))
+            img = skull(int(rr / 2) * 2, int(abs(math.sin(age * 1.6 + i)) * 3 + 0.5))
+            if al < 0.99:
+                img = img.copy()
+                img.putalpha(img.split()[3].point(lambda v: int(v * al)))
+            core.alpha_composite(img, (int(cx - img.width / 2), max(0, int(cy - rr * 1.05))))
+        frames.append(_fx_merge(core, glow, max(1, W * 0.035)))
+    return frames
+
+
+def make_dragon_frames(size, seed):
+    """Kim long quấn quanh chữ: rồng vàng kim lượn xoắn dọc dòng chữ (đoạn sau chữ mờ đi), đầu ló ra ở chỗ gõ."""
+    rnd = random.Random(seed + 13000)
+    W, H = int(size * 2.2), int(size * 0.95)
+    cy = H * 0.5
+    A = H * 0.26
+    turns = rnd.uniform(3.0, 3.6)
+    ph0 = rnd.uniform(0, 6.3)
+    x0, x1 = W * 0.04, W * 0.9
+
+    def P(u):
+        a = ph0 + u * turns * 2 * math.pi
+        return x0 + u * (x1 - x0), cy + A * math.sin(a), math.cos(a)
+
+    gold, rim, dark = (215, 160, 35), (255, 225, 110), (130, 85, 15)
+    F = 15
+    frames = []
+    for f in range(F):
+        core, glow, dc, dg = _fx_new(W, H)
+        u = min(1.0, (f + 1) / 11.0)
+        fade = 1.0 if f < F - 3 else (F - f) / 3.0
+        n = 40
+        body = [P(max(0.0, u - k * 0.018)) for k in range(n)]
+        thick = H * 0.05
+        segs = []
+        for k in range(n - 1, 0, -1):
+            (xa, ya, da), (xb, yb, db) = body[k], body[k - 1]
+            segs.append(((da + db) / 2, k, (xa, ya), (xb, yb)))
+        segs.sort(key=lambda s_: s_[0])                       # đoạn phía sau chữ vẽ trước, mờ hơn
+        for depth, k, pa, pb in segs:
+            front = depth > 0
+            w_ = thick * (0.3 + 0.7 * (1 - k / float(n))) * (1.0 if front else 0.8)
+            a_ = fade * (1.0 if front else 0.45)
+            dg.line([pa, pb], fill=(255, 190, 40, int(150 * a_)), width=max(3, int(w_ * 3)))
+            dc.line([pa, pb], fill=rim + (int(255 * a_),), width=max(2, int(w_ * 2.2)))
+            dc.line([pa, pb], fill=gold + (int(255 * a_),), width=max(1, int(w_ * 1.7)))
+            if k % 2 == 0:                                     # vảy
+                x, y = pa
+                dc.arc((x - w_ * 0.6, y - w_ * 0.6, x + w_ * 0.6, y + w_ * 0.6), 200, 340, fill=dark + (int(255 * a_),), width=1)
+            if k % 3 == 0 and front and k < n - 2:              # vây lưng đỏ cam
+                tx, ty = pb[0] - pa[0], pb[1] - pa[1]
+                L = math.hypot(tx, ty) or 1
+                nx, ny = -ty / L, tx / L
+                x, y = pa
+                dc.polygon([(x + nx * w_ * 0.5, y + ny * w_ * 0.5), (x + nx * w_ * 1.6 - tx / L * w_ * 0.4,
+                            y + ny * w_ * 1.6 - ty / L * w_ * 0.4), (x - tx / L * w_ * 0.8, y - ty / L * w_ * 0.8)],
+                           fill=(235, 90, 30, int(255 * a_)))
+        hx, hy, hd = body[0]
+        px, py, _ = body[1]
+        ang = math.atan2(hy - py, hx - px)
+        ca, sa = math.cos(ang), math.sin(ang)
+
+        def rot(dx, dy):
+            return hx + dx * ca - dy * sa, hy + dx * sa + dy * ca
+        hs = thick * 2.1
+        head = [rot(-hs * 0.5, -hs * 0.75), rot(hs * 0.6, -hs * 0.6), rot(hs * 1.7, -hs * 0.2), rot(hs * 1.8, hs * 0.15),
+                rot(hs * 0.8, hs * 0.55), rot(-hs * 0.5, hs * 0.7)]
+        dg.polygon(head, fill=(255, 200, 60, int(220 * fade)))
+        dc.polygon(head, fill=gold + (int(255 * fade),), outline=rim + (int(255 * fade),))
+        for s_ in (-1, 1):                                     # sừng hươu + râu rồng
+            hb = rot(-hs * 0.2, s_ * hs * 0.55)
+            ht = rot(-hs * 1.4, s_ * hs * 1.15)
+            dc.line([hb, ht], fill=(250, 235, 200, int(255 * fade)), width=max(1, int(hs * 0.16)))
+            mid = ((hb[0] + ht[0]) / 2, (hb[1] + ht[1]) / 2)
+            dc.line([mid, rot(-hs * 0.9, s_ * hs * 1.5)], fill=(250, 235, 200, int(255 * fade)), width=max(1, int(hs * 0.1)))
+            dc.line([rot(hs * 1.4, s_ * hs * 0.2), rot(hs * 0.6, s_ * hs * 1.3), rot(-hs * 0.8, s_ * hs * 1.7)],
+                    fill=(255, 230, 140, int(230 * fade)), width=1)
+        ex, ey = rot(hs * 0.6, -hs * 0.25)
+        q = max(1, hs * 0.17)
+        dg.ellipse((ex - q * 3, ey - q * 3, ex + q * 3, ey + q * 3), fill=(255, 40, 30, int(200 * fade)))
+        dc.ellipse((ex - q, ey - q, ex + q, ey + q), fill=(220, 20, 20, int(255 * fade)))
+        if f >= F - 4:                                         # tan thành bụi vàng
+            for _ in range(14):
+                x, y, _d = body[rnd.randint(0, n - 1)]
+                x += rnd.uniform(-1, 1) * H * 0.12
+                y += rnd.uniform(-1, 1) * H * 0.12
+                q = H * rnd.uniform(0.012, 0.025)
+                dc.ellipse((x - q, y - q, x + q, y + q), fill=(255, 220, 120, int(230 * fade)))
+        frames.append(_fx_merge(core, glow, max(1, H * 0.035)))
+    return frames
+
+
+def make_sword_frames(size, seed):
+    """Vạn kiếm: 5–7 phi kiếm nhỏ lần lượt bay xoáy rồi đâm chùm quanh chữ, nứt vỡ, cùng tan."""
+    rnd = random.Random(seed + 15000)
+    W = H = int(size * 1.5)
+    hit = (W / 2.0, H * 0.55)
+    L = size * 0.32
+    sword = _sword_img(L)
+    n = rnd.randint(5, 7)
+    sw = []
+    for i in range(n):
+        a0 = rnd.uniform(0, 2 * math.pi)
+        tg = (hit[0] + rnd.uniform(-0.12, 0.12) * size, hit[1] + rnd.uniform(-0.07, 0.07) * size)
+        cr = [_jagged(tg, (tg[0] + math.cos(a) * size * rnd.uniform(0.1, 0.2), tg[1] + math.sin(a) * size * rnd.uniform(0.06, 0.13)),
+                      3, size * 0.015, rnd) for a in [rnd.uniform(0, 6.3) for _ in range(3)]]
+        sw.append(dict(a0=a0, sgn=rnd.choice((-1, 1)), R=W * rnd.uniform(0.28, 0.42), start=i * 0.8, tg=tg, cracks=cr))
+    FLY = 6
+
+    def orbit(s_, t):
+        a = s_["a0"] + s_["sgn"] * t * 2.2 * math.pi
+        rr = s_["R"] * (1 - 0.5 * t)
         return hit[0] + math.cos(a) * rr, hit[1] + math.sin(a) * rr * 0.75
 
-    def put(layer, cx_, cy_, tipdir, al=1.0, glowlayer=None):
+    def put(layer, cx_, cy_, tipdir, al=1.0):
         dx, dy = tipdir
         deg = math.degrees(math.atan2(-dy, dx)) - 90
         img = sword.rotate(deg, resample=Image.BICUBIC, expand=True)
@@ -3321,54 +3338,47 @@ def make_sword_frames(size, seed):
         tmp = Image.new("RGBA", layer.size, (0, 0, 0, 0))
         tmp.paste(img, (int(cx_ - img.width / 2), int(cy_ - img.height / 2)), img)
         layer.alpha_composite(tmp)
-        if glowlayer is not None:
-            glowlayer.alpha_composite(tmp)
 
+    F = int(n * 0.8 + FLY + 7)
     frames = []
-    hist = []
-    for f in range(13):
+    for f in range(F):
         core, glow, dc, dg = _fx_new(W, H)
-        if f <= 7:                                          # bay xoáy, mũi kiếm theo hướng bay
-            t = f / 8.0
-            p, q = orbit(t), orbit(t + 0.03)
-            tip = (q[0] - p[0], q[1] - p[1])
-            hist.append((p, tip))
-            trail = [orbit(max(0.0, t - k * 0.025)) for k in range(8)]   # vệt kiếm khí cong theo đường bay
-            dg.line(trail, fill=(90, 210, 255, 170), width=max(3, int(L * 0.16)))
-            dc.line(trail[:5], fill=(200, 240, 255, 150), width=max(1, int(L * 0.03)))
-            tl = math.hypot(*tip) or 1
-            ux, uy = tip[0] / tl, tip[1] / tl
-            dg.line([(p[0] - ux * L * 0.45, p[1] - uy * L * 0.45), (p[0] + ux * L * 0.45, p[1] + uy * L * 0.45)],
-                    fill=(110, 220, 255, 200), width=max(3, int(L * 0.14)))          # hào quang dọc thân kiếm
-            put(core, p[0], p[1], tip)
-        else:
-            p, tip = hist[-1]
-            d_ = (hit[0] - p[0], hit[1] - p[1])
-            dl = math.hypot(*d_) or 1
-            u = (d_[0] / dl, d_[1] / dl)
-            a_tip = L * 0.48                                # tâm ảnh -> mũi kiếm
-            if f == 8:                                      # lao thẳng tới
-                cxx, cyy = hit[0] - u[0] * (a_tip + L * 0.25), hit[1] - u[1] * (a_tip + L * 0.25)
-                dg.line([(p[0], p[1]), (cxx, cyy)], fill=(120, 220, 255, 200), width=max(3, int(L * 0.2)))
-                put(core, cxx, cyy, u)
-            else:                                           # cắm vào chữ, rung rồi tan
-                k = f - 9
-                fade = max(0.0, 1 - k / 4.0)
-                shake = (2 if k < 2 else 0) * (1 if f % 2 else -1)
-                put(core, hit[0] - u[0] * a_tip * 0.92 + shake, hit[1] - u[1] * a_tip * 0.92, u, max(0.2, fade))
-                if k <= 1:
-                    r = size * (0.16 + 0.08 * k)
-                    dg.ellipse((hit[0] - r * 1.4, hit[1] - r, hit[0] + r * 1.4, hit[1] + r), fill=(140, 220, 255, 230))
-                    dc.ellipse((hit[0] - r * 0.5, hit[1] - r * 0.35, hit[0] + r * 0.5, hit[1] + r * 0.35),
-                               fill=(255, 255, 255, 255))
-                for cr in cracks:
-                    dc.line(cr, fill=(255, 255, 255, int(255 * fade)), width=max(1, int(size * 0.012)))
-                    dg.line(cr, fill=(100, 200, 255, int(200 * fade)), width=max(2, int(size * 0.035)))
-                for a, sp, q in shards:
-                    x = hit[0] + math.cos(a) * sp * (k + 1) * size / 55.0
-                    y = hit[1] + math.sin(a) * sp * (k + 1) * size / 55.0 + 0.6 * (k + 1) ** 2 * size / 55.0
-                    dc.polygon([(x - q, y), (x, y - q), (x + q * 0.8, y + q * 0.6)], fill=(170, 185, 210, int(255 * fade)))
-        frames.append(_fx_merge(core, glow, max(1, size * 0.03)))
+        end_fade = 1.0 if f < F - 4 else (F - f) / 4.0
+        for s_ in sw:
+            age = f - s_["start"]
+            if age < 0:
+                continue
+            tg = s_["tg"]
+            if age < FLY:                                       # bay xoáy, mũi kiếm theo hướng bay
+                t = age / float(FLY)
+                p, q = orbit(s_, t), orbit(s_, t + 0.04)
+                tip = (q[0] - p[0], q[1] - p[1])
+                trail = [orbit(s_, max(0.0, t - k * 0.04)) for k in range(6)]
+                dg.line(trail, fill=(90, 210, 255, 160), width=max(2, int(L * 0.15)))
+                put(core, p[0], p[1], tip)
+                s_["last"] = p
+            else:
+                p = s_.get("last", orbit(s_, 1.0))
+                d_ = (tg[0] - p[0], tg[1] - p[1])
+                dl = math.hypot(*d_) or 1
+                u = (d_[0] / dl, d_[1] / dl)
+                a_tip = L * 0.48
+                k = age - FLY
+                if k < 1:                                       # lao thẳng tới
+                    cxx, cyy = tg[0] - u[0] * (a_tip + L * 0.3), tg[1] - u[1] * (a_tip + L * 0.3)
+                    dg.line([p, (cxx, cyy)], fill=(130, 225, 255, 200), width=max(2, int(L * 0.2)))
+                    put(core, cxx, cyy, u)
+                else:                                           # cắm vào chữ
+                    shake = (1.5 if k < 2.5 else 0) * (1 if int(f) % 2 else -1)
+                    put(core, tg[0] - u[0] * a_tip * 0.9 + shake, tg[1] - u[1] * a_tip * 0.9, u, max(0.15, end_fade))
+                    if k < 2:
+                        r = size * 0.07
+                        dg.ellipse((tg[0] - r * 1.5, tg[1] - r, tg[0] + r * 1.5, tg[1] + r), fill=(150, 225, 255, 220))
+                        dc.ellipse((tg[0] - r * 0.4, tg[1] - r * 0.3, tg[0] + r * 0.4, tg[1] + r * 0.3), fill=(255, 255, 255, 255))
+                    for cr in s_["cracks"]:
+                        dc.line(cr, fill=(255, 255, 255, int(255 * end_fade)), width=1)
+                        dg.line(cr, fill=(100, 200, 255, int(180 * end_fade)), width=max(2, int(size * 0.02)))
+        frames.append(_fx_merge(core, glow, max(1, size * 0.025)))
     return frames
 
 
@@ -3377,8 +3387,8 @@ FX_EFFECTS = [
     ("bolt", "Lôi điện tỏa", make_bolt_frames, (0.5, 0.5)),
     ("thunder", "Lôi đình giáng xuống", make_thunder_frames, (0.5, 0.9)),
     ("holy", "Thần quang vàng", make_holy_frames, (0.5, 0.5)),
-    ("skull", "Đầu lâu ma quái bay lên", make_skull_frames, (0.5, 0.72)),
-    ("dragon", "Hắc long cuộn", make_dragon_frames, (0.5, 0.5)),
+    ("skull", "Đầu lâu ma quái bay lên", make_skull_frames, (0.5, 0.86)),
+    ("dragon", "Kim long quấn quanh chữ", make_dragon_frames, (0.88, 0.5)),
     ("hellfire", "Lửa địa ngục (lam hoả)", make_hellfire_frames, (0.5, 0.86)),
     ("darkflame", "Hắc diễm bùng cháy", make_darkflame_frames, (0.5, 0.85)),
     ("ice", "Băng tinh nổ", make_ice_frames, (0.5, 0.5)),
@@ -3386,7 +3396,7 @@ FX_EFFECTS = [
     ("shock", "Sóng xung kích", make_shock_frames, (0.5, 0.5)),
     ("slash", "Loạn đao chém", make_slash_frames, (0.5, 0.5)),
     ("hammer", "Búa sấm đập vỡ chữ", make_hammer_frames, (0.5, 0.65)),
-    ("sword", "Phi kiếm đâm vỡ chữ", make_sword_frames, (0.5, 0.55)),
+    ("sword", "Vạn kiếm đâm vỡ chữ", make_sword_frames, (0.5, 0.55)),
     ("shatter", "Vỡ vụn", make_shatter_frames, (0.5, 0.5)),
     ("blackhole", "Hố đen nuốt chữ", make_blackhole_frames, (0.5, 0.5)),
     ("explode", "Nổ tung", make_explode_frames, (0.5, 0.5)),
