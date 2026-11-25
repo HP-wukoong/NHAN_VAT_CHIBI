@@ -1,8 +1,9 @@
 {
-  "version": "3.1",
+  "version": "3.2",
   "date": "2026-11-25",
   "notes": [
-    "Thêm 8 hiệu ứng sấm sét: Lôi xích liên hoàn, Lôi cầu plasma, Lôi vân giáng thế, Lôi thương xuyên chữ, Lôi trảo xé chữ, Huyết lôi diệt thế, Thiên phạt lôi trụ, Lôi võng thu lưới",
-    "Thêm lựa chọn ★ Ngẫu nhiên hệ Lôi (mỗi lần gõ ra một kiểu sấm sét khác nhau)"
+    "Thêm nhân vật mới CỔ LONG – hắc long thái cổ: 28 động tác, 1053 khung hình vẽ theo khung xương nên chuyển động mượt",
+    "Chiêu riêng: Long hống, Hắc viêm long tức, Long trảo liên hoàn, Thần vĩ trảm, Phong dực, Chấn địa, Lôi long giáng thế, Tụ long khí, Hắc nhật diệt thế, Thiên long trụy, full combo Thái cổ long hoàng quyết",
+    "Chọn nhân vật trong tab Nhân vật; mỗi nhân vật nhớ bộ gán chuột, tên gọi riêng"
   ]
 }

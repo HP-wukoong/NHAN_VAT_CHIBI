@@ -1,0 +1,148 @@
+{
+ "name": "Cổ Long",
+ "desc": "Hắc long thái cổ – rồng đen chibi, cánh màng, đuôi lưỡi đao, phun hắc viêm",
+ "fly_prefix": "flydash",
+ "drop_action": "LongPhi_ThienLongTruy",
+ "wall_hit_action": "LongTinh_AnVa",
+ "climb_behaviors": [
+  "LongDi_BamVachTrai",
+  "LongDi_BamVachPhai"
+ ],
+ "groups": {
+  "LongKy": "Long kỹ",
+  "LongBa": "Bá khí",
+  "LongPhi": "Bay lượn",
+  "LongTinh": "Cảm xúc",
+  "LongNghi": "Nghỉ ngơi",
+  "LongDi": "Di chuyển",
+  "LongTruy": "Theo chuột"
+ },
+ "labels": {
+  "StandAlt": "Phì khói ngó nghiêng",
+  "Run": "Phi nước đại",
+  "Dash": "Lướt sát đất",
+  "LongNghi_CuonMinh": "Cuộn mình nằm nghỉ",
+  "LongNghi_Ngu": "Ngủ say (khò khò)",
+  "LongKy_Hong": "Long hống (gầm sóng âm)",
+  "LongKy_HacViem": "Hắc viêm long tức (phun lửa đen)",
+  "LongKy_Trao": "Long trảo liên hoàn",
+  "LongKy_VyTram": "Thần vĩ trảm (quật đuôi)",
+  "LongKy_PhongDuc": "Phong dực cuồng phong (vỗ cánh)",
+  "LongKy_ChanDia": "Chấn địa (dậm nứt đất)",
+  "LongKy_LoiGiang": "Lôi long giáng thế (gọi sét)",
+  "LongBa_TuKhi": "Tụ long khí (nạp năng lượng)",
+  "LongBa_HacNhat": "Hắc nhật diệt thế (chiêu cuối)",
+  "LongBa_FullCombo": "THÁI CỔ LONG HOÀNG QUYẾT (full combo)",
+  "LongPhi_BayVut": "Cất cánh bay vút",
+  "LongPhi_BayTheoChuot": "Bay theo chuột",
+  "LongPhi_ThienLongTruy": "Thiên long trụy (bổ nhào tạo hố)",
+  "LongDi_BamVachTrai": "Leo vách trái",
+  "LongDi_BamVachPhai": "Leo vách phải",
+  "LongTinh_CuoiKhay": "Cười khẩy phì khói",
+  "LongTinh_CuongNo": "Cuồng nộ",
+  "LongTinh_AnVa": "Ăn vạ lăn đùng",
+  "LongTinh_Khoc": "Ngồi khóc",
+  "LongTinh_NanNi": "Nằn nì mắt long lanh",
+  "LongTruy_DuoiChuot": "Đuổi theo chuột"
+ },
+ "triggers": {
+  "L1": {
+   "act": "LongKy_Trao",
+   "cmd": "upcoming"
+  },
+  "L2": {
+   "act": "",
+   "cmd": "manager"
+  },
+  "L3": {
+   "act": "LongBa_FullCombo",
+   "cmd": ""
+  },
+  "LH": {
+   "act": "LongBa_TuKhi",
+   "cmd": ""
+  },
+  "R1": {
+   "act": "",
+   "cmd": "menu"
+  },
+  "R2": {
+   "act": "LongTinh_CuongNo",
+   "cmd": ""
+  },
+  "R3": {
+   "act": "LongTinh_NanNi",
+   "cmd": ""
+  },
+  "RH": {
+   "act": "LongPhi_BayTheoChuot",
+   "cmd": ""
+  },
+  "WU": {
+   "act": "LongPhi_BayVut",
+   "cmd": ""
+  },
+  "WD": {
+   "act": "LongNghi_CuonMinh",
+   "cmd": ""
+  },
+  "M1": {
+   "act": "LongTruy_DuoiChuot",
+   "cmd": ""
+  },
+  "E_REMIND": {
+   "act": "LongKy_Hong"
+  },
+  "E_DONE": {
+   "act": "LongTinh_CuoiKhay"
+  },
+  "E_SNOOZE": {
+   "act": "LongTinh_AnVa"
+  },
+  "E_SKIP": {
+   "act": "LongTinh_Khoc"
+  },
+  "E_BREAK": {
+   "act": "LongNghi_CuonMinh"
+  },
+  "E_GREET": {
+   "act": "LongKy_PhongDuc"
+  },
+  "E_SLEEP": {
+   "act": "LongNghi_Ngu"
+  },
+  "E_WAKE": {
+   "act": "LongKy_Hong"
+  },
+  "E_TYPING": {
+   "act": "LongBa_TuKhi"
+  },
+  "E_DELETING": {
+   "act": "LongKy_VyTram"
+  },
+  "S_L1": {
+   "act": "LongKy_Trao"
+  },
+  "S_L2": {
+   "act": "LongKy_HacViem"
+  },
+  "S_R1": {
+   "act": "LongKy_VyTram"
+  },
+  "S_R2": {
+   "act": "LongBa_HacNhat"
+  },
+  "S_WU": {
+   "act": "LongKy_LoiGiang"
+  },
+  "S_WD": {
+   "act": "LongKy_ChanDia"
+  },
+  "S_M1": {
+   "act": "LongKy_Hong"
+  },
+  "S_HK": {
+   "act": "LongBa_FullCombo"
+  }
+ }
+}

@@ -1,0 +1,983 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Mascot xmlns="http://www.group-finity.com/Mascot" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.group-finity.com/Mascot Mascot.xsd">
+ <BehaviorList>
+   <Behavior Name="Fall" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Land" Frequency="100"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Dragged" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Fall" Frequency="100"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Thrown" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Fall" Frequency="100"/>
+    </NextBehaviorList>
+   </Behavior>
+  <Condition Condition="#{mascot.environment.floor.isOn(mascot.anchor)}">
+   <Behavior Name="Stand" Frequency="80">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="StandAlt" Frequency="35">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Walk" Frequency="100">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Run" Frequency="35">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Dash" Frequency="18">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongNghi_CuonMinh" Frequency="26">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongNghi_Ngu" Frequency="8">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongKy_Hong" Frequency="10">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongKy_HacViem" Frequency="9">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongKy_Trao" Frequency="12">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongKy_VyTram" Frequency="10">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongKy_PhongDuc" Frequency="9">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongKy_ChanDia" Frequency="9">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongKy_LoiGiang" Frequency="6">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongBa_TuKhi" Frequency="6">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongBa_HacNhat" Frequency="3">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongBa_FullCombo" Frequency="2">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongPhi_BayVut" Frequency="8">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongPhi_BayTheoChuot" Frequency="4">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongPhi_ThienLongTruy" Frequency="4">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongDi_BamVachTrai" Frequency="5">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongDi_BamVachPhai" Frequency="5">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongTinh_CuoiKhay" Frequency="8">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongTinh_CuongNo" Frequency="6">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongTinh_AnVa" Frequency="5">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongTinh_Khoc" Frequency="5">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongTinh_NanNi" Frequency="6">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="LongTruy_DuoiChuot" Frequency="4">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="Land" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="Stand" Frequency="80"/>
+     <BehaviorReference Name="StandAlt" Frequency="35"/>
+     <BehaviorReference Name="Walk" Frequency="100"/>
+     <BehaviorReference Name="Run" Frequency="35"/>
+     <BehaviorReference Name="Dash" Frequency="18"/>
+     <BehaviorReference Name="LongNghi_CuonMinh" Frequency="26"/>
+     <BehaviorReference Name="LongNghi_Ngu" Frequency="8"/>
+     <BehaviorReference Name="LongKy_Hong" Frequency="10"/>
+     <BehaviorReference Name="LongKy_HacViem" Frequency="9"/>
+     <BehaviorReference Name="LongKy_Trao" Frequency="12"/>
+     <BehaviorReference Name="LongKy_VyTram" Frequency="10"/>
+     <BehaviorReference Name="LongKy_PhongDuc" Frequency="9"/>
+     <BehaviorReference Name="LongKy_ChanDia" Frequency="9"/>
+     <BehaviorReference Name="LongKy_LoiGiang" Frequency="6"/>
+     <BehaviorReference Name="LongBa_TuKhi" Frequency="6"/>
+     <BehaviorReference Name="LongBa_HacNhat" Frequency="3"/>
+     <BehaviorReference Name="LongBa_FullCombo" Frequency="2"/>
+     <BehaviorReference Name="LongPhi_BayVut" Frequency="8"/>
+     <BehaviorReference Name="LongPhi_BayTheoChuot" Frequency="4"/>
+     <BehaviorReference Name="LongPhi_ThienLongTruy" Frequency="4"/>
+     <BehaviorReference Name="LongDi_BamVachTrai" Frequency="5"/>
+     <BehaviorReference Name="LongDi_BamVachPhai" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_CuoiKhay" Frequency="8"/>
+     <BehaviorReference Name="LongTinh_CuongNo" Frequency="6"/>
+     <BehaviorReference Name="LongTinh_AnVa" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_Khoc" Frequency="5"/>
+     <BehaviorReference Name="LongTinh_NanNi" Frequency="6"/>
+     <BehaviorReference Name="LongTruy_DuoiChuot" Frequency="4"/>
+    </NextBehaviorList>
+   </Behavior>
+  </Condition>
+  <Condition Condition="#{mascot.environment.wall.isOn(mascot.anchor)}">
+   <Behavior Name="GrabWall" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="ClimbWall" Frequency="100"/>
+     <BehaviorReference Name="GrabWall" Frequency="30"/>
+     <BehaviorReference Name="Fall" Frequency="15"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ClimbWall" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <Condition Condition="#{mascot.environment.ceiling.isOn(mascot.anchor)}"><BehaviorReference Name="GrabCeiling" Frequency="200"/></Condition>
+     <BehaviorReference Name="ClimbWall" Frequency="60"/>
+     <BehaviorReference Name="GrabWall" Frequency="30"/>
+     <BehaviorReference Name="Fall" Frequency="15"/>
+    </NextBehaviorList>
+   </Behavior>
+  </Condition>
+  <Condition Condition="#{mascot.environment.ceiling.isOn(mascot.anchor)}">
+   <Behavior Name="GrabCeiling" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="ClimbCeiling" Frequency="100"/>
+     <BehaviorReference Name="GrabCeiling" Frequency="30"/>
+     <BehaviorReference Name="Fall" Frequency="15"/>
+    </NextBehaviorList>
+   </Behavior>
+   <Behavior Name="ClimbCeiling" Frequency="0" Hidden="true">
+    <NextBehaviorList Add="false">
+     <BehaviorReference Name="ClimbCeiling" Frequency="100"/>
+     <BehaviorReference Name="GrabCeiling" Frequency="30"/>
+     <BehaviorReference Name="Fall" Frequency="15"/>
+    </NextBehaviorList>
+   </Behavior>
+  </Condition>
+ </BehaviorList>
+</Mascot>

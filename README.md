@@ -20,7 +20,7 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 | Nhắc việc | Một lần, hằng ngày, T2–T6, chọn thứ, lặp mỗi N phút. Có Hoãn 10'/30', báo trước, máy bật trễ tối đa 3 giờ vẫn nhắc. Nhắc dở dang được nhắc tiếp khi mở lại app |
 | Tự học | Phát hiện việc bạn hay làm cùng giờ, gợi ý dời giờ nhắc, bỏ ngày hay bị bỏ qua, học thói quen mở ứng dụng |
 | Sức khoẻ | Nhắc nghỉ mắt theo thời gian làm việc liên tục thật, có giờ yên lặng, tự ngủ khi bạn rời máy |
-| Nhân vật | Engine Shimeji-ee chạy thẳng `actions.xml` / `behaviors.xml`. Gồm 35 động tác: combo, biểu cảm, bám vách, leo trần, bay theo chuột |
+| Nhân vật | Engine Shimeji-ee chạy thẳng `actions.xml` / `behaviors.xml`. Có sẵn 2 nhân vật: **Áo Đen** (35 động tác) và **Cổ Long** (28 động tác, xem bên dưới). Chọn ở tab **Nhân vật**; mỗi nhân vật nhớ bộ gán chuột, tên gọi riêng |
 | Môi trường | Đi và đứng trên mép cửa sổ đang mở. Thấy cửa sổ hay biểu tượng thư mục/file cao hơn phía trước thì nhảy lên. Bước hụt mép thì rơi |
 | Chuột trên nhân vật | Trái/phải × (1 lần, 2 lần, liên tục, giữ), lăn lên, lăn xuống, nhấn con lăn. Mỗi thao tác gán 1 chiêu và/hoặc 1 lệnh. Kéo để xách; thả ra thì nhân vật **lao cắm đầu xuống và nện tạo hố**; quăng **đập vào tường** thì rơi xuống **ăn vạ** (đổi được cả hai) |
 | Chuột trên màn hình | Bấm 1 lần, 2 lần, chuột phải, lăn, nhấn con lăn tại bất kỳ điểm nào: nhân vật **lao tới ngay khi vừa nhấn chuột** (~0,16 giây, dù xa cỡ nào) rồi tung chiêu. Phím **Ctrl + Alt + X** gọi nhân vật tới chỗ con trỏ |
@@ -55,6 +55,23 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 
 Đổi tất cả trong **Bảng quản lý → Điều khiển**. Mở bảng quản lý bằng cách nhấp đúp vào nhân vật.
 
+## Nhân vật Cổ Long (hắc long thái cổ)
+
+Rồng đen chibi vẽ hoàn toàn bằng code theo khung xương (thân, cổ, đầu có hàm mở được, 4 chân, 2 cánh màng, đuôi 12 đốt có lưỡi đao). Mỗi khung hình là một tư thế tính từ đường cong mượt nên đi, bay, vỗ cánh, quật đuôi đều liền mạch (25 hình/giây). Có quầng hắc khí tím mờ quanh thân để nổi trên nền tối.
+
+| Nhóm | Động tác |
+|---|---|
+| Di chuyển | Đứng thở, phì khói ngó nghiêng, đi 4 chân (bàn chân không trượt), phi nước đại, lướt sát đất, leo vách, bò trên trần |
+| Long kỹ | **Long hống** (gầm sóng âm), **Hắc viêm long tức** (phun dòng lửa đen viền tím), **Long trảo liên hoàn** (đứng dậy cào 3 nhát), **Thần vĩ trảm** (quật đuôi qua đầu thành vệt trăng khuyết), **Phong dực cuồng phong** (vỗ cánh tạo gió xoáy), **Chấn địa** (dậm nứt đất, đá văng), **Lôi long giáng thế** (gầm gọi sét đánh quanh mình, sét đánh vào sừng) |
+| Bá khí | **Tụ long khí** (lửa hắc khí bốc quanh thân, hạt khí hút vào), **Hắc nhật diệt thế** (tụ mặt trời đen trước miệng rồi bắn pháo hắc nhật), **Thái cổ long hoàng quyết** (full combo 6 chiêu) |
+| Bay lượn | Cất cánh bay vút, bay theo chuột, **Thiên long trụy** (bay lên rồi bổ nhào kéo đuôi lửa, nện tạo hố) |
+| Cảm xúc | Cười khẩy phì khói, cuồng nộ (mắt đỏ, lửa đỏ), ăn vạ nằm ngửa giãy, ngồi khóc, nằn nì mắt long lanh |
+| Nghỉ | Cuộn mình nằm nghỉ, ngủ khò khò (chữ Z khói bay lên) |
+
+Gán mặc định cho Cổ Long: trái 1 lần = Long trảo, trái 3 lần = full combo, giữ trái = Tụ long khí, phải 2 lần = Cuồng nộ, lăn lên = Bay vút; thả rơi = Thiên long trụy; đập tường = Ăn vạ. Trên màn hình: trái 2 lần = Hắc viêm, phải 2 lần = Hắc nhật, lăn lên = Lôi long giáng thế.
+
+Muốn chỉnh hình rồng: sửa `tools/tao_co_long.py` rồi chạy `python tools/tao_co_long.py` (cần Pillow) để vẽ lại toàn bộ `NhanVat/CoLong/`. Xem nhanh vài động tác: `python tools/tao_co_long.py --xem roar,breath 8` (ảnh ra `/tmp/rong_xem.png`).
+
 ## Hiệu ứng gõ phím & quyền riêng tư
 
 - App chỉ nhận biết **"vừa gõ ký tự"** hay **"vừa xoá"**. Không ghi lại, không lưu, không gửi đi phím nào (xem hàm `classify_key` trong mã nguồn).
@@ -86,6 +103,8 @@ ChibiNhacViec.pyw      Chương trình (1 file, Python + tkinter + Pillow)
 ChayChibi.bat          Trình khởi động: tìm Python, cài Pillow, chạy không hiện cửa sổ đen
 version.json           Số phiên bản mới nhất + ghi chú (app đọc file này để biết có bản mới)
 NhanVat/NhanVatAoDen/  Nhân vật gốc: ảnh + conf/actions.xml + conf/behaviors.xml (định dạng Shimeji-ee)
+NhanVat/CoLong/        Nhân vật Cổ Long (ảnh do tools/tao_co_long.py vẽ) + conf/chibi.json (tên chiêu, gán mặc định)
+tools/                 Công cụ vẽ nhân vật Cổ Long
 ThuVien/               Để bộ cài Pillow .whl cho máy không có mạng
 tests/                 Kiểm thử tự động
 ChibiData/             (tự tạo khi chạy) dữ liệu người dùng – không đưa lên git
@@ -103,6 +122,7 @@ python test_dong_tac.py
 python test_cap_nhat.py
 python test_go_phim.py
 python test_tha_roi.py
+python test_co_long.py
 ```
 
 Trên Linux chạy bằng `xvfb-run python3 tests/<tên file>`. Mỗi bộ test chạy trong thư mục tạm, không đụng dữ liệu thật, và in `PASS`/`FAIL` cho từng mục.

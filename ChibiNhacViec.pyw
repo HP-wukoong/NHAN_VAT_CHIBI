@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.1"
+APP_VER = "3.2"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -477,8 +477,65 @@ def occurs_on(t, d):
 
 
 # ───────────────────────── Nhân vật Shimeji (engine chạy actions.xml / behaviors.xml) ─────────────────────────
-BUILTIN_PACK = os.path.join(BASE_DIR, "NhanVat", "NhanVatAoDen")
+NHANVAT_DIR = os.path.join(BASE_DIR, "NhanVat")
+BUILTIN_PACK = os.path.join(NHANVAT_DIR, "NhanVatAoDen")
 PACKS_DIR = os.path.join(DATA_DIR, "packs")
+PACK_META = {}                    # thông tin riêng của nhân vật đang dùng (conf/chibi.json): nhãn, nhóm, gán mặc định
+PROFILE_KEYS = ("triggers", "drop_action", "wall_hit_action", "free", "pet_name")
+
+
+def pack_meta(path):
+    """Đọc conf/chibi.json của bộ nhân vật (nếu có)."""
+    for sub in ("conf", ""):
+        f = os.path.join(path or BUILTIN_PACK, sub, "chibi.json")
+        if os.path.isfile(f):
+            try:
+                with open(f, encoding="utf-8") as fh:
+                    m = json.load(fh)
+                return m if isinstance(m, dict) else {}
+            except Exception:
+                log_error()
+    return {}
+
+
+def pack_key(ref):
+    return ref or "builtin:NhanVatAoDen"
+
+
+def pack_defaults(meta, name=""):
+    """Bộ gán chuột / sự kiện / thả rơi mặc định của một nhân vật."""
+    import copy
+    tr = copy.deepcopy(DEFAULT_TRIGGERS)
+    if meta.get("triggers"):
+        tr = {k: dict(v) for k, v in DEFAULT_TRIGGERS.items()}
+        for k in tr:
+            tr[k]["act"] = ""
+        for k, v in meta["triggers"].items():
+            tr[k] = dict(v)
+    return {"triggers": tr, "drop_action": meta.get("drop_action", "VaCham_RoiHoDat"),
+            "wall_hit_action": meta.get("wall_hit_action", "TrangThai_AnVa"), "free": {},
+            "pet_name": meta.get("name") or name or "Áo Đen"}
+
+
+def available_packs():
+    """[(mã lưu trong cài đặt, tên hiển thị)]: nhân vật có sẵn trong NhanVat/ + bộ Shimeji đã nạp thêm."""
+    out = [("", "Áo Đen")]
+    try:
+        for d in sorted(os.listdir(NHANVAT_DIR)):
+            full = os.path.join(NHANVAT_DIR, d)
+            if d == "NhanVatAoDen" or not os.path.isdir(os.path.join(full, "conf")):
+                continue
+            out.append(("builtin:" + d, pack_meta(full).get("name") or d))
+    except Exception:
+        pass
+    try:
+        for d in sorted(os.listdir(PACKS_DIR)):
+            full = os.path.join(PACKS_DIR, d)
+            if os.path.isdir(full):
+                out.append((pack_ref(full), (pack_meta(full).get("name") or d) + " (đã nạp)"))
+    except Exception:
+        pass
+    return out
 
 
 def pack_ref(path):
@@ -495,6 +552,8 @@ def pack_ref(path):
 def pack_resolve(ref):
     if not ref:
         return ""
+    if ref.startswith("builtin:"):
+        return os.path.join(NHANVAT_DIR, ref[8:])
     return ref if os.path.isabs(ref) else os.path.join(DATA_DIR, ref)
 
 
@@ -531,6 +590,9 @@ SYSTEM_BEHAVIORS = ("Fall", "Land", "Dragged", "Thrown", "GrabWall", "ClimbWall"
 
 
 def beh_label(n):
+    lab = PACK_META.get("labels") or {}
+    if n in lab:
+        return lab[n]
     if n in BEHAVIOR_LABELS:
         return BEHAVIOR_LABELS[n]
     s = n.split("_", 1)[-1]
@@ -543,6 +605,9 @@ def beh_group(n):
     if n in SYSTEM_BEHAVIORS:
         return "Hệ thống"
     p = n.split("_", 1)[0]
+    g = PACK_META.get("groups") or {}
+    if p in g:
+        return g[p]
     return GROUP_LABELS.get(p, p if "_" in n else "Khác")
 
 
@@ -639,6 +704,9 @@ class ShimejiPack:
         self.name = os.path.basename(self.img_dir)
         if self.name.lower() == "nhanvataoden":
             self.name = "Áo Đen"
+        self.meta = pack_meta(self.img_dir)
+        if self.meta.get("name"):
+            self.name = self.meta["name"]
         files = {f.lower(): f for f in os.listdir(conf)}
         A = ET.parse(os.path.join(conf, files["actions.xml"])).getroot()
         B = ET.parse(os.path.join(conf, files["behaviors.xml"])).getroot()
@@ -1323,7 +1391,8 @@ class Engine:
             return n in ("Stand", "StandAlt")
         if not s.get("free_master", True):
             return n in ("Stand", "StandAlt")
-        if n in ("DiChuyen_BamVachTrai", "DiChuyen_BamVachPhai", "TrangThai_BiTreo") and not s.get("climb", True):
+        if (n in ("DiChuyen_BamVachTrai", "DiChuyen_BamVachPhai", "TrangThai_BiTreo")
+                or n in (self.pack.meta.get("climb_behaviors") or ())) and not s.get("climb", True):
             return False
         if s.get("assigned_no_free", True) and n in self.pet.assigned():
             return False
@@ -1394,12 +1463,13 @@ class Engine:
         return True
 
     def fly_poses(self):
-        # ưu tiên tư thế "lao vút" hl_hover (người thẳng, vệt lửa dưới chân)
+        # ưu tiên tư thế "lao vút" (Áo Đen: hl_hover; nhân vật khác khai báo fly_prefix trong chibi.json)
+        pre = (self.pack.meta.get("fly_prefix") or "hl_hover").lower()
         hov = []
         seen = set()
         for sp in self.pack.actions.values():
             for p in sp.poses:
-                if p.img.lower().startswith("hl_hover") and p.img not in seen:
+                if p.img.lower().startswith(pre) and p.img not in seen:
                     seen.add(p.img)
                     q = Pose()
                     q.img, q.imgr, q.ax, q.ay, q.vx, q.vy, q.dur = p.img, p.imgr, p.ax, p.ay, 0.0, 0.0, 1
@@ -3987,6 +4057,8 @@ class Pet:
             self.pack = pk
             self._pack_dir = path
             self.engine = None
+            PACK_META.clear()
+            PACK_META.update(pk.meta)
         self.zoom = self.s_user * self.app.dpi
         self.env.zoom = self.zoom
         self.cache = {}
@@ -4973,6 +5045,35 @@ class App:
         self.store.s[k] = v
         self.save_soon()
 
+    def switch_pack(self, ref):
+        """Đổi nhân vật: cất bộ gán chuột / tên của nhân vật cũ, lấy lại bộ của nhân vật mới (lần đầu = mặc định)."""
+        import copy
+        s = self.store.s
+        old = s.get("pack") or ""
+        if ref == old and self.pet.pack is not None:
+            return False
+        prof = s.get("profiles") or {}
+        prof[pack_key(old)] = {k: copy.deepcopy(s.get(k)) for k in PROFILE_KEYS}
+        path = pack_resolve(ref) or BUILTIN_PACK
+        if not os.path.isdir(path):
+            return False
+        s["pack"] = ref
+        saved = prof.get(pack_key(ref))
+        if saved:
+            s.update(copy.deepcopy(saved))
+        else:
+            name = ""
+            try:
+                name = ShimejiPack(path).name
+            except Exception:
+                pass
+            s.update(pack_defaults(pack_meta(path), name))
+        s["profiles"] = prof
+        self.store.fix_triggers()
+        self.store.save()
+        self.pet.apply_look()
+        return True
+
     def set_scale(self, v):
         v = round(max(0.4, min(3.0, v)), 2)
         self.store.s["scale"] = v
@@ -5522,10 +5623,13 @@ class Manager:
             ttk.Checkbutton(left, text=txt, variable=v,
                             command=lambda k=key, v=v: (self.app.set_setting(k, v.get()), self.app.pet.env.refresh(True))
                             ).pack(anchor="w")
+        ttk.Label(left, text="Chọn nhân vật:").pack(anchor="w", pady=(8, 0))
         bf = ttk.Frame(left)
-        bf.pack(anchor="w", pady=(8, 0))
-        ttk.Button(bf, text="Nạp Shimeji khác", style="Small.TButton", command=self.load_pack).pack(side="left")
-        ttk.Button(bf, text="Về Áo Đen", style="Small.TButton", command=self.reset_pack).pack(side="left", padx=4)
+        bf.pack(anchor="w")
+        self.packcb = ttk.Combobox(bf, state="readonly", width=20)
+        self.packcb.pack(side="left")
+        self.packcb.bind("<<ComboboxSelected>>", lambda e: self.pick_pack())
+        ttk.Button(bf, text="Nạp Shimeji khác", style="Small.TButton", command=self.load_pack).pack(side="left", padx=4)
 
         right = ttk.Frame(f)
         right.pack(side="left", fill="both", expand=True, padx=(12, 0))
@@ -5534,7 +5638,7 @@ class Manager:
                   foreground=C_MUTED, wraplength=520).pack(anchor="w")
         cols = ("name", "group", "assign", "free")
         tv = ttk.Treeview(right, columns=cols, show="headings", selectmode="browse")
-        for c, h, w in (("name", "Động tác", 170), ("group", "Nhóm", 90), ("assign", "Đang gán cho", 190), ("free", "Tự làm", 60)):
+        for c, h, w in (("name", "Động tác", 235), ("group", "Nhóm", 80), ("assign", "Đang gán cho", 145), ("free", "Tự làm", 55)):
             tv.heading(c, text=h)
             tv.column(c, width=w, anchor="center" if c == "free" else "w")
         tv.tag_configure("off", foreground="#6d6480")
@@ -5627,13 +5731,25 @@ class Manager:
         os.makedirs(PACKS_DIR, exist_ok=True)
         dst = os.path.join(PACKS_DIR, safe_name(pk.name))
         shutil.copytree(pk.img_dir, dst)
-        self.app.set_setting("pack", pack_ref(dst))
-        self.app.pet.apply_look()
+        self.app.switch_pack(pack_ref(dst))
         self.refresh(True)
 
     def reset_pack(self):
-        self.app.set_setting("pack", "")
-        self.app.pet.apply_look()
+        self.app.switch_pack("")
+        self.refresh(True)
+
+    def fill_packs(self):
+        self._packs = available_packs()
+        self.packcb.config(values=[b for _, b in self._packs])
+        cur = self.app.store.s.get("pack") or ""
+        self.packcb.set(next((b for r, b in self._packs if r == cur), self.app.pet.pack.name if self.app.pet.pack else ""))
+
+    def pick_pack(self):
+        lab = self.packcb.get()
+        ref = next((r for r, b in self._packs if b == lab), None)
+        if ref is None:
+            return
+        self.app.switch_pack(ref)
         self.refresh(True)
 
     def preview_loop(self):
@@ -5786,8 +5902,9 @@ class Manager:
         self.refresh_beh()
 
     def reset_triggers(self):
-        import copy
-        self.app.set_setting("triggers", copy.deepcopy(DEFAULT_TRIGGERS))
+        pk = self.app.pet.pack
+        d = pack_defaults(pk.meta if pk else {}, pk.name if pk else "")
+        self.app.set_setting("triggers", d["triggers"])
         self.fill_controls()
         self.refresh_beh()
 
@@ -6076,6 +6193,7 @@ class Manager:
             st_ = self.app.store.s
             pk = self.app.pet.pack
             self.pk_name.config(text="Nhân vật: %s  (%d động tác)" % (pk.name, len(pk.user_behaviors())) if pk else "")
+            self.fill_packs()
             self.scale_var.set(st_.get("scale", 1.0))
             self.scale_lbl.config(text="%.1fx" % float(st_.get("scale", 1.0)))
             self.name_e.delete(0, "end")
@@ -6158,7 +6276,7 @@ UPDATE_BRANCH = "main"
 URL_VERSION = "https://raw.githubusercontent.com/%s/%s/version.json" % (UPDATE_REPO, UPDATE_BRANCH)
 URL_ZIP = "https://github.com/%s/archive/refs/heads/%s.zip" % (UPDATE_REPO, UPDATE_BRANCH)
 URL_PAGE = "https://github.com/%s" % UPDATE_REPO
-INSTALL_ITEMS = ["ChibiNhacViec.pyw", "ChayChibi.bat", "README.md", "version.json", "NhanVat", "tests"]
+INSTALL_ITEMS = ["ChibiNhacViec.pyw", "ChayChibi.bat", "README.md", "version.json", "NhanVat", "tests", "tools"]
 UPDATE_MODES = [("notify", "Báo khi có bản mới (hỏi trước khi cập nhật)"), ("auto", "Tự động cập nhật"),
                 ("off", "Tắt kiểm tra tự động")]
 BACKUP_DIR = os.path.join(DATA_DIR, "backup")
