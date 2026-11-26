@@ -30,19 +30,29 @@ def land():
     return False
 
 
+FLY_STEP, FLY_ACC = [0], [0]
+
+
 def fly(mode, n=3000):
     land()
     ok = eng.force(mode, wait=False)
-    path, imgs = [], set()
+    path, imgs, pl = [], set(), []
     for i in range(n):
         env.refresh()
         env.icon_plats = ICONS
         eng.tick()
         path.append((eng.ax, eng.ay))
+        pl.append(eng.pose.img if eng.pose else "")
         if eng.pose:
             imgs.add(eng.pose.img)
         if eng.cur != mode:
             break
+    fl = [k for k in range(2, len(path)) if all(pl[j].startswith(("x_bay", "fly")) for j in (k - 2, k - 1, k))]
+    if fl:
+        FLY_STEP[0] = max(math.hypot(path[k][0] - path[k - 1][0], path[k][1] - path[k - 1][1]) for k in fl)
+        acc = sorted(math.hypot(path[k][0] - 2 * path[k - 1][0] + path[k - 2][0], path[k][1] - 2 * path[k - 1][1] + path[k - 2][1])
+                     for k in fl)
+        FLY_ACC[0] = acc[len(acc) // 2]
     return ok, path, imgs, i
 
 
@@ -64,10 +74,10 @@ check(any(i.startswith("x_bay") for i in imgs) and any(i.startswith("x_catcanh")
 check(min(y for _, y in path) < 300 and max(x for x, _ in path) - min(x for x, _ in path) > 600,
       "bay rộng khắp màn hình (lên cao, sang ngang)")
 check(inside(path), "không bay ra ngoài màn hình")
-step = max(abs(path[k][0] - path[k - 1][0]) + abs(path[k][1] - path[k - 1][1]) for k in range(1, len(path)))
-check(step < 60, "chuyển động liền mạch, không giật cục (bước lớn nhất %d px/nhịp)" % step)
+check(FLY_STEP[0] < 30, "đang bay: liền mạch, bước lớn nhất %d px/nhịp" % FLY_STEP[0])
+check(FLY_ACC[0] < 1.2, "đang bay: gia tốc trung vị %.2f px/nhịp² (lượn mượt, không phanh giật)" % FLY_ACC[0])
 check(env.on_floor(eng.ax, eng.ay) is not None, "bay xong hạ cánh an toàn xuống đất")
-check(n < 1600, "chuyến bay kết thúc (%.1f giây)" % (n * 0.04))
+check(n < 1400, "chuyến bay kết thúc (%.1f giây)" % (n * 0.04))
 
 # 2 màn hình: bay sang được màn hình kia
 app.areas = [(0, 0, 1600, 960), (1600, 0, 3200, 960)]

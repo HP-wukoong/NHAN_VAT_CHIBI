@@ -1,11 +1,10 @@
 {
-  "version": "3.14",
+  "version": "3.15",
   "date": "2026-11-26",
   "notes": [
-    "Áo Đen – 2 chiêu rồng (Hắc Long nhảy vút, Hắc Long bay theo chuột): khi bay lơ lửng lên, khe hư không xé ra, đầu rồng chui ra trước rồi thân rồng hiện dần cuộn quanh toàn thân nhân vật, cuối cùng mới là hình rồng cuộn như cũ; mỗi chiêu một dạng rồng riêng",
-    "Áo Đen – Đứng nộ (Nổ khí): bỏ 2 vòng cung đỏ, thay bằng sấm sét đỏ thẫm bao phủ: vòm sét gấp khúc trùm người, điện bò trên tay vai chân, sét chạy mặt đất, chớp tắt lệch nhịp",
-    "Cổ Long cũng bay phá phách: ÔM ICON CẮN (đớp phập 3 lần, dấu răng, vụn bay, 'Rộp!'), QUẬT ĐUÔI làm icon vỡ vụn (mảnh văng rồi mọc lại), PHUN LỬA đốt icon (cháy đen, hoá tro, khói, rồi hồi sinh), PHUN SÉT giật điện icon, CUỘN SIẾT icon; thêm 2 chiêu Ôm cắn, Quật đuôi dùng được như chiêu thường",
-    "Trò nghịch mới cho cả hai: 'Đuổi bắt chuột' – đuổi theo con trỏ, bắt được thì chọc một phát rồi vụt chạy, trêu tiếp; mỗi chuyến phá icon không lặp lại chiêu vừa dùng; icon sát mép màn hình tự đổi phía để ra đòn trúng",
-    "Mọi hiệu ứng phá icon chỉ vẽ đè lên màn hình – icon thật không bị di chuyển hay sửa"
+    "Bay lượn mượt, hết khựng: lái liên tục (không phanh ở mỗi điểm, không dừng lơ lửng vô cớ), thân nghiêng theo hướng bay (ngóc lên khi vút, chúi xuống khi bổ nhào), khung bay không còn rung lệch, không còn giật khi sát mép màn hình",
+    "Tinh nghịch khi bay: thỉnh thoảng lộn vòng, bổ nhào rồi vút lên, lạng lách, vụt tăng tốc; lượn quanh con trỏ, đuổi bắt chuột",
+    "CHỈ dừng khi đâm vào mép màn hình hoặc icon: đụng tường thì bám tường thở dốc rồi đạp bật ra / nảy lại kêu 'Ui da!', đụng trần thì treo ngược rồi buông rơi bay tiếp, chạm đất thì đáp xuống ra một chiêu rồi cất cánh lại; lướt qua icon nào là dừng lại phá icon đó",
+    "Áp dụng cho cả Áo Đen và Cổ Long; nhiều màn hình thì bay xuyên qua chỗ giáp ranh"
   ]
 }

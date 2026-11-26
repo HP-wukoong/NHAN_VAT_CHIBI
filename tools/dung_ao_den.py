@@ -91,6 +91,14 @@ def foot_anchor(im):
     return int(round(xs.mean())), int(ys.max())
 
 
+def body_ref(im, ky=0.78):
+    """Điểm tham chiếu cố định của THÂN (trọng tâm vùng đặc) – tính trên ảnh gốc đã xoay, trước khi thêm khăn bay /
+    vệt tốc độ, để mọi khung cùng neo đúng một chỗ trên thân (không giật)."""
+    a = np.asarray(im)[..., 3] > 120
+    ys, xs = np.nonzero(a)
+    return float(xs.mean()), float(ys.min() + (ys.max() - ys.min()) * ky)
+
+
 def save(name, im, anchor, meta):
     im.save(os.path.join(PACK, name + ".png"), optimize=True)
     meta[name] = [int(anchor[0]), int(anchor[1])]
@@ -254,7 +262,7 @@ def patch_xml(extra=()):
 # ── ĐỨNG NỘ (aura): bỏ 2 vòng cung đỏ, thay bằng sấm sét bao phủ toàn thân ──
 AURA_ANC = {0: (111, 113), 1: (133, 136), 2: (155, 160), 3: (175, 172), 4: (156, 160), 5: (171, 169), 6: (159, 160),
             7: (172, 175), 8: (161, 160), 9: (144, 146)}
-AURAFADE_ANC = {}
+AURAFADE_ANC = {10: (160, 160), 11: (160, 160)}             # aurafade0, aurafade1 (neo gốc)
 LOI_DO = ((255, 238, 244), (255, 48, 92), (120, 0, 34), (30, 0, 10))       # sét đỏ thẫm hợp áo khăn đỏ
 XW, XH, XA = 300, 236, (150, 208)
 
@@ -328,7 +336,7 @@ def aura_lightning():
     frames = []
     names = ["aura%d" % k for k in range(10)] + ["aurafade0", "aurafade1"]
     for k, img in enumerate(names):
-        anc = AURA_ANC.get(k) or _xml_anchor(img)
+        anc = AURA_ANC.get(k) or AURAFADE_ANC.get(k) or _xml_anchor(img)
         fade = 1.0 if k < 10 else (0.55, 0.22)[k - 10]
         ch = char_only(img, anc)
         jr = __import__("random").Random(k * 31 + 5)
@@ -378,22 +386,27 @@ def main():
     # ── bay ngang: tư thế lao (jumpup), xoay cho thân nằm ngang hơn ──
     bases = [load("jumpup0"), load("jumpup1")]
     for f in range(8):
-        b = padded(bases[f // 2 % 2], 60)
+        b = padded(bases[0], 60)
         b = b.rotate(18, Image.BICUBIC, expand=False)               # hạ đầu xuống: thân gần nằm ngang
+        ref = body_ref(b)
+        if f // 2 % 2:                                              # khung xen kẽ: thân thứ 2, căn trùng trọng tâm
+            b2 = padded(bases[1], 60).rotate(18, Image.BICUBIC, expand=False)
+            r2 = body_ref(b2)
+            b = b2.transform(b2.size, Image.AFFINE, (1, 0, r2[0] - ref[0], 0, 1, r2[1] - ref[1]), Image.BICUBIC)
         b = flutter(b, f * math.pi / 4, 5.0, side=1)
-        bob = int(round(2 * math.sin(f * math.pi / 4)))
-        b = b.transform(b.size, Image.AFFINE, (1, 0, 0, 0, 1, -bob), Image.BICUBIC)
+        bob = 1.5 * math.sin(f * math.pi / 4)
         b = streaks(b, f)
-        b, _ = trim(b)
-        save("x_bay%d" % f, b, (b.width // 2, int(b.height * 0.78)), meta)
+        b, off = trim(b)
+        save("x_bay%d" % f, b, (int(round(ref[0] - off[0])), int(round(ref[1] - off[1] - bob))), meta)
     for nm, ang in (("x_baylen", -16), ("x_bayxuong", 40)):
         for f in range(4):
-            b = padded(bases[f // 2 % 2], 70)
+            b = padded(bases[0], 70)
             b = b.rotate(18 + ang, Image.BICUBIC, expand=False)
+            ref = body_ref(b)
             b = flutter(b, f * math.pi / 2, 5.0, side=1)
             b = streaks(b, f + 3, n=5)
-            b, _ = trim(b)
-            save("%s%d" % (nm, f), b, (b.width // 2, int(b.height * 0.78)), meta)
+            b, off = trim(b)
+            save("%s%d" % (nm, f), b, (int(round(ref[0] - off[0])), int(round(ref[1] - off[1]))), meta)
     # ── cất cánh: khuỵu gối lấy đà -> bật lên ──
     cr = load("hl_crouch0")
     for f, (sx, sy) in enumerate(((1.06, 0.92), (1.1, 0.84))):

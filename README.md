@@ -210,3 +210,8 @@ Trên Linux chạy bằng `xvfb-run python3 tests/<tên file>`. Mỗi bộ test 
 - Áo Đen: `python tools/dung_ao_den.py` dựng khung bay, rồng hiện từ hư không (`x_hla_in*`, `x_hlb_in*`), đứng nộ sấm sét (`x_aura*`) và tự nối vào `conf/actions.xml` (khối `x:begin … x:end`).
 - Xem thử: `python tests/xem_bay_ao_den.py BayLuon_PhaIcon 13 out.gif CoLong 0,0,700,480`.
 
+## Bay lượn mượt (v3.15)
+- Bay bằng lái liên tục: hướng uốn theo nhiễu mượt + trò nghịch (lộn vòng, bổ nhào, lạng lách, vụt); thân nghiêng theo hướng bay (xoay hình khi vẽ).
+- Chỉ dừng khi đâm mép màn hình (bám tường / treo trần / nảy / đáp đất ra chiêu) hoặc chạm icon (phá).
+- Đo độ mượt: `python tests/do_muot_bay.py BayLuon_TuDo NhanVatAoDen 4` (in gia tốc và các cú giật không do va chạm – phải rỗng).
+

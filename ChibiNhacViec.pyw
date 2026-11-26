@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.14"
+APP_VER = "3.15"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -1155,6 +1155,7 @@ class Engine:
         self.last_plat = None
         self.pending = None          # (tên chiêu, hạn chót) chờ đứng vững rồi ra chiêu
         self.wall_hit = False        # vừa bị quăng đập vào tường
+        self.tilt = 0.0              # độ nghiêng thân khi bay (độ, + = chúi đầu xuống), vẽ bằng cách xoay hình
 
     # ── tiện ích ──
     def ctx(self):
@@ -1385,9 +1386,16 @@ class Engine:
             right = not right
         tx = cx + dx if right else cx - dx
         ty = cy - dy
-        yield from self._fly_to(tx, ty, st, hover_end=True, near=8)
-        self.ax, self.ay = tx, ty
-        self.look_right = right
+        if "th" in st:                                           # lượn mềm tới chỗ ra đòn, phanh dần khi tới nơi
+            yield from self._cruise_until(st, lambda: math.hypot(tx - self.ax, ty - self.ay) < 10,
+                                          seek=lambda: (tx, ty), arrive=7.0, max_t=180)
+        else:
+            yield from self._fly_to(tx, ty, st, hover_end=True, near=8)
+        if math.hypot(tx - self.ax, ty - self.ay) < 14:        # tới nơi: khớp đúng điểm ra đòn
+            self.ax, self.ay = tx, ty
+        self.look_right = right                                 # (bị mép chặn: ra đòn ngay chỗ đang đứng, không nhảy cóc)
+        self.tilt = 0.0
+        st["tilt"] = 0.0
         dirx = 1 if self.ax < cx else -1
         poses = self._poses_of(atk["act"])
         seq = []
@@ -1414,6 +1422,249 @@ class Engine:
                 for _ in range(min(3, p.dur)):
                     yield p
 
+    # ── BAY LƯỢN MƯỢT: lái liên tục, chỉ dừng khi đâm mép màn hình / icon ──
+    BUMP_TAUNTS = ("Ui da! 😵", "Tường ở đâu ra vậy?!", "Hehe, bám chút~", "Á! Mép màn hình!", "Bùm! Đụng rồi 🤕")
+
+    def _ext(self, p):
+        """Khung hình hiện tại so với neo (trái, trên, phải, dưới) – để biết sắp chạm mép màn hình chưa.
+        Khi đang bay dùng 1 khung bao cố định cho mọi khung bay (khung bay to nhỏ khác nhau vì vệt gió -> không rung)."""
+        fe = getattr(self, "_fext", None)
+        if fe and p in fe["set"]:
+            return fe[self.look_right]
+        try:
+            im = self.pack.image((p.imgr or p.img) if self.look_right else p.img)
+            w, h = im.size
+        except Exception:
+            w, h = 120, 120
+        ax = (w - p.ax) if self.look_right else p.ax
+        return ax, p.ay, w - ax, h - p.ay
+
+    def _area_now(self):
+        for a in self._fly_bounds():
+            if a[0] <= self.ax <= a[2] and a[1] <= self.ay <= a[3]:
+                return a
+        return self.env.area_at(self.ax, self.ay)
+
+    def _steer(self, st, tx, ty, arrive=0.0):
+        """Đổi hướng bay dần về (tx, ty) – giới hạn tốc độ quay để đường bay cong mềm."""
+        want = math.atan2(ty - self.ay, tx - self.ax)
+        d = (want - st["th"] + math.pi) % (2 * math.pi) - math.pi
+        st["th"] += max(-0.13, min(0.13, d * 0.35))
+        if arrive:
+            dist = math.hypot(tx - self.ax, ty - self.ay)
+            st["sp_goal"] = max(2.0, min(st["cruise"], dist / arrive))
+
+    def _wander(self, st):
+        """Lượn tự do: hướng bay uốn theo nhiễu mượt + thỉnh thoảng một trò nghịch (lộn vòng, bổ nhào, lạng lách, vụt)."""
+        t = st["t"]
+        turn = 0.035 * math.sin(t * 0.031 + st["p1"]) + 0.028 * math.sin(t * 0.077 + st["p2"])
+        m = st.get("man")
+        if m is None and t >= st["next_man"]:
+            m = st["man"] = dict(kind=random.choice(("loop", "swoop", "zigzag", "dash", "loop", "swoop")), t=0)
+        if m is not None:
+            k = m["kind"]
+            m["t"] += 1
+            if k == "loop":                                        # lộn một vòng tròn, nửa đầu vút lên
+                if m["t"] == 1:
+                    m["sg"] = -1 if math.cos(st["th"]) > 0 else 1
+                turn += m["sg"] * 2 * math.pi / 40.0
+                end = 40
+            elif k == "swoop":                                     # bổ nhào xuống rồi vút lên
+                if m["t"] == 1:
+                    m["sg"] = 1 if math.cos(st["th"]) > 0 else -1
+                turn += m["sg"] * 0.05 * math.sin(m["t"] * math.pi / 26.0) * (1 if m["t"] < 26 else -1.2)
+                end = 52
+            elif k == "zigzag":                                    # lạng lách
+                turn += 0.16 * (1 if (m["t"] // 6) % 2 else -1)
+                end = 36
+            else:                                                  # vụt tăng tốc
+                st["sp_goal"] = st["cruise"] * 1.8
+                end = 22
+            if m["t"] >= end:
+                st["man"] = None
+                st["next_man"] = t + random.randint(55, 130)
+        # gần mép: nửa số lần lượn tránh mềm mại, nửa còn lại cứ lao vào (để bám / nảy / đụng cho vui)
+        a = self._area_now()
+        if st.get("avoid") is None or t % 40 == 0:
+            st["avoid"] = random.random() < 0.55
+        if st["avoid"]:
+            cx, cy = (a[0] + a[2]) / 2.0, (a[1] + a[3]) / 2.0
+            mx, my = (a[2] - a[0]) * 0.5 - 150, (a[3] - a[1]) * 0.5 - 130
+            if abs(self.ax - cx) > mx or abs(self.ay - cy) > my:
+                want = math.atan2(cy - self.ay, cx - self.ax)
+                d = (want - st["th"] + math.pi) % (2 * math.pi) - math.pi
+                turn += max(-0.06, min(0.06, d * 0.08))
+        st["th"] += turn
+
+    def _move(self, st):
+        """Một nhịp bay: vận tốc bám theo hướng + tốc độ mong muốn (quán tính), nghiêng thân theo hướng bay, chọn khung."""
+        st["t"] += 1
+        sp = st["sp"] = st["sp"] + (st["sp_goal"] - st["sp"]) * 0.12
+        dvx, dvy = math.cos(st["th"]) * sp, math.sin(st["th"]) * sp
+        st["vx"] += (dvx - st["vx"]) * 0.25
+        st["vy"] += (dvy - st["vy"]) * 0.25
+        self.ax += st["vx"]
+        self.ay += st["vy"] + math.sin(st["t"] * 0.21) * 0.35
+        vx, vy = st["vx"], st["vy"]
+        if (vx > 2.2 and not self.look_right) or (vx < -2.2 and self.look_right):
+            self.look_right = vx > 0                               # đổi hướng có ngưỡng: không lật qua lật lại
+        sgn = 1 if self.look_right else -1
+        ang = math.degrees(math.atan2(vy, abs(vx) + 0.001)) if math.hypot(vx, vy) > 1.0 else 0.0
+        ang = max(-40.0, min(48.0, ang)) * min(1.0, (abs(vx) + 0.5) / 4.5)   # bay gần thẳng đứng: thân về thẳng
+        st["tilt"] += (ang - st["tilt"]) * 0.22
+        self.tilt = -st["tilt"] if self.look_right else st["tilt"]
+        bay = st["bay"]
+        return bay[(st["t"] // 2) % len(bay)]
+
+    def _bump(self, st, p):
+        """Sắp chạm mép màn hình -> 'side' ('left' / 'right' / 'top' / 'bottom') hoặc None. Không cho lấn ra ngoài."""
+        a = self._area_now()
+        l, t, r, b = self._ext(p)
+        side = None
+        if self.ax - l < a[0] and st["vx"] < 0:
+            side = "left"
+        elif self.ax + r > a[2] and st["vx"] > 0:
+            side = "right"
+        elif self.ay - t < a[1] and st["vy"] < 0:
+            side = "top"
+        elif self.ay + b > a[3] and st["vy"] > 0:
+            side = "bottom"
+        if side:
+            # có màn hình kế bên thì bay xuyên qua, không coi là đụng
+            nx = self.ax + st["vx"] * 6
+            ny = self.ay + st["vy"] * 6
+            for o in self._fly_bounds():
+                if o is not a and o[0] <= nx <= o[2] and o[1] <= ny <= o[3]:
+                    return None
+        return side
+
+    def _react_bump(self, side, st):
+        """Đụng mép: bám tường / treo trần / nảy bật kêu đau / đáp đất làm một chiêu rồi cất cánh lại."""
+        a = self._area_now()
+        kit = st["kit"]
+        self.tilt = 0.0
+        st["tilt"] = 0.0
+        again = st.get("last_bump") == side and st["t"] - st.get("last_bump_t", -999) < 100
+        st["last_bump"], st["last_bump_t"] = side, st["t"]
+        if side in ("left", "right"):
+            pick = 1.0 if again else random.random()
+            grab = self._poses_of("GrabWall")
+            if pick < 0.5 and grab and self.app.store.s.get("climb", True):
+                self.ax = a[0] if side == "left" else a[2]
+                self.look_right = side == "right"
+                for i in range(random.randint(25, 50)):          # bám tường, thở dốc
+                    yield grab[(i // 4) % len(grab)]
+                if random.random() < 0.4:
+                    self._taunt(dict(taunts=self.BUMP_TAUNTS))
+                st["th"] = math.radians(random.uniform(-40, 10)) + (0 if side == "left" else math.pi)
+                st["th"] = math.atan2(math.sin(st["th"]), math.cos(st["th"]))
+                st["vx"] = (8.0 if side == "left" else -8.0)        # đạp tường bật ra
+                st["vy"] = -3.0
+                st["sp"] = 8.0
+            else:                                                   # nảy bật lại, rên một tiếng
+                st["vx"] = -st["vx"] * 0.6
+                st["th"] = math.atan2(st["vy"], st["vx"])
+                st["sp"] *= 0.6
+                if random.random() < 0.5:
+                    self._taunt(dict(taunts=self.BUMP_TAUNTS))
+                self.ax = max(a[0] + 2, min(a[2] - 2, self.ax))
+        elif side == "top":
+            ceil = self._poses_of("GrabCeiling")
+            if not again and random.random() < 0.55 and ceil and self.app.store.s.get("climb", True):
+                self.ay = a[1]
+                for i in range(random.randint(25, 45)):           # treo ngược trên trần
+                    yield ceil[(i // 4) % len(ceil)]
+                st["th"] = math.radians(random.choice((60, 120)))
+                st["vx"], st["vy"], st["sp"] = 0.0, 5.0, 6.0         # buông tay rơi xuống rồi bay tiếp
+            else:
+                st["vy"] = abs(st["vy"]) * 0.6
+                st["th"] = math.atan2(st["vy"], st["vx"])
+                st["sp"] *= 0.7
+        else:                                                       # chạm đất: đáp, làm 1 chiêu, cất cánh lại
+            fl = self.env.landing(self.ax, self.ay - 60, a[3] + 1)
+            self.ay = fl.y if fl is not None else a[3]
+            if "Land" in self.pack.actions:
+                yield from self.run_action("Land")
+            moves = [a_["act"] for a_ in kit["attacks"]] + ([n for n in ("CuoiMaQuai", "YeuThich", "GamRu")
+                                                             if self._poses_of(n)])
+            if moves and random.random() < 0.7:
+                ps = self._poses_of(random.choice(moves))
+                for p in ps:
+                    for _ in range(p.dur):
+                        yield p
+            for q in kit["takeoff"]:
+                for _ in range(max(1, min(3, q.dur))):
+                    self.ay -= 5
+                    yield q
+            st["th"] = math.radians(random.choice((-60, -120)))
+            st["vx"], st["vy"], st["sp"] = 0.0, -8.0, 9.0
+
+    def _cruise_until(self, st, done, seek=None, arrive=0.0, max_t=600, icons=None, target=None):
+        """Bay liên tục cho tới khi done() đúng. seek() -> (x, y) hoặc None (lượn tự do). Đụng mép -> phản ứng;
+        lướt qua icon chưa phá -> dừng lại phá. Trả về True nếu done."""
+        for _ in range(max_t):
+            if done():
+                return True
+            if st["t"] > st.get("hard", 10 ** 9):                 # trần thời gian cả chuyến bay
+                return False
+            tg = seek() if seek else None
+            if tg is not None:
+                self._steer(st, tg[0], tg[1], arrive)
+            else:
+                st["sp_goal"] = st["cruise"]
+                self._wander(st)
+            p = self._move(st)
+            self._fly_clamp_soft(p, 0.3, 8.0)                    # lấn mép (sau khi ra chiêu sát mép) -> trôi dần vào
+            side = self._bump(st, p)
+            if side:
+                self._fly_clamp_soft(p)
+                z = self.env.zoom
+                if target is not None and icons is not None and target in icons and math.hypot(
+                        (target[0] + target[2]) / 2.0 / z - self.ax, (target[1] + target[3]) / 2.0 / z - self.ay) < 300:
+                    icons.remove(target)                          # icon sát mép: đụng mép cạnh icon -> phá luôn
+                    st["done_icons"].append(target)
+                    yield from self._smash(target, st)
+                    st["th"] = math.atan2(-0.4, -1.0 if self.look_right else 1.0)
+                    st["sp"] = 3.0
+                    continue
+                yield from self._react_bump(side, st)
+                continue
+            if icons is not None:
+                hit = self._icon_touch(icons, p)
+                if hit is not None:
+                    icons.remove(hit)
+                    st["done_icons"].append(hit)
+                    yield from self._smash(hit, st)
+                    st["th"] = math.atan2(-0.4, -1.0 if self.look_right else 1.0)  # phá xong vụt đi hướng ngược
+                    st["sp"] = 3.0
+                    continue
+            yield p
+        return False
+
+    def _fly_clamp_soft(self, p, k=1.0, cap=14.0):
+        """Kéo hình về trong màn hình – từng chút (tối đa cap px / nhịp), không giật cục."""
+        a = self._area_now()
+        l, t, r, b = self._ext(p)
+        if a[2] - a[0] > l + r:
+            tx = max(a[0] + l, min(a[2] - r, self.ax))
+            self.ax += max(-cap, min(cap, (tx - self.ax) * k))
+        if a[3] - a[1] > t + b:
+            ty = max(a[1] + t, min(a[3] - b, self.ay))
+            self.ay += max(-cap, min(cap, (ty - self.ay) * k))
+
+    def _icon_touch(self, icons, p):
+        z = self.env.zoom
+        l, t, r, b = self._ext(p)
+        cx, cy = self.ax + (r - l) / 2.0, self.ay - (t - b) / 2.0
+        rad = 0.32 * min(l + r, t + b)
+        for rc in icons:
+            x1, y1, x2, y2 = (v / z for v in rc)
+            dx = max(x1 - cx, 0, cx - x2)
+            dy = max(y1 - cy, 0, cy - y2)
+            if dx * dx + dy * dy < rad * rad:
+                return rc
+        return None
+
     def _taunt(self, kit=None):
         try:
             b = self.app.bubble
@@ -1424,82 +1675,119 @@ class Engine:
             pass
 
     def act_freefly(self, spec, a):
+        """Bay tự do toàn màn hình: cất cánh rồi lượn liên tục (lộn vòng, bổ nhào, lạng lách...), chỉ dừng khi đâm mép
+        màn hình (bám tường, treo trần, nảy, đáp đất ra chiêu) hoặc chạm icon (phá); hết giờ thì lượn xuống đáp đất."""
         kit = self.fly_kit()
         bay = kit["bay"]
         if not bay:
             return
-        st = dict(vx=0.0, vy=0.0, t=0, bay=bay, up=kit["up"], dn=kit["dn"], hov=kit["hov"], kit=kit)
+        cruise = random.uniform(9.5, 12.5)
+        st = dict(vx=0.0, vy=0.0, t=0, bay=bay, up=kit["up"], dn=kit["dn"], hov=kit["hov"], kit=kit,
+                  th=-math.pi / 2 + (0.5 if self.look_right else -0.5), sp=2.0, sp_goal=cruise, cruise=cruise, tilt=0.0,
+                  p1=random.uniform(0, 6.3), p2=random.uniform(0, 6.3), next_man=random.randint(30, 80), man=None,
+                  done_icons=[])
         mode = a.get("Mode", "free")
-        cc = kit["takeoff"]
-        if self.env.on_floor(self.ax, self.ay) is not None and cc:     # lấy đà rồi bật vút lên
-            n = len(cc)
-            for i, q in enumerate(cc):
-                for _ in range(max(1, min(3, q.dur))):
-                    if i >= n // 2:
-                        self.ay -= 9
-                    yield q
-            st["vy"] = -12.0
-            st["vx"] = self.dir() * 3.0
-        plan = []
-        if mode == "icons" and self.app.store.s.get("pha_icon", True) and kit["attacks"]:
-            icons = self._icon_targets(random.randint(2, 4))
-            try:
-                self.app.icon_fx.prepare(icons)                    # chụp hình icon trước khi nhân vật bay tới che
-            except Exception:
-                log_error()
-            for r in icons:
-                if random.random() < 0.6:
-                    plan.append(("pt", self._rand_point()))
-                plan.append(("icon", r))
-            if not icons:
-                mode = "free"
-        if mode == "tease":
-            plan += [("tease", None), ("pt", self._rand_point()), ("tease", None)]
-        if mode == "chase":
-            plan += [("chase", None), ("pt", self._rand_point())]
-        if mode in ("free", "icons") and not plan:
-            plan += [("pt", self._rand_point()) for _ in range(random.randint(3, 6))]
-            if random.random() < 0.5:
-                plan.insert(random.randint(0, len(plan)), ("tease", None))
-        for kind, arg in plan:
-            if kind == "pt":
-                yield from self._fly_to(arg[0], arg[1], st)
-                if random.random() < 0.25:
-                    yield from self._hover(random.randint(10, 22), st)
-            elif kind == "icon":
-                yield from self._smash(arg, st)
-            elif kind == "tease":                                   # lượn vòng quanh con chuột, rồi vụt đi
-                cx, cy = self.env.cursor
-                yield from self._fly_to(cx + 80, cy + 30, st, hover_end=True, near=20)
-                ph = random.uniform(0, 6.28)
-                for k in range(46):
-                    cx, cy = self.env.cursor
-                    ang = ph + k * 0.2
-                    tx, ty = cx + math.cos(ang) * 95, cy + 40 + math.sin(ang) * 55
-                    yield from self._fly_to(tx, ty, st, max_t=1, near=0)
-                if random.random() < 0.5:
-                    self._taunt(kit)
-            elif kind == "chase":                                   # đuổi bắt con chuột: bắt được thì "chọc" một phát
-                caught = 0
-                for _ in range(260):
-                    cx, cy = self.env.cursor
-                    yield from self._fly_to(cx + 30, cy + 50, st, max_t=1, near=0)
-                    if math.hypot(self.ax - cx - 30, self.ay - cy - 50) < 26:
-                        caught += 1
-                        z = self.env.zoom
+        self._fext = None
+        ex = {}
+        for rt in (False, True):
+            self.look_right, keep = rt, self.look_right
+            es = [self._ext(q) for q in bay]
+            ex[rt] = tuple(max(e[i] for e in es) for i in range(4))
+            self.look_right = keep
+        ex["set"] = set(bay)
+        self._fext = ex
+        try:
+            if self.env.on_floor(self.ax, self.ay) is not None and kit["takeoff"]:   # lấy đà rồi bật vút lên
+                n = len(kit["takeoff"])
+                for i, q in enumerate(kit["takeoff"]):
+                    for _ in range(max(1, min(3, q.dur))):
+                        if i >= n // 2:
+                            self.ay -= 7
+                        yield q
+                st["vy"] = -9.0
+                st["vx"] = self.dir() * 3.0
+                st["sp"] = 9.0
+            icons = None
+            if mode == "icons" and self.app.store.s.get("pha_icon", True) and kit["attacks"]:
+                icons = self._icon_targets(random.randint(2, 4))
+                try:
+                    self.app.icon_fx.prepare(icons)                # chụp hình icon trước khi nhân vật bay tới che
+                except Exception:
+                    log_error()
+                if not icons:
+                    icons = None
+            total = random.randint(260, 420)                       # ~10–17 giây bay lượn
+            t_end = st["t"] + total
+            st["hard"] = st["t"] + 1000                            # dài nhất ~40 giây
+            z = self.env.zoom
+            if icons is not None:
+                plan = list(icons)
+                while plan:
+                    # lượn chơi một quãng rồi mới nhắm icon kế tiếp (lướt qua icon khác trên đường cũng phá luôn)
+                    t0, n_ = st["t"], random.randint(25, 70)
+                    yield from self._cruise_until(st, lambda: st["t"] - t0 > n_, icons=icons)
+                    plan = [r for r in plan if r in icons]
+                    if not plan:
+                        break
+                    rc = plan.pop(0)
+                    cx, cy = (rc[0] + rc[2]) / 2.0 / z, (rc[1] + rc[3]) / 2.0 / z
+                    yield from self._cruise_until(st, lambda: rc not in icons, seek=lambda: (cx, cy), max_t=260,
+                                                  icons=icons, target=rc)
+                    if rc in icons:                                  # không chạm được (bị mép chặn) -> tới tận nơi phá
+                        icons.remove(rc)
+                        yield from self._smash(rc, st)
+            elif mode == "tease":                                   # lượn vòng quanh con trỏ rồi vụt đi
+                for _ in range(2):
+                    t0 = st["t"]
+                    ph = random.uniform(0, 6.28)
+
+                    def orbit():
+                        cx, cy = self.env.cursor
+                        k = (st["t"] - t0) * 0.09 + ph
+                        return cx + math.cos(k) * 110, cy + 40 + math.sin(k) * 65
+                    yield from self._cruise_until(st, lambda: st["t"] - t0 > 130, seek=orbit)
+                    if random.random() < 0.6:
+                        self._taunt(kit)
+                    t0 = st["t"]
+                    yield from self._cruise_until(st, lambda: st["t"] - t0 > 70)
+            elif mode == "chase":                                   # đuổi bắt chuột: bắt được thì chọc 1 phát rồi chạy
+                for _ in range(3):
+                    caught = []
+
+                    def near():
+                        cx, cy = self.env.cursor
+                        if math.hypot(self.ax - cx, self.ay - 40 - cy) < 34:
+                            caught.append((cx, cy))
+                            return True
+                        return False
+                    ok = yield from self._cruise_until(st, near, seek=lambda: (self.env.cursor[0], self.env.cursor[1] + 40),
+                                                       max_t=220)
+                    if caught:
+                        cx, cy = caught[0]
                         try:
                             self.app.icon_fx.play("poke", (cx * z - 24, cy * z - 24, cx * z + 24, cy * z + 24),
                                                   1 if self.ax < cx else -1)
                         except Exception:
                             log_error()
                         self._taunt(dict(taunts=("Bắt được rồi nhé! 😝", "Chạy đâu cho thoát~", "Chạm! Tới lượt bạn đuổi!")))
-                        st["vx"], st["vy"] = random.choice((-1, 1)) * 14.0, -9.0      # vụt bay ra xa rồi đuổi tiếp
-                        for _ in range(14):
-                            yield from self._fly_to(self.ax + st["vx"] * 3, self.ay + st["vy"] * 3, st, max_t=1, near=0)
-                        if caught >= 3:
-                            break
-        # hạ cánh: thả rơi theo đà rồi tiếp đất
-        self.vx, self.vy = st["vx"] * 0.6, max(st["vy"], 0.0)
+                        st["th"] += math.pi + random.uniform(-0.6, 0.6)
+                        st["sp"] = st["cruise"] * 1.6
+                        t0 = st["t"]
+                        yield from self._cruise_until(st, lambda: st["t"] - t0 > 45)
+            # lượn tự do cho đủ giờ
+            yield from self._cruise_until(st, lambda: st["t"] >= t_end, icons=icons)
+            # hạ cánh: lượn chếch xuống mặt đất phía trước, sát đất thì đáp
+            ar = self._area_now()
+            gx = max(ar[0] + 80, min(ar[2] - 80, self.ax + self.dir() * 160))
+            fl = self.env.landing(gx, self.ay, ar[3] + 1)
+            gy = fl.y if fl is not None else ar[3]
+            st["hard"] = st["t"] + 220
+            yield from self._cruise_until(st, lambda: math.hypot(gx - self.ax, gy - 10 - self.ay) < 30,
+                                          seek=lambda: (gx, gy - 10), arrive=9.0, max_t=200)
+        finally:
+            self.tilt = 0.0
+            self._fext = None
+        self.vx, self.vy = st["vx"] * 0.5, max(st["vy"], 0.0)
         fall = self.pack.actions.get("Fall")
         if fall:
             yield from self.act_fall(fall, dict(fall.attrs))
@@ -8294,6 +8582,41 @@ class Pet:
             self.cache.pop(next(iter(self.cache)))
         return f
 
+    def frame_rot(self, fn, mirror, ang, ax, ay):
+        """Khung xoay nghiêng quanh neo (bay lượn): cắt sát hình sau khi xoay -> trả thêm vị trí neo mới."""
+        key = ("rot", fn, mirror, ang)
+        f = self.cache.pop(key, None)
+        if f:
+            self.cache[key] = f
+            return f
+        base = self.pack.image(fn)
+        if mirror:
+            base = ImageOps.mirror(base)
+        z = self.zoom
+        w, h = max(1, int(round(base.width * z))), max(1, int(round(base.height * z)))
+        im = base.resize((w, h), Image.LANCZOS) if (w, h) != base.size else base
+        axz, ayz = ax * z, ay * z
+        R = int(math.ceil(max(math.hypot(axz - cx, ayz - cy) for cx in (0, w) for cy in (0, h)))) + 2
+        cv = Image.new("RGBA", (2 * R, 2 * R), (0, 0, 0, 0))
+        cv.paste(im, (int(round(R - axz)), int(round(R - ayz))))
+        cv = cv.rotate(ang, Image.BICUBIC, center=(R, R))
+        bb = cv.getchannel("A").getbbox() or (0, 0, 2, 2)
+        cv = cv.crop(bb)
+        if self.mode == "layered":
+            data = cv.convert("RGBa").tobytes("raw", "BGRa")
+        else:
+            a = cv.split()[3].point(lambda v: 255 if v >= 100 else 0)
+            bg = Image.new("RGB", cv.size, (255, 0, 255))
+            solid = Image.new("RGBA", cv.size, (40, 30, 45, 255))
+            solid.alpha_composite(cv)
+            bg.paste(solid.convert("RGB"), (0, 0), a)
+            data = ImageTk.PhotoImage(bg)
+        f = (data, cv.width, cv.height, 0, 0, (R - bb[0], R - bb[1]))
+        self.cache[key] = f
+        while len(self.cache) > 700:
+            self.cache.pop(next(iter(self.cache)))
+        return f
+
     def render(self):
         eng = self.engine
         p = eng.pose
@@ -8303,11 +8626,19 @@ class Pet:
         fn = (p.imgr or p.img) if right else p.img
         blink = self.alert and int(self.t * 2.5) % 2 == 0
         mirror = right and not p.imgr
-        data, w, h, off, top, base_w = self.frame(fn, blink, mirror)
-        ax = (base_w - p.ax) if right else p.ax
         z = self.zoom
-        x = int(round(eng.ax * z - ax * z))
-        y = int(round(eng.ay * z - p.ay * z - off))
+        tilt = getattr(eng, "tilt", 0.0) or 0.0
+        if abs(tilt) >= 1.5:                                    # bay lượn: thân nghiêng theo hướng bay
+            bw = self.pack.image(fn).width
+            axi = (bw - p.ax) if right else p.ax
+            data, w, h, off, top, (nax, nay) = self.frame_rot(fn, mirror, int(round(tilt / 3.0)) * 3, axi, p.ay)
+            x = int(round(eng.ax * z - nax))
+            y = int(round(eng.ay * z - nay))
+        else:
+            data, w, h, off, top, base_w = self.frame(fn, blink, mirror)
+            ax = (base_w - p.ax) if right else p.ax
+            x = int(round(eng.ax * z - ax * z))
+            y = int(round(eng.ay * z - p.ay * z - off))
         x, y = self.clamp_to_screen(x, y, w, h, eng.ax * z, eng.ay * z)
         size_changed = (w, h) != (self.W, self.H)
         if self.mode == "layered":

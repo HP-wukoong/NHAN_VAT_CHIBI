@@ -58,7 +58,16 @@ for i in range(1200):
             if 0 <= k < len(seq):
                 o = seq[k]
                 fr.alpha_composite(o, (int(cx - o.width * anc[0]), int(cy - o.height * anc[1])))
-        fr.alpha_composite(im, (int(eng.ax - ax), int(eng.ay - p.ay)))
+        ay_ = p.ay
+        tl = getattr(eng, "tilt", 0.0) or 0.0
+        if abs(tl) >= 1.5:                                   # nghiêng thân như trong app (xoay quanh neo)
+            import math as _m
+            R = int(_m.ceil(max(_m.hypot(ax - cx, ay_ - cy) for cx in (0, im.width) for cy in (0, im.height)))) + 2
+            cv = Image.new("RGBA", (2 * R, 2 * R))
+            cv.paste(im, (int(round(R - ax)), int(round(R - ay_))))
+            im = cv.rotate(int(round(tl / 3.0)) * 3, Image.BICUBIC, center=(R, R))
+            ax, ay_ = R, R
+        fr.alpha_composite(im, (int(eng.ax - ax), int(eng.ay - ay_)))
         frames.append((fr if len(ARGV) > 5 else fr.resize((W // 2, H // 2))).convert("RGB"))
     if eng.cur != mode and i > 10 and frames:
         for _ in range(12):
