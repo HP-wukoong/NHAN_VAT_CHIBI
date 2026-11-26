@@ -1,9 +1,10 @@
 {
-  "version": "3.5",
+  "version": "3.6",
   "date": "2026-11-26",
   "notes": [
-    "Sửa lỗi hiệu ứng gõ chữ mới không hiện (cập nhật từ bản cũ bị thiếu thư mục ảnh HieuUng) – bản này tải bổ sung đủ ảnh",
-    "Trình cập nhật chép mọi thư mục có trong gói, bản sau thêm thư mục mới cũng không bị thiếu",
-    "Tự phát hiện thiếu ảnh hiệu ứng: tự tải bổ sung và báo rõ trong Cài đặt"
+    "Cổ Long: vá đuôi bị cụt ở các tư thế đứng / đi / leo",
+    "Hệ Lôi Thái Cổ Hắc Long: sấm sét răng cưa, nhánh nhọn, bảng màu tím cố định, điện tụ ở sừng, mắt, vuốt, đuôi theo nhịp",
+    "Hiệu ứng gõ phím làm lại thành 16 VFX động (5 giai đoạn, nhiều lớp, có hạt); gõ và xoá diễn biến khác nhau",
+    "Chỉ hiện hiệu ứng khi nội dung thật sự đổi; gõ dồn thì chồng lớp có giới hạn; dựng hình ở luồng phụ, không khựng máy"
   ]
 }

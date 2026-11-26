@@ -171,6 +171,102 @@ def cut(name):
     return im
 
 
+# Khung đi bộ 1–4 trong ảnh gốc bị khung kế bên che mất đuôi -> ghép đoạn đuôi của walk5 (đủ đuôi, có chùm lửa đầu đuôi)
+# tên -> (điểm cụt x, y tâm đuôi, hệ số độ dày)
+TAIL_GRAFT = {"walk1": (84, 67, 0.85), "walk2": (113, 76, 0.9), "walk3": (113, 66, 0.9), "walk4": (113, 81, 0.9)}
+TAIL_SRC = ("walk5", 148, 81)                 # khung có đuôi, cột bắt đầu cắt đoạn đuôi, tâm đuôi tại cột đó
+
+
+def graft_tail(im, stump_x, stump_y, k):
+    src = cut(TAIL_SRC[0])
+    sx0, sy0 = TAIL_SRC[1], TAIL_SRC[2]
+    piece = src.crop((sx0 - 6, 0, src.width, 97))                   # bỏ phần chân / bụi đất phía dưới
+    if k != 1.0:
+        piece = piece.resize((max(1, int(piece.width * k)), max(1, int(piece.height * k))), Image.LANCZOS)
+    a = np.asarray(piece.getchannel("A")).astype(np.float32)
+    ramp = np.clip(np.arange(a.shape[1]) / 8.0, 0, 1)                # mép nối mờ dần, giấu đường ghép
+    piece.putalpha(Image.fromarray((a * ramp[None, :]).astype(np.uint8)))
+    ox = int(round(stump_x - 6 * k - 6 * k))
+    oy = int(round(stump_y - sy0 * k))
+    W = max(im.width, ox + piece.width)
+    top = min(0, oy)
+    H = max(im.height, oy + piece.height) - top
+    out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    out.alpha_composite(piece, (ox, oy - top))                       # đuôi nằm sau thân
+    out.alpha_composite(im, (0, -top))
+    tip = (ox + (src.width - 12 - sx0 + 6) * k, oy - top + 40 * k)
+    return out, -top, tip
+
+
+def hot_points(k):
+    """Điểm tập trung điện năng trên khung rồng (toạ độ khung): sừng, mắt, móng vuốt, đầu đuôi, khớp vảy.
+    Mỗi điểm có 1–2 tia sét gốc cố định toả ra ngoài thân (không đổi hình giữa các frame)."""
+    try:
+        body, gx, gy = k._hot_src
+    except Exception:
+        return None
+    ys, xs = np.nonzero(body)
+    if len(xs) < 50:
+        return None
+    dy = 0
+    if k.tail_tip is not None:
+        dy = int(round(k.anchor[1] - (gy + 1)))                       # đuôi ghép có thể dời khung xuống
+    x0, x1, y0, y1 = xs.min(), xs.max(), ys.min(), ys.max()
+    w, h = x1 - x0 + 1, y1 - y0 + 1
+    pts = []
+    head = xs < x0 + w * 0.42
+    if head.any():                                                    # sừng: 2 đỉnh cao nhất vùng đầu
+        hy, hx = ys[head], xs[head]
+        o = np.argsort(hy)
+        a = (float(hx[o[0]]), float(hy[o[0]]))
+        pts.append(("horn", a))
+        far = np.abs(hx[o] - a[0]) > max(6, w * 0.06)
+        if far.any():
+            b = o[np.argmax(far)]
+            pts.append(("horn", (float(hx[b]), float(hy[b]))))
+    mx, my = k.mouth                                                  # mắt: phía trên – sau miệng
+    pts.append(("eye", (mx + w * 0.12, my - h * 0.12)))
+    low = ys > y1 - max(4, h * 0.06)                                  # móng vuốt: chỗ chạm đất
+    if low.any():
+        lx = np.sort(xs[low])
+        groups, cur = [], [lx[0]]
+        for v in lx[1:]:
+            if v - cur[-1] > 6:
+                groups.append(cur)
+                cur = [v]
+            else:
+                cur.append(v)
+        groups.append(cur)
+        for g in sorted(groups, key=len, reverse=True)[:3]:
+            pts.append(("claw", (float(np.mean(g)), float(y1))))
+    if k.tail_tip is not None:
+        pts.append(("tail", (k.tail_tip[0], k.tail_tip[1] - dy)))
+    else:
+        rx = xs > x1 - max(3, w * 0.03)
+        pts.append(("tail", (float(x1), float(ys[rx].mean()))))
+    rnd = random.Random(sum(map(ord, k.name)) * 13)
+    for _ in range(4):                                                # khớp vảy trên thân
+        q = rnd.randrange(len(xs))
+        pts.append(("joint", (float(xs[q]), float(ys[q]))))
+    pts = [(kind, (p[0], p[1] + dy)) for kind, p in pts]
+    cx, cy = float(xs.mean()), float(ys.mean()) + dy
+    bolts = []
+    for kind, p in pts:
+        out = math.degrees(math.atan2(p[1] - cy, p[0] - cx))           # toả ra phía ngoài thân
+        ln = {"horn": 26, "eye": 14, "claw": 16, "tail": 24, "joint": 13}[kind]
+        lst = []
+        for d in ((-18, 18) if kind in ("horn", "tail") else (rnd.uniform(-25, 25),)):
+            e = (p[0] + math.cos(math.radians(out + d)) * ln, p[1] + math.sin(math.radians(out + d)) * ln)
+            lst.append(LoiBolt(p, e, 1.0, rnd, branches=2 if ln > 15 else 1, depth=1))
+        bolts.append(lst)
+    wrap = []
+    joints = [p for kind, p in pts if kind in ("joint", "tail", "horn")]
+    for a, b in zip(joints, joints[1:]):
+        if math.hypot(a[0] - b[0], a[1] - b[1]) < w * 0.7:
+            wrap.append(LoiBolt(a, b, 1.0, rnd, branches=1, depth=1))
+    return dict(pts=[p for _, p in pts], kinds=[kd for kd, _ in pts], bolts=bolts, wrap=wrap[:2])
+
+
 class Key:
     """Một khung gốc đã cắt + điểm neo (chạm đất), miệng, các điểm trên thân để vẽ điện bò."""
 
@@ -204,14 +300,25 @@ class Key:
         self.center = (float(pxs.mean()), float(pys.mean())) if len(pys) else (w / 2.0, h / 2.0)
         self._flash = {}
         self._halo = None
+        self.tail_tip = None
+        self._hot_src = (body, gx, gy)
+        if name in TAIL_GRAFT:
+            sx_, sy_, k_ = TAIL_GRAFT[name]
+            self.im, dy, self.tail_tip = graft_tail(self.im, sx_, sy_, k_)
+            if dy:
+                self.anchor = (self.anchor[0], self.anchor[1] + dy)
+                self.mouth = (self.mouth[0], self.mouth[1] + dy)
+                self.center = (self.center[0], self.center[1] + dy)
+                self.pts = [(x, y + dy) for x, y in self.pts]
+        self.hot = hot_points(self)
 
     def flash(self, k):
         k = round(k * 4) / 4.0
         if k not in self._flash:
             r, g, b, a = self.im.split()
             base = Image.merge("RGB", (r, g, b))
-            hot = base.point(lambda v: min(255, int(v * 1.8 + 90)))          # rực sáng ánh vàng, không bạc màu
-            hot = Image.blend(hot, Image.new("RGB", self.im.size, (255, 214, 110)), 0.35)
+            hot = base.point(lambda v: min(255, int(v * 1.6 + 80)))          # chớp loá trắng tím (bảng màu hệ Lôi)
+            hot = Image.blend(hot, Image.new("RGB", self.im.size, (226, 200, 255)), 0.45)
             rgb = Image.blend(base, hot, k)
             self._flash[k] = Image.merge("RGBA", (*rgb.split(), a))
         return self._flash[k]
@@ -314,7 +421,7 @@ class Frame:
 
     # đặt một khung gốc: neo của khung tới điểm pos, co giãn / xoay quanh tâm thân
     def sprite(self, name, pos=(0.0, 0.0), sx=1.0, sy=1.0, rot=0.0, alpha=1.0, flash=0.0, glow=0.0,
-               glow_col=(255, 190, 40), layer="spr", pivot="center", scale=1.0):
+               glow_col=(120, 55, 230), layer="spr", pivot="center", scale=1.0):
         k = key(name)
         im = k.flash(flash) if flash > 0.01 else k.im
         s = SCALE * SS * scale
@@ -392,8 +499,60 @@ class Frame:
 
 
 # ───────────────────────── 3. hiệu ứng ─────────────────────────
-GOLD_G, GOLD_M = (255, 175, 30), (255, 238, 160)
-VIO_G, VIO_M = (150, 70, 255), (220, 190, 255)
+# ── HỆ LÔI THÁI CỔ HẮC LONG: dùng CHUNG lõi sấm sét với hiệu ứng bàn phím trong ChibiNhacViec.pyw ──
+def _load_app():
+    import importlib.machinery
+    import importlib.util
+    path = os.path.join(os.path.dirname(HERE), "ChibiNhacViec.pyw")
+    argv = sys.argv
+    sys.argv = [path]
+    try:
+        ld = importlib.machinery.SourceFileLoader("chibi_app_core", path)
+        spec = importlib.util.spec_from_loader("chibi_app_core", ld)
+        mod = importlib.util.module_from_spec(spec)
+        ld.exec_module(mod)
+    finally:
+        sys.argv = argv
+    return mod
+
+
+APP = _load_app()
+LoiBolt, loi_stroke, taper_poly = APP.LoiBolt, APP.loi_stroke, APP.taper_poly
+LOI_CORE, LOI_MID, LOI_MID_B, LOI_EDGE, LOI_DARK, LOI_AURA = (APP.LOI_CORE, APP.LOI_MID, APP.LOI_MID_B, APP.LOI_EDGE,
+                                                              APP.LOI_DARK, APP.LOI_AURA)
+GOLD_G, GOLD_M = LOI_MID, LOI_CORE            # tên cũ: mọi tia sét giờ cùng bảng màu tím cố định
+VIO_G, VIO_M = LOI_MID, LOI_CORE
+HALO = (120, 55, 230)                          # quầng năng lượng quanh rồng (tím)
+
+
+class Em:
+    """Bộ vẽ cho lõi Lôi: đổ nét vào các lớp của khung rồng (quầng -> sau lưng, sáng / thân tia -> trước hoặc sau)."""
+
+    def __init__(self, F, back=False):
+        self.F, self.back = F, back
+
+    def _lay(self, layer):
+        if layer == "aura":
+            return "bgg"
+        if layer == "glow":
+            return "bgg" if self.back else "fgg"
+        return "bg" if self.back else "fg"
+
+    def line(self, layer, pts, col, w):
+        if len(pts) >= 2 and col[3] > 0:
+            self.F.line(pts, col, w, layer=self._lay(layer))
+
+    def poly(self, layer, pts, col):
+        if len(pts) >= 3 and col[3] > 0:
+            self.F.poly(pts, col, layer=self._lay(layer))
+
+    def ell(self, layer, c, rx, ry, col):
+        if col[3] > 0:
+            self.F.ell(c, rx, ry, fill=col, layer=self._lay(layer))
+
+    def ell_ring(self, layer, c, rx, ry, col, w):
+        if col[3] > 0:
+            self.F.ell(c, rx, ry, outline=col, w=w, layer=self._lay(layer))
 
 
 def lerp(a, b, t):
@@ -418,90 +577,83 @@ def add(p, q, k=1.0):
     return (p[0] + q[0] * k, p[1] + q[1] * k)
 
 
-def jag(p0, p1, n, amp, rnd):
-    pts = [p0]
-    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
-    L = math.hypot(dx, dy) or 1
-    nx, ny = -dy / L, dx / L
-    for k in range(1, n):
-        t = k / float(n)
-        j = rnd.uniform(-1, 1) * amp
-        pts.append((p0[0] + dx * t + nx * j, p0[1] + dy * t + ny * j))
-    pts.append(p1)
-    return pts
+_BOLTS = {}
 
 
-def zap(F, pts, w=1.2, al=1.0, g=GOLD_G, m=GOLD_M, back=False):
-    al = clamp01(al)
-    G, C = ("bgg", "bg") if back else ("fgg", "fg")
-    F.line(pts, g + (int(220 * al),), w * 3.6, layer=G)
-    F.line(pts, m + (int(255 * al),), w, layer=C)
-    F.line(pts, (255, 255, 255, int(255 * al)), max(0.5, w * 0.4), layer=C)
+def stable_bolt(p0, p1, w, branches=3, depth=2, tag=""):
+    """Tia sét có thiết kế gốc cố định: cùng vị trí (làm tròn) -> cùng hình dáng ở mọi frame, chỉ đổi trạng thái."""
+    q = (tag, round(p0[0] / 10), round(p0[1] / 10), round(p1[0] / 10), round(p1[1] / 10), round(w, 1), branches)
+    b = _BOLTS.get(q)
+    if b is None:
+        L = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+        b = LoiBolt(p0, p1, w * 1.1, random.Random(hash(q) & 0xFFFFFF), branches=branches if L > 25 else 1,
+                    depth=depth if L > 40 else 1)
+        _BOLTS[q] = b
+        if len(_BOLTS) > 4000:
+            _BOLTS.clear()
+    return b
 
 
-def fractal(p0, p1, rnd, rough=0.28, depth=5):
-    """Sét tự nhiên: chia đôi đệ quy, lệch ngẫu nhiên vuông góc."""
-    pts = [p0, p1]
-    off = math.hypot(p1[0] - p0[0], p1[1] - p0[1]) * rough
-    for _ in range(depth):
-        nxt = [pts[0]]
-        for a, b in zip(pts, pts[1:]):
-            dx, dy = b[0] - a[0], b[1] - a[1]
-            L = math.hypot(dx, dy) or 1
-            j = rnd.gauss(0, 0.5) * off
-            nxt.append(((a[0] + b[0]) / 2 - dy / L * j, (a[1] + b[1]) / 2 + dx / L * j))
-            nxt.append(b)
-        pts = nxt
-        off *= 0.55
-    return pts
-
-
-def bolt(F, p0, p1, rnd, w=1.6, al=1.0, g=GOLD_G, m=GOLD_M, branches=3, back=False, seg=None, depth=0):
-    L = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
-    pts = fractal(p0, p1, rnd, 0.22, 5 if L > 60 else 4)
-    zap(F, pts, w, al, g, m, back)
-    base = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
-    for _ in range(branches):
-        if len(pts) < 6:
-            break
-        q = pts[rnd.randint(2, len(pts) - 3)]
-        a = base + rnd.choice((-1, 1)) * rnd.uniform(20, 55)
-        e = add(q, dirv(a), L * rnd.uniform(0.15, 0.35))
-        if depth < 1:
-            bolt(F, q, e, rnd, w * 0.55, al * 0.9, g, m, 1, back, depth=depth + 1)
-        else:
-            zap(F, fractal(q, e, rnd, 0.25, 3), w * 0.5, al * 0.85, g, m, back)
-    return pts
-
-
-def body_arcs(F, info, rnd, n=2, al=1.0, g=GOLD_G, m=GOLD_M, ln=(8, 18)):
-    """Tia điện ngắn bò trên thân rồng."""
-    pts = info["key"].pts
-    if not pts:
+def zap(F, pts, w=1.2, al=1.0, g=None, m=None, back=False):
+    """Đường sét có sẵn toạ độ: vẽ bằng nét sét chuẩn (thuôn nhọn, quầng đen tím, lõi trắng tím)."""
+    n = len(pts)
+    if n < 2:
         return
-    for _ in range(n):
-        p = info["fwd"](pts[rnd.randrange(len(pts))])
-        q = add(p, dirv(rnd.uniform(0, 360)), rnd.uniform(*ln))
-        zap(F, jag(p, q, 4, 3, rnd), 0.8, al, g, m)
+    ws = [w * (1 - 0.5 * k / float(n - 1)) for k in range(n)]
+    ws[-1] = 0
+    loi_stroke(Em(F, back), pts, ws, clamp01(al))
 
 
-def flash_burst(F, c, r, al, col=(255, 230, 150)):
-    F.ell(c, r * 1.6, r * 1.6, fill=col + (int(170 * al),), layer="fgg")
-    F.ell(c, r * 0.6, r * 0.6, fill=(255, 255, 245, int(255 * al)), layer="fg")
-    for k in range(8):
-        a = k * 45 + 22
-        F.line([add(c, dirv(a), r * 0.5), add(c, dirv(a), r * (1.4 if k % 2 else 2.1))], (255, 250, 220, int(230 * al)), 1.0)
+def bolt(F, p0, p1, rnd=None, w=1.6, al=1.0, g=None, m=None, branches=3, back=False, seg=None, depth=0, grow=1.0, tail=0.0,
+         tag=""):
+    b = stable_bolt(p0, p1, w, branches, 2 if depth == 0 else 1, tag)
+    jr = random.Random(int(al * 1000) + int(p0[0] * 7))
+    b.draw(Em(F, back), grow, tail, clamp01(al), 0.6, jr)
+    return b.pts
 
 
-def ring(F, c, rx, ry, al, col=(255, 200, 70), w=1.4):
-    F.ell(c, rx, ry, outline=col + (int(200 * al),), w=w * 3, layer="fgg")
-    F.ell(c, rx, ry, outline=(255, 250, 225, int(255 * al)), w=w, layer="fg")
+def body_arcs(F, info, rnd, n=2, al=1.0, g=None, m=None, ln=(8, 18)):
+    """Điện bò quanh thân: tập trung ở sừng, mắt, móng vuốt, đầu đuôi, khớp vảy; mỗi điểm có nhịp riêng
+    (bùng – giữ – co rút – tắt), nhánh đổi độ dài theo frame nhưng hình dáng gốc cố định."""
+    k = info["key"]
+    hot = getattr(k, "hot", None)
+    if not hot:
+        return
+    i = getattr(F, "frame_no", 0)
+    em = Em(F)
+    budget = max(1, int(n * 2))
+    pts = hot["pts"]
+    order = sorted(range(len(pts)), key=lambda j: ((i + j * 5) % 9))       # điểm nào đang tới nhịp thì sáng trước
+    for j in order[:budget]:
+        ph = (i + j * 5) % 9
+        if ph > 4:
+            continue
+        grow = (0.45, 1.0, 1.0, 0.85, 0.6)[ph]
+        tail = (0.0, 0.0, 0.15, 0.45, 0.75)[ph]
+        pw = (0.8, 1.0, 0.6, 0.85, 0.4)[ph] * al
+        for tb in hot["bolts"][j]:
+            tb.draw(em, grow, tail, pw, 0.5, random.Random(i * 31 + j), xf=info["fwd"], wk=SCALE * 1.7)
+    if n >= 3:                                                   # tia quấn ngang thân nối 2 điểm điện (mảnh, không che dáng)
+        for wb in hot["wrap"]:
+            ph = (i + int(wb.L)) % 7
+            if ph < 3:
+                wb.draw(em, (0.5, 1.0, 1.0)[ph], (0.0, 0.0, 0.4)[ph], 0.6 * al, 0.4, random.Random(i), xf=info["fwd"],
+                        wk=SCALE * 1.0)
+
+
+def flash_burst(F, c, r, al, col=None):
+    APP.loi_flash(Em(F), c, r * 0.8, clamp01(al))
+
+
+def ring(F, c, rx, ry, al, col=None, w=1.4):
+    APP.loi_ring(Em(F), c, rx, ry, clamp01(al), w)
 
 
 def sound_ring(F, c, ang, r, al):
     pts = [add(c, dirv(ang - 60 + 120 * k / 16.0), r) for k in range(17)]
-    F.line(pts, (255, 200, 80, int(170 * al)), 3.4, layer="fgg")
-    F.line(pts, (255, 248, 225, int(235 * al)), 1.1)
+    F.line(pts, LOI_MID + (int(180 * al),), 3.6, layer="fgg")
+    F.line(pts, LOI_EDGE + (int(200 * al),), 1.8)
+    F.line(pts, LOI_CORE + (int(240 * al),), 0.8)
 
 
 def dust(F, c, r, al, back=False):
@@ -510,7 +662,7 @@ def dust(F, c, r, al, back=False):
     F.ell(c, r * 0.8, r * 0.4, fill=(185, 172, 155, int(120 * al)), layer="bg" if back else "fg")
 
 
-def speed_lines(F, rnd, y0, y1, x0, x1, n=7, col=(255, 230, 160)):
+def speed_lines(F, rnd, y0, y1, x0, x1, n=7, col=(205, 170, 255)):
     for _ in range(n):
         y = rnd.uniform(y0, y1)
         a = rnd.uniform(x0, x1)
@@ -524,15 +676,15 @@ def crack(F, x0, dirn, ln, rnd, al):
     while abs(x - x0) < ln:
         x += dirn * rnd.uniform(5, 10)
         pts.append((x, -0.5 + rnd.uniform(-2.5, 1.0)))
-    F.line(pts, (255, 170, 40, int(230 * al)), 5, layer="bgg")
+    F.line(pts, (160, 80, 255, int(230 * al)), 5, layer="bgg")
     F.line(pts, (30, 16, 6, int(255 * al)), 2.0, layer="bg")
-    F.line(pts, (255, 230, 150, int(255 * al)), 0.8, layer="bg")
+    F.line(pts, (240, 225, 255, int(255 * al)), 0.8, layer="bg")
 
 
 def rock(F, c, sz, ang, al=1.0):
     pts = [add(c, dirv(ang + k * 72 + (k % 2) * 18), sz * (0.75 + 0.15 * (k % 3))) for k in range(5)]
     F.poly(pts, (70, 58, 50, int(255 * al)))
-    F.line(pts + [pts[0]], (255, 190, 70, int(200 * al)), 0.5)
+    F.line(pts + [pts[0]], (170, 100, 255, int(200 * al)), 0.5)
 
 
 def fire_blob(F, c, r, al, hot):
@@ -658,7 +810,10 @@ def pair(F, a, b, mix, **tr):
 
 
 def build(T, fn):
-    return [(lambda F, i=i: fn(F, i)) for i in range(T)]
+    def run(F, i):
+        F.frame_no = i
+        return fn(F, i)
+    return [(lambda F, i=i: run(F, i)) for i in range(T)]
 
 
 def kfv(i, keys):
@@ -683,7 +838,7 @@ def S_stand():
     def f(F, i):
         w = TAU * i / T
         info = F.sprite("walk3", (0, 0), sx=1 - 0.008 * math.sin(w), sy=1 + 0.016 * math.sin(w), rot=0.7 * math.sin(w + 1),
-                        pivot="anchor", glow=0.18 + 0.08 * math.sin(w), glow_col=(255, 170, 40))
+                        pivot="anchor", glow=0.18 + 0.08 * math.sin(w), glow_col=(120, 55, 230))
         if i % 10 in (3, 4):
             body_arcs(F, info, random.Random(i), 1, 0.9)
     return build(T, f)
@@ -698,7 +853,7 @@ def S_standb():
     def f(F, i):
         w = TAU * i / T
         a, b, m = seq[i]
-        info = pair(F, a, b, m, sy=1 + 0.014 * math.sin(w), rot=1.6 * math.sin(w), pivot="anchor", glow=0.2, glow_col=(255, 170, 40))
+        info = pair(F, a, b, m, sy=1 + 0.014 * math.sin(w), rot=1.6 * math.sin(w), pivot="anchor", glow=0.2, glow_col=(120, 55, 230))
         if 12 <= i <= 20:
             body_arcs(F, info, random.Random(i * 3), 2, 1.0 - (i - 12) / 9.0)
     return build(T, f)
@@ -1008,6 +1163,18 @@ def S_fire():
     return build(T, f)
 
 
+_rb = random.Random(4242)
+BREATH = {
+    "beam": [LoiBolt((0, 0), (-250, 0), 2.8, _rb, branches=4, depth=2),
+             LoiBolt((0, -2), (-245, -16), 1.4, _rb, branches=2, depth=1),
+             LoiBolt((0, 2), (-245, 16), 1.4, _rb, branches=2, depth=1)],
+    "splash": [LoiBolt((0, 0), add((0, 0), dirv(a), _rb.uniform(16, 30)), 1.0, _rb, branches=1, depth=1)
+               for a in (120, 160, 200, 235, 270)],
+    "gather": [LoiBolt(add((0, 0), dirv(a), 45), add((0, 0), dirv(a), 12), 0.8, _rb, branches=1, depth=1)
+               for a in (140, 170, 200, 230, 115, 250)],
+}
+
+
 @defset("boltb")
 def S_boltb():
     segs = [("roar1", 7), ("roar2", 9), ("roar3", 12), ("roar2", 6), ("roar3", 8), ("walk3", 6)]
@@ -1019,27 +1186,31 @@ def S_boltb():
         vio = i >= 18
         sx_, sy_ = shake(i, 1.3) if 4 <= i <= 40 else (0, 0)
         fl = 0.6 if i in (4, 18, 29) else (0.3 if i in (5, 19, 30) else 0)
-        info = pair(F, a, b, m, pos=(sx_, sy_), pivot="anchor", glow=0.6, glow_col=(150, 80, 255) if vio else (255, 180, 40), flash=fl)
+        info = pair(F, a, b, m, pos=(sx_, sy_), pivot="anchor", glow=0.6, glow_col=HALO, flash=fl)
         M = info["mouth"]
         r = random.Random(i * 3)
-        if i < 4:
-            for _ in range(6):
-                p = add(M, dirv(r.uniform(130, 230)), r.uniform(10, 50) * (1 - i / 4.0) + 5)
-                zap(F, fractal(p, add(p, dirv(r.uniform(0, 360)), 7), r, 0.3, 2), 0.6, 0.9)
-        g, mm = (VIO_G, VIO_M) if vio else (GOLD_G, GOLD_M)
-        if 4 <= i <= 42:                                     # tia sét phun từ miệng: 3 sợi xoắn + nhánh
-            Lc = min(1.0, (i - 3) / 3.0) * 250 * (1 if i < 40 else (43 - i) / 3.0)
-            ang = 178 + 3 * math.sin(i * 0.5)
-            end = add(M, dirv(ang), Lc)
-            for s_ in range(3):
-                bolt(F, add(M, (-2, 0)), add(end, (0, r.uniform(-14, 14))), r, 2.6 if s_ == 0 else 1.3, 1.0, g, mm, 2)
-            F.ell(M, 9, 9, fill=g + (200,), layer="fgg")
-            F.ell(end, 14, 10, fill=g + (170,), layer="fgg")
-            for _ in range(4):
-                bolt(F, end, add(end, dirv(r.uniform(100, 260)), r.uniform(14, 30)), r, 0.8, 0.9, g, mm, 0)
+        em = Em(F)
+        if i < 4:                                             # tụ điện: tia nhỏ hội tụ vào miệng
+            for j, tb in enumerate(BREATH["gather"]):
+                tb.draw(em, 1.0, i / 4.0, 0.8, 0.4, r, xf=lambda p: (M[0] + p[0] * (1 - i / 5.0), M[1] + p[1] * (1 - i / 5.0)))
+        if 4 <= i <= 42:                                     # tia sét phun từ miệng: 3 sợi gốc cố định, vươn dài theo frame
+            grow = min(1.0, (i - 3) / 3.0)
+            tail = 0.0 if i < 40 else (i - 39) / 4.0
+            ang = 3 * math.sin(i * 0.5)
+            co, si = math.cos(math.radians(ang)), math.sin(math.radians(ang))
+            xf = lambda p: (M[0] - 2 + p[0] * co - p[1] * si, M[1] + p[0] * si + p[1] * co)
+            pw = (1.0, 0.75, 1.0, 0.55, 0.9, 0.7)[i % 6]
+            for tb in BREATH["beam"]:
+                tb.draw(em, grow, tail, pw, 1.2, r, xf=xf)
+            end = xf((-250 * grow, 0))
+            F.ell(M, 9, 9, fill=LOI_MID + (200,), layer="fgg")
+            if grow >= 1 and tail <= 0:
+                for k2, tb in enumerate(BREATH["splash"]):     # toé điện ở đầu tia, mỗi nhánh có nhịp riêng
+                    if (i + k2) % 3:
+                        tb.draw(em, 1.0, 0.0, 0.9, 0.6, r, xf=lambda p: (end[0] + p[0], end[1] + p[1]))
         if i in (4, 18, 29):
-            flash_burst(F, M, 26, 1.0, col=(255, 230, 150) if not vio else (210, 180, 255))
-        body_arcs(F, info, r, 2, 0.9, g, mm)
+            flash_burst(F, M, 26, 1.0)
+        body_arcs(F, info, r, 2, 0.9)
     return build(T, f)
 
 
@@ -1072,7 +1243,7 @@ def S_dive():
         for _ in range(6):
             x = c[0] + r.uniform(-40, 40)
             y = c[1] - r.uniform(40, 170)
-            F.line([(x, y), (x, y - r.uniform(20, 40))], (255, 230, 160, 170), 0.8, layer="bg")
+            F.line([(x, y), (x, y - r.uniform(20, 40))], (205, 170, 255, 170), 0.8, layer="bg")
     return build(T, f)
 
 
@@ -1111,7 +1282,7 @@ def S_impact():
         r = random.Random(8)
         k = 1 - max(0, i - 24) / 12.0
         F.ell((0, 0), 66, 9, fill=(26, 14, 6, int(220 * k)), layer="bg")
-        F.ell((0, 0), 66, 9, outline=(255, 180, 60, int(200 * k)), w=1.2, layer="bg")
+        F.ell((0, 0), 66, 9, outline=(170, 90, 255, int(200 * k)), w=1.2, layer="bg")
         for dirn in (-1, 1):
             for n in range(3):
                 crack(F, dirn * 50, dirn, min(1.0, i / 4.0) * (30 + n * 28), r, k)
@@ -1165,7 +1336,7 @@ def S_hover():
         a, b, m = seq[i]
         lift = kfv(i, [(0, 0), (12, -16), (44, -16), (56, 0)]) + 2.5 * math.sin(TAU * i / 18)
         info = pair(F, a, b, m, pos=(0, lift), rot=2 * math.sin(TAU * i / 28), pivot="anchor",
-                    glow=0.5, glow_col=(160, 90, 255) if i > 20 else (255, 180, 50), flash=0.35 if i in (23, 41) else 0)
+                    glow=0.5, glow_col=(120, 55, 230), flash=0.35 if i in (23, 41) else 0)
         r = random.Random(i)
         k = math.sin(math.pi * i / T)
         for n in range(3):                                   # xoáy tím dưới chân
@@ -1199,7 +1370,7 @@ def S_roar():
             if i % 3 == 0:
                 x = r.choice((-1, 1)) * r.uniform(60, 150)
                 bolt(F, (x + r.uniform(-20, 20), -230), (x, -1), r, 1.8, 1.0, branches=3, back=True)
-                F.ell((x, -1), 20, 5, fill=(255, 210, 120, 220), layer="bgg")
+                F.ell((x, -1), 20, 5, fill=(200, 160, 255, 220), layer="bgg")
             body_arcs(F, info, r, 3, 1.0)
         if i in (16, 30):
             flash_burst(F, M, 24, 1.0)
@@ -1249,13 +1420,13 @@ def S_ult():
         if i < 10:                                           # tụ khí: hạt sáng hút vào, quả cầu vàng hiện
             for _ in range(12):
                 p = add(c, dirv(r.uniform(0, 360)), 90 * (1 - i / 10.0) + 10)
-                F.line([p, add(p, dirv(r.uniform(0, 360)), 4)], (255, 230, 150, 230), 0.9)
+                F.line([p, add(p, dirv(r.uniform(0, 360)), 4)], (235, 220, 255, 230), 0.9)
             F.fxsprite("fx_orb", add(c, (0, -70)), scale=0.4 + 0.05 * i, rot=i * 20, alpha=0.6 + 0.04 * i)
         if 10 <= i < 58:                                     # sét trời giáng quanh, vòng long uy lan ra
             for _ in range(2):
                 x = c[0] + r.choice((-1, 1)) * r.uniform(70, 200)
                 bolt(F, (x + r.uniform(-30, 30), -250), (x, -1), r, 2.0, 1.0, branches=3, back=r.random() < 0.5)
-                F.ell((x, -1), 22, 6, fill=(255, 210, 120, 230), layer="bgg")
+                F.ell((x, -1), 22, 6, fill=(200, 160, 255, 230), layer="bgg")
             for t0 in range(10, 58, 6):
                 a_ = i - t0
                 if 0 <= a_ < 10:

@@ -24,7 +24,7 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 | Môi trường | Đi và đứng trên mép cửa sổ đang mở. Thấy cửa sổ hay biểu tượng thư mục/file cao hơn phía trước thì nhảy lên. Bước hụt mép thì rơi |
 | Chuột trên nhân vật | Trái/phải × (1 lần, 2 lần, liên tục, giữ), lăn lên, lăn xuống, nhấn con lăn. Mỗi thao tác gán 1 chiêu và/hoặc 1 lệnh. Kéo để xách; thả ra thì nhân vật **lao cắm đầu xuống và nện tạo hố**; quăng **đập vào tường** thì rơi xuống **ăn vạ** (đổi được cả hai) |
 | Chuột trên màn hình | Bấm 1 lần, 2 lần, chuột phải, lăn, nhấn con lăn tại bất kỳ điểm nào: nhân vật **lao tới ngay khi vừa nhấn chuột** (~0,16 giây, dù xa cỡ nào) rồi tung chiêu. Phím **Ctrl + Alt + X** gọi nhân vật tới chỗ con trỏ |
-| Hiệu ứng gõ phím | Ở **mọi phần mềm**, chọn riêng mẫu khi gõ và khi xoá (hoặc ngẫu nhiên / ngẫu nhiên hệ Lôi) trong **26 mẫu cắt từ ảnh hiệu ứng của bạn** (thư mục `HieuUng/`): 21 mẫu hệ Lôi (lôi tinh bạo phát, kim lôi tinh, lôi bạo, lôi hoàn, lốc xoáy, lôi châu, địa lôi nổ vàng / vàng tím / tím, địa chấn lôi, lôi điện giáng, lôi phạt, lôi kiếp, lôi quang, lôi ấn, thiên lôi trụ, lôi thương, sấm sét liên hồi, lôi long, kim long cuộn, tử lôi xà) + Ma trảo, Ma độc long, Bỉ ngạn hoa nở, Đầu lâu ma quỷ bay lên, Dòng phi kiếm bay vút. Mỗi mẫu bùng ra – loé sáng – tan dần ngay chỗ con trỏ nhập; cỡ tự theo cỡ chữ. Gõ liên tục thì nhân vật nạp năng lượng; xoá liên tục thì nhân vật lao tới chỗ xoá. Tắt được trong Cài đặt |
+| Hiệu ứng gõ phím | Ở **mọi phần mềm**, 16 hiệu ứng VFX động (xem mục *Hệ VFX bàn phím*). Chọn riêng mẫu khi gõ và khi xoá, hoặc ngẫu nhiên / ngẫu nhiên hệ Lôi. Cỡ tự theo cỡ chữ. Gõ liên tục thì nhân vật nạp năng lượng; xoá liên tục thì nhân vật lao tới chỗ xoá |
 | Cập nhật | Tự kiểm tra bản mới trên GitHub khi mở app và mỗi 6 giờ. Có thể chọn tự cài hoặc hỏi trước. **F5** trong bảng quản lý để cập nhật ngay. Cập nhật từ file `.zip` cho máy không mạng. Quay về bản trước |
 | Sự kiện | Gán chiêu khi báo nhắc, Xong, Hoãn, Bỏ qua, nghỉ mắt, chào buổi sáng, rời máy, quay lại |
 | Tự hoạt động | Bật/tắt từng động tác. Chiêu đã gán cho chuột trên nhân vật thì mặc định chỉ chạy khi bạn bấm |
@@ -55,9 +55,40 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 
 Đổi tất cả trong **Bảng quản lý → Điều khiển**. Mở bảng quản lý bằng cách nhấp đúp vào nhân vật.
 
+## Hệ VFX bàn phím
+
+Mỗi hiệu ứng là một lớp `Vfx` trong `ChibiNhacViec.pyw`. Vòng đời của nó:
+1. `__init__` nhận thông số: cỡ, chế độ, cường độ, tốc độ, hạt giống.
+2. `init()` dựng thiết kế gốc cố định.
+3. Lặp `update()` và `draw()` theo từng frame.
+4. `finish()` giải phóng.
+
+`bake()` chạy vòng đời đó thành dãy frame 25 hình/giây. Có thêm pha phân rã chung để hiệu ứng luôn kết thúc sạch.
+
+Mỗi hiệu ứng đi qua 5 giai đoạn: khởi phát, tăng năng lượng, cao trào, phản ứng, phân rã. Các lớp hình phối hợp gồm: hình chính, tia phụ, hạt, quầng sáng, tan biến.
+
+- **Gõ và xoá khác nhau:** gõ thì bùng ra, giáng xuống, phóng đi. Xoá thì diễn biến ngược: hút vào, rút về, tan rã, lôi đi.
+- **Chỉ kích hoạt khi nội dung thật sự đổi.** App ghi lại vị trí con trỏ nhập lúc yên, vì hook nhận phím trước phần mềm đích. Nếu con trỏ không dịch chuyển thì bỏ qua (ví dụ Backspace ở đầu ô). Riêng phím Delete được tính dù con trỏ đứng yên.
+- **Gõ dồn:** mỗi lần gõ một hiệu ứng riêng, mỗi hiệu ứng một cửa sổ trong suốt riêng. Tối đa 3 hiệu ứng mỗi kênh; cái cũ nhất được đẩy nhanh sang pha tan biến.
+- **Không làm chậm máy:** frame được dựng sẵn ở luồng phụ (4 biến thể mỗi mẫu).
+
+| Nhóm | Hiệu ứng |
+|---|---|
+| ⚡ Hệ Lôi | Lôi tinh bạo phát, Thiên lôi giáng, Sấm sét liên hồi, Lôi hoàn, Lôi xoáy, Lôi phạt trụ, Địa chấn lôi, Lôi xích liên hoàn, Lôi long, Lôi thương, Tử lôi bùng nổ |
+| Ma pháp | Ma trảo, Ma độc long, Bỉ ngạn hoa nở, Đầu lâu quỷ bay lên, Song phi kiếm bay vút |
+
+**Hệ Lôi Thái Cổ Hắc Long**
+
+Đây là ngôn ngữ thiết kế sấm sét dùng chung cho cả bàn phím và chiêu của Cổ Long.
+- **Hình dạng:** tia chính gấp khúc răng cưa có chủ đích. Nhánh phụ đầu nhọn, phân nhánh tự nhiên, không rối thành lưới.
+- **Bảng màu cố định:** lõi trắng tím, trắng xanh; trung gian tím điện, xanh tím; viền tím đậm; quầng đen tím.
+- **Thiết kế gốc cố định:** mỗi tia được dựng một lần từ hạt giống. Các frame chỉ đổi trạng thái: vươn, giật, nhịp sáng, co rút.
+
+Thử thật: `python tests/chay_thu_go_phim.py bolt slash /tmp/thu.gif` sẽ mở ô soạn thảo, gõ và xoá thật, rồi ghi lại hình hiệu ứng.
+
 ## Nhân vật Cổ Long (rồng đen vảy vàng)
 
-Dựng từ bảng sprite của bạn (`tools/co_long_nguon.png`, 14 nhóm động tác). Công cụ `tools/dung_co_long.py`:
+Dựng từ bảng sprite của bạn (`tools/co_long_nguon.png`, 14 nhóm động tác). 4 khung đi bộ vốn bị khung kế bên che mất đuôi được ghép đuôi từ khung có đủ đuôi. Toàn bộ sấm sét dùng **Hệ Lôi** (tím): điện tập trung ở sừng, mắt, móng vuốt, khớp vảy, đầu đuôi, mỗi điểm sáng theo nhịp riêng. Công cụ `tools/dung_co_long.py`:
 
 1. **Cắt khung:** tách nền caro giả, bỏ nhãn chữ và vạch kẻ, cắt 70 khung gốc. Những khung quay mặt sang phải thì lật lại cho cùng hướng.
 2. **Dựng hoạt cảnh 25 hình/giây:**

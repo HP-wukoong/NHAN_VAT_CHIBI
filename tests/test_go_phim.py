@@ -23,28 +23,63 @@ app.pet.engine.fly_and_act = lambda x, y, n, hold=0.0: calls.append(("fly", n)) 
 
 
 def run():
-    C.caret_info = lambda: ((400, 300), False)
+    cx = [400]
+
+    def moving():                               # mỗi lần gõ con trỏ nhập dịch sang phải (nội dung thay đổi)
+        cx[0] += 9
+        return ((cx[0], 300), False)
+    C.caret_info = moving
     n0 = fx.bolt.played
     for _ in range(10):
-        fx.on_key("T")                          # 10 phím trong tích tắc
-    check(fx.bolt.played - n0 == 1, "gõ dồn dập -> gộp hiệu ứng, không làm chậm máy")
+        fx.on_key("T")                          # 10 phím trong tích tắc (giữ phím lặp)
+    check(fx.bolt.played - n0 == 1, "giữ phím lặp dồn dập -> gộp hiệu ứng, không làm chậm máy")
     fx.t_last["T"] = 0
     fx.on_key("T")
-    check(fx.bolt.played - n0 == 2 and fx.last_pos == (400, 300), "hiệu ứng đặt đúng vị trí con trỏ nhập")
-    fx.on_key("D")
-    check(fx.slash.played == 1, "xoá -> loạn đao chém")
-    check(len(fx.bolt.variants("bolt", fx.size())) == fx.bolt.VARIANTS, "lôi điện: 5 biến thể")
+    check(fx.bolt.played - n0 == 2 and fx.last_pos == (cx[0], 300), "mỗi lần gõ có hiệu ứng riêng, đúng vị trí con trỏ nhập")
+    C.caret_info = lambda: ((cx[0], 300), False)                # con trỏ đứng yên = nội dung không đổi
+    fx.t_last["T"] = 0
+    n1, sk = fx.bolt.played, fx.skipped
+    fx.on_key("T")
+    app.root.update()
+    import time as _t
+    _t.sleep(0.1)
+    app.root.update()
+    check(fx.bolt.played == n1 and fx.skipped == sk + 1, "nội dung không đổi (Backspace ở đầu ô...) -> không có hiệu ứng")
+    fx.t_last["D"] = 0
+    fx.on_key("D", 0x2E)
+    check(fx.slash.played == 1, "phím Delete (xoá chữ bên phải, con trỏ đứng yên) vẫn có hiệu ứng xoá")
+    C.caret_info = moving
+    vs = fx.bolt.variants("bolt", fx.size())
+    for _ in range(100):
+        if len(vs) >= fx.bolt.VARIANTS:
+            break
+        _t.sleep(0.05)
+    check(len(vs) == fx.bolt.VARIANTS, "dựng đủ %d biến thể ở luồng phụ" % fx.bolt.VARIANTS)
     for key, name, maker, anchor in C.FX_EFFECTS:
-        fr = maker(120, 7)
-        ok = len(fr) >= 6 and len({f.size for f in fr}) == 1 and any(f.getbbox() for f in fr)
-        check(ok, "mẫu hiệu ứng '%s': %d khung, cùng cỡ, có hình" % (name, len(fr)))
-    check(all(C.fx_src(n) is not None for n in ("tia_chop", "no_dat", "loilong", "matrao1", "daulau3", "phikiem5")),
-          "đọc được ảnh hiệu ứng của bạn trong HieuUng/")
+        ft, fd = maker(120, 7, "T"), maker(120, 7, "D")
+        ok = all(len(fr) >= 6 and len({f.size for f in fr}) == 1 and sum(1 for f in fr if f.getbbox()) >= len(fr) * 0.6
+                 for fr in (ft, fd))
+        end_ok = all(not fr[-1].getbbox() or fr[-1].getchannel("A").getextrema()[1] < 200 for fr in (ft, fd))
+        diff = any(a.tobytes() != b.tobytes() for a, b in zip(ft, fd))
+        check(ok and end_ok and diff, "'%s': gõ %d / xoá %d khung, có diễn biến, tự tan, gõ ≠ xoá" % (name, len(ft), len(fd)))
+    p = fx.bolt
+    for _ in range(6):
+        p.play(500, 300, 120, "bolt")
+    check(len(p.live) <= p.MAX_LIVE + 1, "gõ chồng nhiều: giới hạn hiệu ứng cùng lúc (%d)" % len(p.live))
+    for _ in range(80):
+        app.root.update()
+        _t.sleep(0.04)
+        if not p.live:
+            break
+    check(not p.live and p.job is None, "hết hiệu ứng: tự dọn, không để lại hình")
     app.store.s["key_fx_type"], app.store.s["key_fx_del"] = "thunder", "skull"
     fx.t_last = {"T": 0, "D": 0}
     fx.on_key("T")
     fx.on_key("D")
     check(fx.bolt.last_key == "thunder" and fx.slash.last_key == "skull", "chọn mẫu riêng cho gõ / xoá")
+    app.store.s["key_fx_type"] = "kimtinh"                    # mã cũ bản 3.4
+    app.store.fix_triggers()
+    check(app.store.s["key_fx_type"] == "bolt", "mẫu cũ đã bỏ -> chuyển sang mẫu mới gần nhất")
     app.store.s["key_fx_type"] = "random"
     got = set()
     for _ in range(30):
@@ -94,20 +129,20 @@ def run():
     import ctypes
     check(ctypes.sizeof(C._VARIANT) == (24 if ctypes.sizeof(ctypes.c_void_p) == 8 else 16), "cấu trúc VARIANT đúng kích thước COM")
     n0 = fx.bolt.played
-    fx.wait = (901, "T", C.time_now(), (11, 11))
+    fx.wait = (901, "T", C.time_now(), (11, 11), None)
     fx.finder.results.put((901, (640, 360), False, "UI Automation"))
     fx.poll()
     check(fx.bolt.played == n0 + 1 and fx.last_pos == (640, 360), "nhận vị trí từ UI Automation -> hiệu ứng đúng chỗ gõ")
     check("UI Automation" in fx.last_info, "ghi lại cách tìm được con trỏ nhập (%s)" % fx.last_info)
-    fx.wait = (902, "D", C.time_now(), (11, 11))
+    fx.wait = (902, "D", C.time_now(), (11, 11), None)
     fx.finder.results.put((902, None, True, "UIA"))
     s0 = fx.slash.played
     fx.poll()
     check(fx.slash.played == s0, "ô mật khẩu trên trình duyệt -> không hiệu ứng")
-    fx.wait = (903, "T", C.time_now() - 1.0, (77, 88))
+    fx.wait = (903, "T", C.time_now() - 1.0, (77, 88), None)
     fx.poll()
     check(fx.last_pos == (77, 88), "phần mềm chậm trả lời quá 0,25 giây -> hiện cạnh chuột, không chờ")
-    fx.wait = (904, "T", C.time_now(), (1, 1))
+    fx.wait = (904, "T", C.time_now(), (1, 1), None)
     fx.finder.results.put((900, (5, 5), False, "MSAA"))
     fx.poll()
     check(fx.wait is not None, "bỏ qua kết quả cũ không đúng yêu cầu")
@@ -122,7 +157,7 @@ def run():
     app.store.s["key_fx_size"], app.store.s["key_fx_autosize"] = 1.0, False
     check(fx.size(12) == fx.size(40), "tắt tự động -> mọi cỡ chữ cùng cỡ hiệu ứng")
     app.store.s["key_fx_autosize"] = True
-    fx.wait = (950, "T", C.time_now(), (1, 1))
+    fx.wait = (950, "T", C.time_now(), (1, 1), None)
     fx.finder.results.put((950, (300, 300), False, "UI Automation", 32))
     fx.poll()
     check(fx.last_size == fx.size(32), "cỡ chữ từ UI Automation được dùng để tính cỡ hiệu ứng")

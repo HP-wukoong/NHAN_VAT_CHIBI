@@ -66,16 +66,6 @@ def s3():
     check(os.path.exists(os.path.join(C.BASE_DIR, "ThuMucMoi", "anh.txt")),
           "chép cả thư mục mới có trong gói (lỗi thiếu HieuUng ở bản 3.4)")
     check(not os.path.exists(os.path.join(C.BASE_DIR, "ChibiData", "settings.json")), "không đè dữ liệu người dùng ChibiData")
-    import shutil
-    hu = os.path.join(C.BASE_DIR, "HieuUng")
-    shutil.move(hu, hu + "_tam")
-    C._FX_SRC.clear()
-    check(not C.fx_assets_ok(), "phát hiện thiếu thư mục HieuUng")
-    fr = C.FX_BY_KEY["kimtinh"][2](120, 0)
-    check(fr and "kimtinh1" in C.FX_MISSING, "thiếu ảnh -> ghi nhận để báo trên giao diện")
-    shutil.move(hu + "_tam", hu)
-    check(C.fx_assets_ok() and C.fx_src("kimtinh1") is not None and "kimtinh1" not in C.FX_MISSING,
-          "có lại ảnh -> đọc lại được ngay, không nhớ lỗi cũ")
     bk = os.listdir(C.BACKUP_DIR)
     check(len(bk) == 1 and os.path.exists(os.path.join(C.BACKUP_DIR, bk[0], "ChibiNhacViec.pyw")), "đã sao lưu bản cũ")
     check(app.store.s.get("just_updated") == "9.9", "ghi nhớ để chào sau khi khởi động lại")

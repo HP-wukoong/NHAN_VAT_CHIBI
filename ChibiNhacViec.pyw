@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.5"
+APP_VER = "3.6"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -369,8 +369,8 @@ class Store:
         s["triggers"] = tr
         # mẫu hiệu ứng gõ phím đã bỏ ở bản mới -> về mặc định
         for k, dflt in (("key_fx_type", "bolt"), ("key_fx_del", "slash")):
-            if s.get(k) not in FX_BY_KEY and s.get(k) not in ("random", "random_thunder"):
-                s[k] = dflt
+            v = FX_ALIAS.get(s.get(k), s.get(k))
+            s[k] = v if (v in FX_BY_KEY or v in ("random", "random_thunder")) else dflt
 
     def load(self):
         self._bak_ts = 0
@@ -2148,7 +2148,7 @@ class GlobalMouse:
                                             bool(k.flags & 0x20) or bool(u32.GetAsyncKeyState(0x12) & 0x8000),
                                             bool((u32.GetAsyncKeyState(0x5B) | u32.GetAsyncKeyState(0x5C)) & 0x8000))
                         if kind:
-                            self.q.put(("K", kind))
+                            self.q.put(("K", kind, k.vkCode))
                     except Exception:
                         pass
                 return u32.CallNextHookEx(None, code, wp, lp)
@@ -2218,7 +2218,7 @@ class GlobalMouse:
     def poll(self):
         self.mode = self.app.store.s.get("screen_mode", "desktop")
         try:
-            self.app.keyfx.poll()
+            self.app.keyfx.poll(self.q.empty())
         except Exception:
             log_error()
         while True:
@@ -2230,7 +2230,7 @@ class GlobalMouse:
                 continue
             k = ev[0]
             if k == "K":
-                self.app.keyfx.on_key(ev[1])
+                self.app.keyfx.on_key(ev[1], ev[2] if len(ev) > 2 else None)
                 continue
             if k == "HK":
                 x, y = self.app.root.winfo_pointerxy()
@@ -3780,160 +3780,1637 @@ def make_net_frames(size, seed):
     return frames
 
 
-# ── hiệu ứng từ ảnh của người dùng (thư mục HieuUng/, cắt bằng tools/cat_hieu_ung.py) ──
-FX_DIR = os.path.join(BASE_DIR, "HieuUng")
-_FX_SRC = {}
-FX_MISSING = set()                                   # ảnh hiệu ứng không tìm thấy (để báo trên giao diện)
+# ══════════════ HỆ LÔI THÁI CỔ HẮC LONG – ngôn ngữ thiết kế sấm sét dùng chung ══════════════
+# Dùng cho hiệu ứng bàn phím VÀ chiêu thức của Cổ Long (tools/dung_co_long.py nạp lại phần này).
+# Bảng màu cố định, không đổi giữa các frame / chiêu:
+LOI_CORE = (246, 238, 255)       # lõi: trắng tím cực sáng
+LOI_CORE_B = (228, 242, 255)     # lõi phụ: trắng xanh
+LOI_MID = (172, 94, 255)         # lớp điện trung gian: tím điện
+LOI_MID_B = (118, 108, 255)      # xanh tím
+LOI_EDGE = (84, 26, 152)         # viền ngoài: tím đậm
+LOI_DARK = (44, 9, 72)           # hắc tím
+LOI_AURA = (22, 4, 38)           # quầng năng lượng: đen tím (vẽ bán trong suốt)
 
 
-def fx_src(name):
-    im = _FX_SRC.get(name)
-    if im is None:
-        try:
-            im = Image.open(os.path.join(FX_DIR, name + ".png")).convert("RGBA")
-            _FX_SRC[name] = im
-            FX_MISSING.discard(name)
-        except Exception:
-            FX_MISSING.add(name)                     # không nhớ lỗi: lần sau (sau khi tải bổ sung) đọc lại
-    return im
+def _c01(t):
+    return 0.0 if t < 0 else (1.0 if t > 1 else t)
 
 
-def fx_assets_ok():
-    """Đủ ảnh hiệu ứng chưa (máy cập nhật từ bản cũ có thể thiếu thư mục HieuUng)."""
-    try:
-        return len([f for f in os.listdir(FX_DIR) if f.endswith(".png")]) >= 60
-    except Exception:
-        return False
+def _ph(t, a, b):
+    """Tiến độ 0..1 của giai đoạn [a, b] trên trục thời gian 0..1."""
+    return _c01((t - a) / float(max(1e-6, b - a)))
 
 
-def _fx_tone(im, bright=1.0, alpha=1.0):
-    if bright == 1.0 and alpha >= 0.999:
-        return im
-    r, g, b, a = im.split()
-    if bright != 1.0:
-        lut = [min(255, int(v * bright + (bright - 1) * 40)) for v in range(256)]
-        r, g, b = r.point(lut), g.point(lut), b.point(lut)
-    if alpha < 0.999:
-        a = a.point(lambda v: int(v * alpha))
-    return Image.merge("RGBA", (r, g, b, a))
+def _eo(t):
+    t = _c01(t)
+    return 1 - (1 - t) ** 3
 
 
-def make_sprite_fx(names, style="burst", mult=1.2, frames=None):
-    """Hoạt cảnh từ ảnh hiệu ứng:
-    burst  – bùng ra từ con trỏ, xoay nhẹ, loé sáng rồi tan
-    ground – nổ trên mặt chữ: bốc lên từ dưới, đổi khung liên tục
-    pillar – cột sét giáng xuống chữ: loé hẹp -> bung rộng, chớp nháy
-    strike – sấm sét liên hồi: mỗi nhịp một tia khác nhau đánh xuống
-    seq    – chạy lần lượt các khung (vuốt, rồng, hoa nở, phi kiếm)
-    rise   – chạy khung và bay dần lên (đầu lâu)"""
-    def maker(size, seed):
-        rnd = random.Random(seed * 7919 + len(names))
-        srcs = [fx_src(n) for n in names]
-        srcs = [x for x in srcs if x is not None]
-        if not srcs:
-            return make_bolt_frames(size, seed)              # thiếu ảnh -> tạm dùng sét vẽ sẵn (giao diện báo thiếu)
-        n = frames or {"burst": 9, "ground": 11, "pillar": 9, "strike": 9, "seq": 0, "rise": 0}[style]
-        if not n:
-            n = len(srcs) * 2 + 4
-        k = size * mult / float(max(max(x.size) for x in srcs)) * rnd.uniform(0.92, 1.08)
-        mw = max(x.width for x in srcs) * k
-        mh = max(x.height for x in srcs) * k
-        flip = rnd.random() < 0.5 and style not in ("rise",)
-        if style == "burst":
-            W = H = int(math.hypot(mw, mh) * 1.1) + 4
-        else:
-            W, H = int(mw * 1.2) + 4, int(mh * (1.35 if style == "rise" else 1.1)) + 4
-        rot0 = rnd.uniform(-25, 25)
+def _ei(t):
+    t = _c01(t)
+    return t * t
+
+
+def _dv(a):
+    r = math.radians(a)
+    return (math.cos(r), math.sin(r))
+
+
+def _ad(p, q, k=1.0):
+    return (p[0] + q[0] * k, p[1] + q[1] * k)
+
+
+def _lp(p, q, t):
+    return (p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t)
+
+
+def loi_path(p0, p1, rnd, kink=(0.025, 0.07), seg=(0.05, 0.12), lift=0.0):
+    """Đường sét chính: gấp khúc răng cưa sắc, luân phiên đổi hướng có chủ đích, hội tụ vào điểm đích.
+    lift > 0: cả đường vồng lên (dùng cho tia nhảy giữa 2 chữ)."""
+    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
+    L = math.hypot(dx, dy) or 1.0
+    nx, ny = -dy / L, dx / L
+    pts = [p0]
+    t = 0.0
+    side = rnd.choice((-1, 1))
+    drift = 0.0
+    while True:
+        t += rnd.uniform(*seg) * (0.55 if rnd.random() < 0.3 else 1.0)
+        if t >= 0.94:
+            break
+        if rnd.random() < 0.72:
+            side = -side                                     # luân phiên -> răng cưa
+        jag = rnd.uniform(*kink) * (2.1 if rnd.random() < 0.18 else 1.0)    # thỉnh thoảng gập mạnh có chủ đích
+        drift = drift * 0.5 + side * jag
+        off = drift * L * (1 - 0.5 * t)
+        if lift:
+            off -= lift * L * 4 * t * (1 - t)
+        pts.append((p0[0] + dx * t + nx * off, p0[1] + dy * t + ny * off))
+    pts.append(p1)
+    return pts
+
+
+class LoiBolt:
+    """Một tia sét có THIẾT KẾ GỐC CỐ ĐỊNH (khung xương + cây nhánh tạo một lần từ hạt giống).
+    Mỗi frame chỉ đổi trạng thái: grow (vươn tới đâu), tail (co rút từ gốc), power (nhịp sáng), jit (giật nhẹ)."""
+
+    def __init__(self, p0, p1, w, rnd, branches=3, depth=2, kink=(0.025, 0.07), seg=(0.05, 0.12),
+                 blen=(0.2, 0.38), spread=(24, 52), lift=0.0, pts=None, hue=0.0):
+        self.pts = pts if pts is not None else loi_path(p0, p1, rnd, kink, seg, lift)
+        self.w = w
+        self.hue = hue                                        # 0 = tím điện, 1 = xanh tím
+        cum = [0.0]
+        for a, b in zip(self.pts, self.pts[1:]):
+            cum.append(cum[-1] + math.hypot(b[0] - a[0], b[1] - a[1]))
+        self.cum, self.L = cum, (cum[-1] or 1.0)
+        self.kids = []
+        n = len(self.pts)
+        if depth > 0 and branches > 0 and n > 3:
+            idx = list(range(1, n - 2))
+            rnd.shuffle(idx)
+            idx = sorted(idx[:branches])
+            side = rnd.choice((-1, 1))
+            for i in idx:
+                q = self.pts[i]
+                a, b = self.pts[i - 1], self.pts[i + 1]
+                d0 = math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))
+                side = -side
+                ang = d0 + side * rnd.uniform(*spread)
+                ln = self.L * rnd.uniform(*blen) * (1 - 0.35 * cum[i] / self.L)
+                kid = LoiBolt(q, _ad(q, _dv(ang), ln), w * 0.52, rnd, branches=max(0, branches - 2), depth=depth - 1,
+                              kink=(kink[0] * 1.15, kink[1] * 1.15), seg=(0.14, 0.26), blen=blen, spread=spread, hue=hue)
+                self.kids.append((cum[i] / self.L, kid))
+
+    def _cut(self, s0, s1):
+        """Đoạn đường từ tỉ lệ s0 tới s1 của chiều dài."""
+        a, b = s0 * self.L, s1 * self.L
         out = []
-        for f in range(n):
-            t = f / float(max(1, n - 1))
-            if style in ("seq", "rise"):
-                src = srcs[min(len(srcs) - 1, f // 2)]
-            elif style == "strike":
-                src = srcs[rnd.randrange(len(srcs))]
-            else:
-                src = srcs[(f // 2 + seed) % len(srcs)] if style in ("ground", "pillar") else srcs[seed % len(srcs)]
-            grow = 1 - (1 - min(1.0, (f + 1) / 3.0)) ** 2
-            sx = sy = 1.0
-            bright = 1.55 if f == 0 else (1.25 if f == 1 else 1.0)
-            fade = 1.0 if t < 0.5 else max(0.08, 1 - (t - 0.5) / 0.55)
-            if style == "burst":
-                sx = sy = 0.45 + 0.55 * grow + (0.05 if f == 3 else 0)
-            elif style == "ground":
-                sx, sy = 0.65 + 0.35 * grow, 0.25 + 0.75 * grow
-            elif style == "pillar":
-                sx = 0.25 if f == 0 else (1.15 if f == 1 else 1.0)
-                fade *= 1.0 if f % 2 == 0 else 0.78
-                bright = 1.8 if f == 0 else (1.35 if f == 1 else (1.12 if f % 2 == 0 else 1.0))
-            elif style == "strike":
-                sx = sy = rnd.uniform(0.75, 1.05)
-                fade *= 1.0 if f % 2 == 0 else 0.7
-            else:
-                sx = sy = 0.85 + 0.15 * grow
-            w = max(1, int(src.width * k * sx))
-            h = max(1, int(src.height * k * sy))
-            im = src.resize((w, h), Image.BILINEAR)
-            if flip:
-                im = im.transpose(Image.FLIP_LEFT_RIGHT)
-            if style == "burst":
-                im = im.rotate(rot0 + f * 4, resample=Image.BILINEAR, expand=True)
-            im = _fx_tone(im, bright, fade)
-            fr = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-            if style == "burst":
-                x, y = (W - im.width) // 2, (H - im.height) // 2
-            elif style == "rise":
-                x, y = (W - im.width) // 2, int(H * 0.95) - im.height - int(H * 0.22 * t)
-            elif style == "strike":
-                x = (W - im.width) // 2 + rnd.randint(-int(W * 0.12), int(W * 0.12))
-                y = int(H * 0.95) - im.height
-            elif style == "seq":
-                x, y = (W - im.width) // 2, (H - im.height) // 2
-            else:
-                x, y = (W - im.width) // 2, int(H * 0.95) - im.height
-            fr.alpha_composite(im, (max(0, x), max(0, y)))
-            out.append(fr)
+        for i in range(len(self.pts) - 1):
+            c0, c1 = self.cum[i], self.cum[i + 1]
+            if c1 < a or c0 > b:
+                continue
+            p, q = self.pts[i], self.pts[i + 1]
+            seg = (c1 - c0) or 1.0
+            if not out:
+                out.append(_lp(p, q, max(0.0, (a - c0) / seg)))
+            out.append(_lp(p, q, min(1.0, (b - c0) / seg)))
         return out
+
+    def draw(self, em, grow=1.0, tail=0.0, power=1.0, jit=0.0, jr=None, xf=None, wk=1.0, kid_power=0.9):
+        """em: bộ vẽ (VCanvas hoặc adapter khung rồng). xf: hàm biến đổi toạ độ (xoay / co giãn theo frame)."""
+        grow, tail = _c01(grow), _c01(tail)
+        if grow - tail > 0.02 and power > 0.02:
+            pts = self._cut(tail, grow)
+            if len(pts) >= 2:
+                if jit and jr is not None:
+                    pts = [pts[0]] + [(x + jr.uniform(-jit, jit), y + jr.uniform(-jit, jit)) for x, y in pts[1:-1]] + [pts[-1]]
+                if xf:
+                    pts = [xf(p) for p in pts]
+                vis = (grow - tail)
+                n = len(pts)
+                ws = []
+                for k in range(n):
+                    u = k / float(n - 1)
+                    w = self.w * wk * (1 - 0.5 * (tail + u * vis))
+                    tip = _c01((1 - u) / 0.18) if vis > 0.05 else 0.0     # đầu tia nhọn
+                    root = _c01(u / 0.12) if tail > 0.02 else 1.0          # đang co rút: gốc cũng nhọn
+                    ws.append(w * min(tip, max(0.35, root)) if k not in (0, n - 1) else (0.0 if k == n - 1 else w * (1.0 if tail <= 0.02 else 0.3)))
+                loi_stroke(em, pts, ws, power, self.hue)
+        for tk, kid in self.kids:
+            if grow > tk:
+                g = (grow - tk) / 0.28
+                tl = (tail - tk) / 0.28 if tail > tk else 0.0
+                kid.draw(em, g, tl, power * kid_power, jit * 0.8, jr, xf, wk, kid_power)
+
+
+def _norms(pts):
+    n = len(pts)
+    out = []
+    for i in range(n):
+        a = pts[max(0, i - 1)]
+        b = pts[min(n - 1, i + 1)]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        L = math.hypot(dx, dy) or 1.0
+        out.append((-dy / L, dx / L))
+    return out
+
+
+def taper_poly(pts, ws, k=1.0):
+    """Đa giác thuôn nhọn bao quanh đường gấp khúc (độ dày ws[i] * k)."""
+    nm = _norms(pts)
+    L = [(p[0] + n[0] * w * k, p[1] + n[1] * w * k) for p, n, w in zip(pts, nm, ws)]
+    R = [(p[0] - n[0] * w * k, p[1] - n[1] * w * k) for p, n, w in zip(pts, nm, ws)]
+    return L + R[::-1]
+
+
+def loi_stroke(em, pts, ws, power=1.0, hue=0.0):
+    """Vẽ một đường sét theo bảng màu cố định: quầng đen tím – quầng tím – viền tím đậm – thân tím điện – lõi trắng tím."""
+    p = _c01(power)
+    wmax = max(ws) if ws else 1.0
+    mid = tuple(int(LOI_MID[i] + (LOI_MID_B[i] - LOI_MID[i]) * hue) for i in range(3))
+    core = tuple(int(LOI_CORE[i] + (LOI_CORE_B[i] - LOI_CORE[i]) * hue) for i in range(3))
+    em.line("aura", pts, LOI_AURA + (int(120 * (0.4 + 0.6 * p)),), wmax * 7.0)
+    em.line("glow", pts, mid + (int(215 * p),), wmax * 2.8)
+    em.poly("base", taper_poly(pts, ws, 1.7), LOI_EDGE + (int(255 * min(1.0, 0.35 + p)),))
+    em.poly("base", taper_poly(pts, ws, 1.0), mid + (int(255 * min(1.0, 0.2 + p)),))
+    if p > 0.25:
+        em.poly("base", taper_poly(pts, ws, 0.42), core + (int(255 * _c01((p - 0.25) / 0.5)),))
+
+
+def loi_arc_pts(r, a0, a1, rnd, kink=(0.05, 0.12), step=(7, 13)):
+    """Đường sét chạy theo cung tròn bán kính r (toạ độ quanh tâm 0,0), gấp khúc theo bán kính."""
+    pts = []
+    a = a0
+    side = rnd.choice((-1, 1))
+    while a < a1:
+        if rnd.random() < 0.8:
+            side = -side
+        rr = r * (1 + side * rnd.uniform(*kink)) if pts else r
+        pts.append((math.cos(math.radians(a)) * rr, math.sin(math.radians(a)) * rr))
+        a += rnd.uniform(*step)
+    pts.append((math.cos(math.radians(a1)) * r, math.sin(math.radians(a1)) * r))
+    return pts
+
+
+def loi_flash(em, c, r, power=1.0):
+    """Chớp loá: quầng đen tím rộng, quầng tím, tâm trắng, 8 tia sáng nhọn."""
+    p = _c01(power)
+    em.ell("aura", c, r * 2.2, r * 2.2, LOI_AURA + (int(130 * p),))
+    em.ell("glow", c, r * 1.3, r * 1.3, LOI_MID + (int(220 * p),))
+    em.ell("base", c, r * 0.45, r * 0.45, LOI_CORE + (int(255 * p),))
+    for k in range(8):
+        a = k * 45 + 22.5
+        ln = r * (1.9 if k % 2 else 1.25)
+        em.poly("base", [_ad(c, _dv(a - 7), r * 0.3), _ad(c, _dv(a), ln), _ad(c, _dv(a + 7), r * 0.3)],
+                LOI_CORE + (int(230 * p),))
+
+
+def loi_ring(em, c, rx, ry, power=1.0, w=2.0):
+    p = _c01(power)
+    em.ell_ring("glow", c, rx, ry, LOI_MID + (int(200 * p),), w * 2.6)
+    em.ell_ring("base", c, rx, ry, LOI_EDGE + (int(230 * p),), w * 1.5)
+    em.ell_ring("base", c, rx, ry, LOI_CORE + (int(240 * p),), max(1.0, w * 0.5))
+
+
+# ══════════════ VFX bàn phím: khung vẽ, hạt, lớp hiệu ứng ══════════════
+class VCanvas:
+    """Khung vẽ một frame: lớp quầng (làm mờ rộng), lớp sáng (mờ vừa), lớp chính (vẽ phóng ss lần cho sắc nét)."""
+
+    def __init__(self, W, H, ss=2, blur=1.0):
+        from PIL import ImageDraw
+        self.W, self.H, self.ss, self.blur = int(W), int(H), ss, blur
+        self.L = {"aura": Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0)),
+                  "glow": Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0)),
+                  "base": Image.new("RGBA", (self.W * ss, self.H * ss), (0, 0, 0, 0))}
+        self.D = {k: ImageDraw.Draw(v) for k, v in self.L.items()}
+
+    def _p(self, layer, pts):
+        if layer == "base":
+            s = self.ss
+            return [(x * s, y * s) for x, y in pts]
+        return list(pts)
+
+    def _k(self, layer):
+        return self.ss if layer == "base" else 1
+
+    def line(self, layer, pts, col, w):
+        if len(pts) >= 2 and col[3] > 0:
+            self.D[layer].line(self._p(layer, pts), fill=col, width=max(1, int(w * self._k(layer))), joint="curve")
+
+    def poly(self, layer, pts, col):
+        if len(pts) >= 3 and col[3] > 0:
+            self.D[layer].polygon(self._p(layer, pts), fill=col)
+
+    def ell(self, layer, c, rx, ry, col):
+        if col[3] > 0 and rx > 0 and ry > 0:
+            k = self._k(layer)
+            x, y = c[0] * k, c[1] * k
+            self.D[layer].ellipse((x - rx * k, y - ry * k, x + rx * k, y + ry * k), fill=col)
+
+    def ell_ring(self, layer, c, rx, ry, col, w):
+        if col[3] > 0 and rx > 1 and ry > 0.5:
+            k = self._k(layer)
+            x, y = c[0] * k, c[1] * k
+            self.D[layer].ellipse((x - rx * k, y - ry * k, x + rx * k, y + ry * k), outline=col, width=max(1, int(w * k)))
+
+    def stamp(self, im, c, scale=1.0, rot=0.0, alpha=1.0, layer="base"):
+        """Đặt một hình (đầu lâu, kiếm...) tâm tại c, phóng / xoay / độ mờ."""
+        if alpha <= 0.01 or im is None:
+            return
+        k = self._k(layer) * scale
+        w, h = max(1, int(im.width * k)), max(1, int(im.height * k))
+        t = im.resize((w, h), Image.BICUBIC)
+        if rot:
+            t = t.rotate(rot, resample=Image.BICUBIC, expand=True)
+        if alpha < 0.999:
+            t.putalpha(t.getchannel("A").point(lambda v: int(v * alpha)))
+        x = int(c[0] * self._k(layer) - t.width / 2)
+        y = int(c[1] * self._k(layer) - t.height / 2)
+        tgt = self.L[layer]
+        bx0, by0 = max(0, -x), max(0, -y)
+        bx1, by1 = min(t.width, tgt.width - x), min(t.height, tgt.height - y)
+        if bx1 > bx0 and by1 > by0:
+            tgt.alpha_composite(t.crop((bx0, by0, bx1, by1)), (x + bx0, y + by0))
+
+    def image(self):
+        from PIL import ImageFilter
+        out = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        base = min(self.W, self.H)
+        for k, r in (("aura", max(3.0, base * 0.03)), ("glow", max(1.5, base * 0.011))):
+            lay = self.L[k]
+            b = lay.getbbox()
+            if not b:
+                continue
+            r *= self.blur
+            m = int(r * 3) + 2
+            b = (max(0, b[0] - m), max(0, b[1] - m), min(self.W, b[2] + m), min(self.H, b[3] + m))
+            g = lay.crop(b).filter(ImageFilter.GaussianBlur(r))
+            out.alpha_composite(g, b[:2])
+            if k == "glow":
+                out.alpha_composite(g, b[:2])                   # cộng 2 lần: sáng rực kiểu cộng màu
+        bs = self.L["base"]
+        if bs.getbbox():
+            out.alpha_composite(bs.resize((self.W, self.H), Image.LANCZOS) if self.ss > 1 else bs)
+        return out
+
+
+class Part:
+    """Hạt: tia lửa điện, bụi năng lượng, khói, đá vụn, cánh hoa, mảnh vỡ..."""
+    __slots__ = ("x", "y", "vx", "vy", "life", "age", "size", "kind", "drag", "grav", "rot", "vr", "col", "ax", "ay")
+
+    def __init__(self, x, y, vx, vy, life, size, kind="spark", drag=0.92, grav=0.0, col=None, rot=0.0, vr=0.0):
+        self.x, self.y, self.vx, self.vy = x, y, vx, vy
+        self.life, self.age, self.size, self.kind = life, 0, size, kind
+        self.drag, self.grav, self.col, self.rot, self.vr = drag, grav, col, rot, vr
+        self.ax = self.ay = 0.0
+
+    def step(self):
+        self.age += 1
+        self.vx = self.vx * self.drag + self.ax
+        self.vy = self.vy * self.drag + self.grav + self.ay
+        self.x += self.vx
+        self.y += self.vy
+        self.rot += self.vr
+
+    def alive(self):
+        return self.age < self.life
+
+    def draw(self, cv):
+        k = 1 - self.age / float(self.life)
+        x, y, s = self.x, self.y, self.size
+        if self.kind == "spark":                              # vệt tia lửa điện: lõi trắng, viền tím
+            s = max(s, 1.2)
+            tail = (x - self.vx * 1.6, y - self.vy * 1.6)
+            cv.line("glow", [tail, (x, y)], LOI_MID + (int(220 * k),), s * 2.5)
+            cv.line("base", [tail, (x, y)], LOI_MID + (int(255 * k),), s)
+            cv.line("base", [_lp(tail, (x, y), 0.5), (x, y)], LOI_CORE + (int(255 * k),), max(0.6, s * 0.45))
+        elif self.kind == "mote":                             # bụi năng lượng hình thoi
+            col = self.col or LOI_MID
+            s = max(s, 1.6)
+            cv.ell("glow", (x, y), s * 2.2, s * 2.2, col + (int(160 * k),))
+            cv.poly("base", [(x, y - s * 1.6), (x + s * 0.7, y), (x, y + s * 1.6), (x - s * 0.7, y)], LOI_CORE + (int(240 * k),))
+        elif self.kind == "smoke":                            # khói / quầng hắc tím, nở to dần
+            col = self.col or LOI_AURA
+            r = s * (1 + 1.4 * (1 - k))
+            cv.ell("aura", (x, y), r, r * 0.85, col + (int(150 * k),))
+        elif self.kind == "gas":                              # độc khí xanh tím
+            col = self.col or (90, 210, 80)
+            r = s * (1 + 1.2 * (1 - k))
+            cv.ell("aura", (x, y), r, r * 0.8, col + (int(110 * k),))
+            cv.ell("glow", (x, y), r * 0.5, r * 0.4, col + (int(70 * k),))
+        elif self.kind == "rock":                             # đá vụn tối, mép ánh tím
+            pts = [_ad((x, y), _dv(self.rot + i * 72 + (i % 2) * 20), s * (0.7 + 0.2 * (i % 3))) for i in range(5)]
+            cv.poly("base", pts, (34, 22, 40, int(255 * min(1, k * 1.5))))
+            cv.line("base", pts + [pts[0]], LOI_MID + (int(220 * k),), 0.8)
+        elif self.kind == "shard":                            # mảnh sáng (kiếm vỡ, sọ vỡ)
+            col = self.col or LOI_CORE
+            pts = [_ad((x, y), _dv(self.rot), s * 1.6), _ad((x, y), _dv(self.rot + 150), s * 0.6),
+                   _ad((x, y), _dv(self.rot + 210), s * 0.6)]
+            cv.poly("base", pts, col + (int(255 * k),))
+            cv.ell("glow", (x, y), s * 1.5, s * 1.5, LOI_MID + (int(150 * k),))
+        elif self.kind == "petal":                            # cánh bỉ ngạn rơi xoay
+            col = self.col or (210, 22, 44)
+            a = self.rot
+            pts = [_ad((x, y), _dv(a), s * 1.8), _ad((x, y), _dv(a + 90), s * 0.45), _ad((x, y), _dv(a + 180), s * 0.8),
+                   _ad((x, y), _dv(a + 270), s * 0.45)]
+            cv.poly("base", pts, col + (int(255 * k),))
+            cv.ell("glow", (x, y), s * 1.2, s * 1.2, (255, 60, 90, int(90 * k)))
+        elif self.kind == "soul":                             # linh hồn: đốm sáng kéo đuôi
+            tail = (x - self.vx * 3, y - self.vy * 3)
+            cv.line("glow", [tail, (x, y)], (150, 110, 255, int(170 * k)), s * 2.2)
+            cv.ell("base", (x, y), s * 0.6, s * 0.6, LOI_CORE + (int(230 * k),))
+        elif self.kind == "drop":                             # giọt độc
+            col = self.col or (120, 255, 90)
+            cv.poly("base", [(x, y - s * 1.8), (x + s * 0.8, y), (x, y + s * 0.8), (x - s * 0.8, y)], col + (int(240 * k),))
+
+
+def dissolve(im, thr, noise, edge=(186, 110, 255), width=0.09):
+    """Tan rã theo nhiễu (không phải chỉ làm mờ): điểm có nhiễu < thr biến mất, mép đang cháy sáng tím."""
+    import numpy as np
+    a = np.asarray(im).astype(np.float32)
+    nz = noise[:a.shape[0], :a.shape[1]]
+    keep = np.clip((nz - thr) / 0.03, 0, 1)
+    burn = np.clip(1 - (nz - thr) / width, 0, 1) * keep
+    for c in range(3):
+        a[..., c] = a[..., c] * (1 - burn) + edge[c] * burn
+    a[..., 3] *= keep
+    return Image.fromarray(a.astype(np.uint8), "RGBA")
+
+
+def make_noise(w, h, seed, cell=6):
+    import numpy as np
+    rr = np.random.RandomState(seed)
+    small = (rr.rand(max(2, h // cell + 2), max(2, w // cell + 2)) * 255).astype(np.uint8)
+    big = Image.fromarray(small).resize((w + cell, h + cell), Image.BICUBIC)
+    return np.asarray(big).astype(np.float32) / 255.0
+
+
+class Vfx:
+    """Một hiệu ứng bàn phím. Vòng đời: __init__ (nhận thông số) -> init() -> [update(f, t) -> draw(cv, f, t)] * n
+    -> finish() giải phóng. bake() chạy vòng đời đó để tạo dãy frame; FxPlayer phát dãy frame tại con trỏ nhập.
+    Thông số: size (cỡ, theo cỡ chữ), mode 'T' (gõ) / 'D' (xoá), power (cường độ), speed (tốc độ), seed (biến thiên)."""
+    name = ""
+    frames = 16                    # số frame ở tốc độ 1 (25 frame/giây)
+    anchor = (0.5, 0.5)            # điểm trong khung ứng với vị trí con trỏ nhập
+    box = (1.3, 1.3)               # khung = box * size
+
+    def __init__(self, size, seed=0, mode="T", power=1.0, speed=1.0):
+        self.S = float(size)
+        self.mode, self.D = mode, (mode == "D")
+        self.power, self.speed = power, speed
+        self.seed = seed
+        self.rnd = random.Random(seed * 7919 + sum(map(ord, self.name)) * 31 + (17 if self.D else 0))
+        self.n = max(6, int(round(self.frames / max(0.3, speed))))
+        self.W, self.H = int(self.box[0] * size) + 4, int(self.box[1] * size) + 4
+        self.c = (self.W * self.anchor[0], self.H * self.anchor[1])
+        self.parts = []
+        self.init()
+
+    # các bước con ghi đè
+    def init(self):
+        pass
+
+    def update(self, f, t):
+        pass
+
+    def draw(self, cv, f, t):
+        pass
+
+    def finish(self):
+        self.parts = []
+
+    # tiện ích
+    def emit(self, n, c, speed, life, size, kind="spark", spread=(0, 360), drag=0.9, grav=0.0, col=None, inward=False,
+             radius=0.0):
+        r = self.rnd
+        for _ in range(n):
+            a = r.uniform(*spread)
+            v = speed * r.uniform(0.5, 1.15)
+            if inward:                                       # sinh ở vòng ngoài, bay vào tâm (hiệu ứng hút ngược)
+                rad = radius * r.uniform(0.7, 1.1)
+                p = _ad(c, _dv(a), rad)
+                d = _dv(a + 180)
+                self.parts.append(Part(p[0], p[1], d[0] * v, d[1] * v, life, size * r.uniform(0.7, 1.2), kind, drag, grav, col,
+                                       r.uniform(0, 360), r.uniform(-15, 15)))
+            else:
+                p = _ad(c, _dv(a), radius * r.random())
+                d = _dv(a)
+                self.parts.append(Part(p[0], p[1], d[0] * v, d[1] * v, life, size * r.uniform(0.7, 1.2), kind, drag, grav, col,
+                                       r.uniform(0, 360), r.uniform(-15, 15)))
+
+    def pulse(self, f, pattern=(1.0, 0.55, 1.0, 0.35, 0.85, 0.3, 0.7, 0.22, 0.5, 0.15)):
+        """Nhịp sáng: sét bùng – tắt – bùng lại, không sáng liên tục."""
+        return pattern[f % len(pattern)]
+
+    def bake(self):
+        ss = 2 if self.S <= 320 else 1
+        out = []
+        jr = random.Random(self.seed * 131 + 7)
+        for f in range(self.n):
+            t = f / float(self.n - 1)
+            self.jr = jr
+            self.update(f, t)
+            for p in self.parts:
+                p.step()
+            self.parts = [p for p in self.parts if p.alive()]
+            cv = VCanvas(self.W, self.H, ss)
+            self.draw(cv, f, t)
+            for p in self.parts:
+                p.draw(cv)
+            im = cv.image()
+            left = self.n - 1 - f
+            if left < 3:                                         # pha phân rã chung: 3 frame cuối mờ dần, kết thúc sạch
+                k = (left + 1) / 4.0
+                im.putalpha(im.getchannel("A").point(lambda v, k=k: int(v * k)))
+            out.append(im)
+        self.finish()
+        return out
+
+
+# ══════════════ 16 hiệu ứng bàn phím ══════════════
+# Mỗi lớp: init() dựng thiết kế gốc cố định (khung sét, quỹ đạo...), update() sinh/di chuyển hạt theo giai đoạn,
+# draw() vẽ trạng thái frame. 5 giai đoạn: khởi phát – tăng năng lượng – cao trào – phản ứng – phân rã.
+# Chế độ 'D' (xoá): hướng ngược lại – hút vào / rút về / tan rã, không dùng lại nguyên hiệu ứng gõ.
+
+class LoiTinhBaoPhat(Vfx):
+    """Lôi tinh bạo phát – gõ: tia sét bung toả từ con trỏ; xoá: tia sét từ ngoài hút sập vào con trỏ."""
+    name, frames, anchor, box = "bolt", 15, (0.5, 0.5), (1.35, 1.35)
+
+    def init(self):
+        r = self.rnd
+        n = 7
+        self.rays = []
+        for k in range(n):
+            a = k * 360.0 / n + r.uniform(-14, 14)
+            L = self.S * r.uniform(0.4, 0.6)
+            out = _ad(self.c, _dv(a), L)
+            p0, p1 = (out, self.c) if self.D else (self.c, out)
+            self.rays.append(LoiBolt(p0, p1, self.S * 0.018, r, branches=3, depth=2))
+
+    def update(self, f, t):
+        if not self.D and f == 1:
+            self.emit(16, self.c, self.S * 0.045, 9, self.S * 0.012, "spark", drag=0.86)
+        if not self.D and f == 5:
+            self.emit(8, self.c, self.S * 0.02, 10, self.S * 0.01, "mote", drag=0.9, grav=-0.15)
+        if self.D and f in (0, 3):
+            self.emit(12, self.c, self.S * 0.05, 9, self.S * 0.011, "spark", inward=True, radius=self.S * 0.55, drag=0.97)
+
+    def draw(self, cv, f, t):
+        pw = self.pulse(f) * self.power
+        c = self.c
+        if not self.D:
+            g = _eo(_ph(t, 0.0, 0.22))
+            tail = _ph(t, 0.58, 0.95)
+            if f <= 1:
+                loi_flash(cv, c, self.S * (0.08 + 0.06 * f), 1.0)
+            if 0.05 < t < 0.5:
+                k = _ph(t, 0.05, 0.5)
+                loi_ring(cv, c, self.S * (0.12 + 0.45 * k), self.S * (0.12 + 0.45 * k), 1 - k, self.S * 0.012)
+            for b in self.rays:
+                b.draw(cv, g, tail, pw * (1 - 0.6 * tail), self.S * 0.006, self.jr)
+            if t < 0.6:
+                cv.ell("base", c, self.S * 0.03, self.S * 0.03, LOI_CORE + (int(255 * pw),))
+        else:
+            g = _ei(_ph(t, 0.0, 0.3)) * 0.98 + 0.02
+            tail = _ph(t, 0.35, 0.7)                             # tia rút dần vào tâm
+            for b in self.rays:
+                b.draw(cv, g, tail, pw, self.S * 0.006, self.jr)
+            k = _ph(t, 0.0, 0.7)
+            loi_ring(cv, c, self.S * 0.55 * (1 - k), self.S * 0.55 * (1 - k), 0.8 * (1 - k), self.S * 0.01)
+            core = self.S * 0.07 * (1 - _ph(t, 0.55, 0.8))
+            cv.ell("aura", c, core * 3, core * 3, LOI_AURA + (180,))
+            cv.ell("base", c, core, core, LOI_DARK + (255,))
+            cv.ell_ring("base", c, core, core, LOI_MID + (255,), 1.2)
+            if 0.72 < t < 0.9:
+                loi_flash(cv, c, self.S * 0.07, 1 - _ph(t, 0.72, 0.9))
+
+
+class ThienLoiGiang(Vfx):
+    """Thiên lôi giáng – gõ: sét dẫn bậc thang giáng xuống chữ, chớp hồi kích, toé điện sát chân chữ;
+    xoá: sét bắn ngược từ chữ lên trời, hạt năng lượng bị hút lên theo."""
+    name, frames, anchor, box = "thunder", 16, (0.5, 0.9), (0.95, 1.6)
+
+    def init(self):
+        r = self.rnd
+        self.g = self.c
+        top = (self.W * 0.5 + r.uniform(-0.15, 0.15) * self.W, self.H * 0.03)
+        p0, p1 = (self.g, top) if self.D else (top, self.g)
+        self.main = LoiBolt(p0, p1, self.S * 0.024, r, branches=5, depth=2)
+        self.side = []
+        for sgn in (-1, 1):
+            e = (self.g[0] + sgn * self.S * r.uniform(0.3, 0.42), self.g[1] - self.S * r.uniform(0.0, 0.06))
+            a, b = (e, self.g) if self.D else (self.g, e)
+            self.side.append(LoiBolt(a, b, self.S * 0.012, r, branches=1, depth=1))
+
+    def update(self, f, t):
+        g = self.g
+        if not self.D and f == 4:
+            self.emit(14, g, self.S * 0.05, 12, self.S * 0.011, "spark", spread=(190, 350), drag=0.9, grav=self.S * 0.004)
+            self.emit(6, g, self.S * 0.015, 14, self.S * 0.05, "smoke", spread=(200, 340), drag=0.9)
+        if self.D and f < 8 and f % 2 == 0:
+            for _ in range(4):
+                x = g[0] + self.rnd.uniform(-0.3, 0.3) * self.S
+                self.parts.append(Part(x, g[1], (g[0] - x) * 0.05, -self.S * 0.05, 12, self.S * 0.012, "mote", 0.98, -0.2))
+
+    def cloud(self, cv, k, lit):
+        """Mây giông hắc tím: cụm bông xếp chồng, loé sáng từ bên trong khi sét đánh."""
+        if k <= 0.02:
+            return
+        cx, cy, S = self.W / 2, self.H * 0.05, self.S
+        for dx, dy, r in ((-0.22, 0.02, 0.13), (0.0, -0.01, 0.17), (0.22, 0.02, 0.13), (-0.1, 0.05, 0.12), (0.12, 0.05, 0.12)):
+            p = (cx + dx * S, cy + dy * S)
+            cv.ell("aura", p, r * S * 1.15, r * S * 0.7, LOI_AURA + (int(150 * k),))
+            cv.ell("base", p, r * S, r * S * 0.55, (52, 26, 78, int(235 * k)))
+            cv.ell("base", (p[0] - r * S * 0.25, p[1] - r * S * 0.2), r * S * 0.55, r * S * 0.3, (84, 52, 120, int(220 * k)))
+        if lit > 0:
+            cv.ell("glow", (cx, cy + S * 0.03), S * 0.3, S * 0.09, LOI_MID + (int(230 * lit * k),))
+
+    def draw(self, cv, f, t):
+        g = self.g
+        cloud = _ph(t, 0, 0.15) * (1 - _ph(t, 0.7, 1.0))
+        if not self.D:
+            self.cloud(cv, cloud, 1.0 if f in (4, 5, 7) else 0.0)
+            lead = (0.2, 0.38, 0.55, 0.72)
+            if f < 4:                                            # tia dẫn: nhảy bậc từng đoạn, mảnh và mờ
+                self.main.draw(cv, lead[f], 0, 0.45, self.S * 0.004, self.jr, wk=0.55)
+                return
+            pw = (1.0, 0.95, 0.3, 1.0, 0.55, 0.85, 0.25, 0.6, 0.18, 0.4, 0.12, 0.2)[min(11, f - 4)] * self.power
+            tail = _ph(t, 0.62, 0.97)
+            self.main.draw(cv, 1.0, tail, pw, self.S * 0.006, self.jr)
+            if f in (4, 5, 7):
+                loi_flash(cv, g, self.S * (0.11 if f == 4 else 0.07), 1.0)
+            sg = _eo(_ph(t, 0.27, 0.42))
+            for b in self.side:
+                b.draw(cv, sg, _ph(t, 0.55, 0.8), pw)
+            k = _ph(t, 0.26, 0.6)
+            loi_ring(cv, g, self.S * (0.08 + 0.42 * k), self.S * (0.03 + 0.09 * k), 1 - k, self.S * 0.01)
+        else:
+            sg = _eo(_ph(t, 0.0, 0.2))
+            for b in self.side:
+                b.draw(cv, sg, _ph(t, 0.2, 0.42), 0.9)
+            if f < 2:
+                loi_flash(cv, g, self.S * 0.08, 0.9)
+            g2 = _eo(_ph(t, 0.12, 0.38))
+            tail = _ei(_ph(t, 0.45, 0.92))                       # gốc rời khỏi chữ, bị kéo lên trời
+            pw = self.pulse(f, (1, 0.6, 1, 0.4, 0.9, 0.5)) * self.power
+            self.main.draw(cv, g2, tail, pw, self.S * 0.006, self.jr)
+            self.cloud(cv, cloud, 0.8 if f in (3, 4, 6) else 0.0)
+
+
+class LoiLienHoi(Vfx):
+    """Sấm sét liên hồi – gõ: 4 tia đánh xuống nối tiếp quanh chữ; xoá: 4 tia bắn ngược lên, lùi dần sang trái."""
+    name, frames, anchor, box = "settia", 22, (0.5, 0.9), (1.7, 1.5)
+
+    def init(self):
+        r = self.rnd
+        offs = [0.32, 0.1, -0.12, -0.34] if self.D else [0.0, -0.3, 0.26, -0.08]
+        self.st = []
+        for i, o in enumerate(offs):
+            g = (self.c[0] + o * self.S, self.c[1] - (0 if i == 0 else r.uniform(0, 0.04) * self.S))
+            top = (g[0] + r.uniform(-0.2, 0.2) * self.S, self.H * 0.04)
+            a, b = (g, top) if self.D else (top, g)
+            self.st.append((i * 4, g, LoiBolt(a, b, self.S * (0.02 if i == 0 else 0.015), r, branches=3, depth=2)))
+
+    def update(self, f, t):
+        for t0, g, _ in self.st:
+            if f == t0 + 1 and not self.D:
+                self.emit(6, g, self.S * 0.04, 9, self.S * 0.01, "spark", spread=(200, 340), grav=self.S * 0.003)
+            if f == t0 and self.D:
+                self.emit(5, g, self.S * 0.03, 10, self.S * 0.01, "mote", spread=(250, 290), grav=-0.3)
+
+    def draw(self, cv, f, t):
+        for t0, g, b in self.st:
+            a = f - t0
+            if a < 0 or a > 7:
+                continue
+            if self.D:
+                grow, tail = (0.45, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0)[a], (0, 0, 0, 0.2, 0.45, 0.65, 0.85, 1)[a]
+            else:
+                grow, tail = (0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0)[a], (0, 0, 0, 0.15, 0.4, 0.6, 0.8, 1)[a]
+            pw = (0.5, 1.0, 0.4, 0.9, 0.5, 0.35, 0.2, 0.1)[a] * self.power
+            b.draw(cv, grow, tail, pw, self.S * 0.005, self.jr, wk=0.6 if a == 0 else 1.0)
+            if a in (1, 3):
+                loi_flash(cv, g, self.S * 0.06, 0.9)
+
+
+class LoiHoan(Vfx):
+    """Lôi hoàn – gõ: vòng sét xoay nở rộng, tia nan hoa nối tâm; xoá: vòng sét xoay ngược, siết vào tâm rồi vỡ."""
+    name, frames, anchor, box = "hoan", 16, (0.5, 0.5), (1.4, 1.4)
+
+    def init(self):
+        r = self.rnd
+        self.arcs = []
+        for k in range(6):
+            a0 = k * 60 + r.uniform(0, 8)
+            pts = loi_arc_pts(1.0, a0, a0 + 46, r, kink=(0.04, 0.1), step=(6, 11))
+            self.arcs.append(LoiBolt(None, None, 1.0, r, branches=2, depth=1, pts=pts, blen=(0.25, 0.45)))
+        self.spokes = [LoiBolt((0, 0), _dv(k * 120 + 30), 1.0, r, branches=1, depth=1) for k in range(3)]
+
+    def _xf(self, rad, rot):
+        c, co, si = self.c, math.cos(math.radians(rot)), math.sin(math.radians(rot))
+        return lambda p: (c[0] + (p[0] * co - p[1] * si) * rad, c[1] + (p[0] * si + p[1] * co) * rad)
+
+    def update(self, f, t):
+        if f == 4 and not self.D:
+            self.emit(14, self.c, self.S * 0.04, 10, self.S * 0.011, "spark", radius=self.S * 0.3)
+        if self.D and f == 2:
+            self.emit(14, self.c, self.S * 0.04, 10, self.S * 0.01, "mote", inward=True, radius=self.S * 0.6, drag=0.97)
+
+    def draw(self, cv, f, t):
+        if not self.D:
+            rad = self.S * (0.1 + 0.45 * _eo(_ph(t, 0, 0.6)))
+            rot = 70 * t
+            g = _eo(_ph(t, 0.0, 0.25))
+            tail = _ph(t, 0.6, 0.95)
+        else:
+            rad = self.S * (0.58 - 0.53 * _ei(_ph(t, 0, 0.75)))
+            rot = -90 * t
+            g = _eo(_ph(t, 0.0, 0.2))
+            tail = _ph(t, 0.7, 0.9)
+        pw = self.pulse(f) * self.power
+        xf = self._xf(rad, rot)
+        for a in self.arcs:
+            a.draw(cv, g, tail, pw, 0.01, self.jr, xf=xf, wk=self.S * 0.017)
+        if not self.D and 0.1 < t < 0.45:
+            for sp in self.spokes:
+                sp.draw(cv, 1.0, _ph(t, 0.3, 0.45), pw * 0.9, 0, None, xf=xf, wk=self.S * 0.011)
+            loi_flash(cv, self.c, self.S * 0.05, 1 - _ph(t, 0.1, 0.45))
+        if self.D and 0.72 < t < 0.95:
+            loi_flash(cv, self.c, self.S * 0.08, 1 - _ph(t, 0.72, 0.95))
+
+
+class LoiXoay(Vfx):
+    """Lôi xoáy – gõ: 3 nhánh sét xoắn ốc xoay toả ra; xoá: xoắn ốc xoáy ngược hút vào lõi."""
+    name, frames, anchor, box = "xoan", 16, (0.5, 0.5), (1.35, 1.35)
+
+    def init(self):
+        r = self.rnd
+        self.arms = []
+        for k in range(3):
+            pts = []
+            n = 22
+            side = 1
+            for i in range(n + 1):
+                u = i / float(n)
+                a = k * 120 + u * 260
+                side = -side if r.random() < 0.75 else side
+                rr = (0.08 + 0.92 * u) * (1 + side * r.uniform(0.0, 0.09))
+                pts.append((math.cos(math.radians(a)) * rr, math.sin(math.radians(a)) * rr))
+            if self.D:
+                pts = pts[::-1]
+            self.arms.append(LoiBolt(None, None, 1.0, r, branches=3, depth=1, pts=pts, blen=(0.15, 0.3)))
+
+    def update(self, f, t):
+        if not self.D and f in (3, 6):
+            self.emit(8, self.c, self.S * 0.035, 10, self.S * 0.01, "spark", radius=self.S * 0.25)
+        if self.D and f in (0, 4):
+            self.emit(10, self.c, self.S * 0.045, 9, self.S * 0.01, "spark", inward=True, radius=self.S * 0.55, drag=0.97)
+
+    def draw(self, cv, f, t):
+        if not self.D:
+            rad, rot = self.S * (0.2 + 0.4 * _eo(_ph(t, 0, 0.7))), 160 * t
+            g, tail = _eo(_ph(t, 0, 0.35)), _ph(t, 0.6, 0.95)
+        else:
+            rad, rot = self.S * (0.6 - 0.45 * _ei(_ph(t, 0.1, 0.8))), -200 * t
+            g, tail = _eo(_ph(t, 0, 0.3)), _ph(t, 0.45, 0.85)
+        c = self.c
+        co, si = math.cos(math.radians(rot)), math.sin(math.radians(rot))
+        xf = lambda p: (c[0] + (p[0] * co - p[1] * si) * rad, c[1] + (p[0] * si + p[1] * co) * rad)
+        pw = self.pulse(f) * self.power
+        for a in self.arms:
+            a.draw(cv, g, tail, pw, 0.008, self.jr, xf=xf, wk=self.S * 0.017)
+        core = self.S * (0.05 + 0.02 * math.sin(f * 1.3)) * (1 - _ph(t, 0.75, 1.0))
+        cv.ell("aura", c, core * 3, core * 3, LOI_AURA + (150,))
+        cv.ell("glow", c, core * 1.6, core * 1.6, LOI_MID + (int(200 * pw),))
+        cv.ell("base", c, core * 0.5, core * 0.5, LOI_CORE + (int(255 * pw),))
+
+
+class LoiPhatTru(Vfx):
+    """Lôi phạt trụ – gõ: cột thiên phạt giáng xuống, sét xoắn quấn cột, ấn tròn dưới chân, cột co hẹp rồi tắt;
+    xoá: cột bắn lên từ chữ rồi bị nhấc khỏi mặt đất hút lên trời."""
+    name, frames, anchor, box = "loiphat", 18, (0.5, 0.92), (0.95, 1.7)
+
+    def init(self):
+        r = self.rnd
+        self.g = self.c
+        top = (self.g[0], 0.0)
+        self.strands = []
+        for k in range(3):
+            o = (k - 1) * self.S * 0.03
+            a, b = ((self.g[0] + o, self.g[1]), (top[0] + o, top[1])) if self.D else ((top[0] + o, top[1]), (self.g[0] + o, self.g[1]))
+            self.strands.append(LoiBolt(a, b, self.S * (0.03 if k == 1 else 0.016), r, branches=2, depth=1, kink=(0.01, 0.03)))
+        self.zz = [r.uniform(-1, 1) for _ in range(40)]
+
+    def update(self, f, t):
+        if f == 3 and not self.D:
+            self.emit(16, self.g, self.S * 0.05, 12, self.S * 0.011, "spark", spread=(190, 350), grav=self.S * 0.004)
+        if 2 < f < 12 and f % 3 == 0:
+            self.emit(3, (self.g[0], self.g[1] - self.S * 0.1), self.S * 0.02, 14, self.S * 0.01, "mote",
+                      spread=(250, 290), grav=-0.25, radius=self.S * 0.1)
+
+    def draw(self, cv, f, t):
+        g = self.g
+        pw = self.pulse(f, (1, 0.7, 1, 0.55, 0.95, 0.6)) * self.power
+        if not self.D:
+            grow = _eo(_ph(t, 0, 0.16))
+            narrow = 1 - 0.75 * _ph(t, 0.62, 0.95)
+            tail = _ph(t, 0.8, 1.0)
+        else:
+            grow = _eo(_ph(t, 0, 0.16))
+            narrow = 1 - 0.5 * _ph(t, 0.6, 0.95)
+            tail = _ei(_ph(t, 0.45, 0.95))
+        for b in self.strands:
+            b.draw(cv, grow, tail, pw, self.S * 0.004, self.jr, wk=narrow)
+        if grow > 0.95 and t < 0.85:                            # sét xoắn quấn quanh cột
+            for s_ in (0, 1):
+                pts, ws = [], []
+                y0 = 0 if not self.D else self.H * tail * 0.9
+                for i in range(40):
+                    y = y0 + (g[1] - y0) * i / 39.0
+                    ph = y / (self.S * 0.12) + f * 0.9 + s_ * math.pi
+                    pts.append((g[0] + math.sin(ph) * self.S * 0.11 * narrow + self.zz[i] * self.S * 0.012, y))
+                    ws.append(self.S * 0.008 * (0.4 + 0.6 * (math.cos(ph) > 0)))
+                ws[-1] = 0
+                loi_stroke(cv, pts, ws, pw * 0.85, 1.0)
+        rk = _eo(_ph(t, 0.1, 0.4)) * (1 - _ph(t, 0.7, 1.0))      # ấn tròn dưới chân, xoay
+        if rk > 0.02:
+            loi_ring(cv, g, self.S * 0.32 * rk, self.S * 0.08 * rk, rk, self.S * 0.008)
+            for k in range(8):
+                a = k * 45 + f * 9
+                p = (g[0] + math.cos(math.radians(a)) * self.S * 0.32 * rk, g[1] + math.sin(math.radians(a)) * self.S * 0.08 * rk)
+                cv.poly("base", [_ad(p, (0, -self.S * 0.03)), _ad(p, (self.S * 0.01, 0)), _ad(p, (0, self.S * 0.012)),
+                                 _ad(p, (-self.S * 0.01, 0))], LOI_CORE + (int(230 * rk),))
+        if f in (2, 3) and not self.D:
+            loi_flash(cv, g, self.S * 0.12, 1.0)
+
+
+class DiaChanLoi(Vfx):
+    """Địa chấn lôi – gõ: sét chạy dọc mặt chữ sang hai bên, đất nứt, đá văng; xoá: sét từ hai đầu chạy dồn vào con trỏ,
+    đá bị hút ngược về."""
+    name, frames, anchor, box = "diachan", 16, (0.5, 0.78), (2.0, 0.95)
+
+    def init(self):
+        r = self.rnd
+        self.g = self.c
+        self.runs = []
+        for sgn in (-1, 1):
+            e = (self.g[0] + sgn * self.W * 0.47, self.g[1] + r.uniform(-0.03, 0.03) * self.S)
+            a, b = (e, self.g) if self.D else (self.g, e)
+            self.runs.append(LoiBolt(a, b, self.S * 0.016, r, branches=4, depth=1, kink=(0.02, 0.05), spread=(40, 75)))
+        self.cracks = []
+        for sgn in (-1, 1):
+            pts, x = [self.g], self.g[0]
+            while abs(x - self.g[0]) < self.W * 0.4:
+                x += sgn * r.uniform(0.04, 0.08) * self.S
+                pts.append((x, self.g[1] + r.uniform(-0.01, 0.025) * self.S))
+            self.cracks.append(pts)
+
+    def update(self, f, t):
+        g = self.g
+        if not self.D and f in (2, 5):
+            for _ in range(7):
+                x = g[0] + self.rnd.uniform(-0.6, 0.6) * self.S
+                self.parts.append(Part(x, g[1], self.rnd.uniform(-1, 1) * self.S * 0.012, -self.S * self.rnd.uniform(0.03, 0.06),
+                                       14, self.S * 0.018, "rock", 0.97, self.S * 0.006, rot=self.rnd.uniform(0, 360), vr=20))
+        if self.D and f in (1, 4):
+            for _ in range(6):
+                sx = self.rnd.choice((-1, 1)) * self.rnd.uniform(0.4, 0.8) * self.S
+                self.parts.append(Part(g[0] + sx, g[1] - self.S * 0.12, -sx * 0.09, self.S * 0.01, 11, self.S * 0.016,
+                                       "rock", 0.95, 0.0, rot=20, vr=-25))
+
+    def draw(self, cv, f, t):
+        pw = self.pulse(f) * self.power
+        if not self.D:
+            g, tail = _eo(_ph(t, 0, 0.3)), _ph(t, 0.55, 0.92)
+        else:
+            g, tail = _ei(_ph(t, 0, 0.45)), _ph(t, 0.5, 0.85)
+        ck = _ph(t, 0.05, 0.3) * (1 - _ph(t, 0.75, 1.0))
+        for pts in self.cracks:
+            n = max(2, int(len(pts) * (g if not self.D else 1)))
+            cv.line("base", pts[:n], LOI_DARK + (int(255 * ck),), self.S * 0.012)
+            cv.line("glow", pts[:n], LOI_MID + (int(180 * ck),), self.S * 0.02)
+        for b in self.runs:
+            b.draw(cv, g, tail, pw, self.S * 0.004, self.jr)
+        if (not self.D and f < 2) or (self.D and 0.42 < t < 0.65):
+            loi_flash(cv, self.g, self.S * 0.08, 1.0)
+        k = _ph(t, 0, 0.5) if not self.D else 1 - _ph(t, 0, 0.5)
+        if 0 < k < 1:
+            loi_ring(cv, self.g, self.S * (0.1 + 0.8 * k), self.S * (0.02 + 0.06 * k), 1 - abs(2 * k - 1), self.S * 0.008)
+
+
+class LoiXich(Vfx):
+    """Lôi xích liên hoàn – gõ: sét nhảy cung qua các chữ phía trước rồi dồn vào chữ vừa gõ;
+    xoá: sét bật khỏi chữ vừa xoá, nhảy lùi sang trái, chữ bị đi qua cháy sém."""
+    name, frames, anchor, box = "chain", 18, (0.9, 0.62), (2.2, 0.8)
+
+    def init(self):
+        r = self.rnd
+        n = 5
+        self.nodes = [(self.c[0] - k * self.S * 0.36 + r.uniform(-0.04, 0.04) * self.S,
+                       self.c[1] - r.uniform(0.0, 0.1) * self.S) for k in range(n)]
+        self.nodes[0] = self.c
+        order = self.nodes[::-1] if not self.D else self.nodes
+        self.hops = [LoiBolt(a, b, self.S * 0.015, r, branches=2, depth=1, lift=0.35) for a, b in zip(order, order[1:])]
+        self.order = order
+
+    def update(self, f, t):
+        i = f // 3
+        if f % 3 == 1 and i < len(self.hops):
+            p = self.order[i + 1]
+            self.emit(5, p, self.S * 0.03, 8, self.S * 0.009, "spark")
+
+    def draw(self, cv, f, t):
+        for i, h in enumerate(self.hops):
+            a = f - i * 3
+            if a < 0:
+                continue
+            grow = _eo(a / 2.0)
+            tail = _c01((a - 3) / 4.0)
+            pw = (0.7, 1.0, 1.0, 0.6, 0.8, 0.4, 0.25)[min(6, a)] * self.power
+            h.draw(cv, grow, tail, pw, self.S * 0.004, self.jr)
+            if a in (2, 3):
+                loi_flash(cv, self.order[i + 1], self.S * 0.05, 0.9)
+        if self.D:                                               # chữ bị sét đi qua: vết cháy hắc tím
+            for i, p in enumerate(self.order[1:]):
+                a = f - i * 3 - 2
+                if a >= 0:
+                    k = 1 - _c01(a / 9.0)
+                    cv.ell("aura", p, self.S * 0.08, self.S * 0.05, LOI_AURA + (int(200 * k),))
+                    cv.ell("base", p, self.S * 0.018, self.S * 0.018, LOI_MID + (int(200 * k),))
+        last = len(self.hops) * 3
+        if not self.D and last - 1 <= f <= last + 2:
+            loi_flash(cv, self.c, self.S * 0.09, 1 - (f - last + 1) / 4.0)
+
+
+def dragon_head(cv, h, behind, L, f, pw, al, style, S):
+    """Đầu rồng dùng chung (Lôi long / Ma độc long): sọ đặc mõm dài, hàm dưới há theo nhịp, nanh, sừng răng cưa,
+    bờm, râu, mắt xếch. style 'loi' = viền sét tím; 'doc' = viền độc xanh, mắt xanh."""
+    d = math.degrees(math.atan2(h[1] - behind[1], h[0] - behind[0]))
+    up = 1 if math.cos(math.radians(d)) >= 0 else -1                 # bay sang trái: lật để đầu không lộn ngược
+    ux, uy = _dv(d)
+    vx, vy = -uy * up, ux * up
+    X = lambda x, y: (h[0] + (ux * x + vx * y) * L, h[1] + (uy * x + vy * y) * L)
+    ja = math.radians(14 + 18 * abs(math.sin(f * 0.8)))
+    J = lambda x, y: X(0.12 + (x - 0.12) * math.cos(ja) - (y - 0.1) * math.sin(ja),
+                       0.1 + (x - 0.12) * math.sin(ja) + (y - 0.1) * math.cos(ja))
+    head = [(-0.35, 0.05), (-0.32, -0.22), (-0.05, -0.33), (0.18, -0.24), (0.55, -0.17), (0.92, -0.11), (1.06, -0.03),
+            (0.98, 0.05), (0.55, 0.07), (0.15, 0.12), (-0.2, 0.16)]
+    jaw = [(0.12, 0.1), (0.92, 0.12), (0.88, 0.2), (0.42, 0.25), (0.08, 0.22)]
+    a8 = int(255 * al)
+    doc = style == "doc"
+    fill = (46, 12, 60) if doc else LOI_DARK
+    rim = (100, 235, 80)
+    if doc:
+        cv.poly("base", [J(*q) for q in [(0.3, 0.12), (0.8, 0.13), (0.75, 0.18), (0.35, 0.2)]], (150, 20, 40, a8))   # họng đỏ
+    for poly_ in ([J(*q) for q in jaw], [X(*q) for q in head]):
+        cv.poly("aura", poly_, ((18, 50, 12) if doc else LOI_AURA) + (int(170 * al),))
+        if doc:
+            cv.poly("base", poly_, rim + (a8,))
+            cv.poly("base", [_lp(_lp(poly_[0], poly_[len(poly_) // 2], 0.5), q, 0.9) for q in poly_], fill + (a8,))
+        else:
+            cv.poly("base", poly_, fill + (a8,))
+            loi_stroke(cv, poly_ + [poly_[0]], [S * 0.008] * (len(poly_) + 1), pw)
+    if doc:                                                           # vảy đầu
+        for x in (0.25, 0.45, 0.65):
+            cv.line("base", [X(x - 0.06, -0.2), X(x, -0.13), X(x + 0.06, -0.18)], (110, 60, 140, a8), max(1, S * 0.004))
+    for x in (0.3, 0.5, 0.7, 0.86):                                   # răng nanh
+        cv.poly("base", [X(x - 0.04, 0.07), X(x + 0.03, 0.07), X(x - 0.01, 0.17)], (235, 240, 225, a8) if doc else LOI_CORE + (a8,))
+        cv.poly("base", [J(x - 0.04, 0.12), J(x + 0.03, 0.12), J(x, 0.03)], (235, 240, 225, a8) if doc else LOI_CORE + (a8,))
+    for (bx, by), (tx, ty) in (((-0.05, -0.3), (-1.0, -0.75)), ((-0.25, -0.2), (-0.95, -0.35))):   # sừng răng cưa
+        pts = [X(bx, by), X(bx + (tx - bx) * 0.35, by + (ty - by) * 0.35 - 0.08), X(bx + (tx - bx) * 0.7, by + (ty - by) * 0.7 + 0.05),
+               X(tx, ty)]
+        ws = [S * 0.017, S * 0.012, S * 0.007, 0]
+        if doc:
+            cv.poly("base", taper_poly(pts, ws, 1.25), rim + (a8,))
+            cv.poly("base", taper_poly(pts, ws, 1.0), (70, 22, 92, a8))
+        else:
+            loi_stroke(cv, pts, ws, pw)
+    for k in range(4):                                                # bờm sau gáy
+        a = X(-0.3, -0.1 + k * 0.08)
+        tip = X(-0.85 - 0.1 * math.sin(f + k), 0.1 + k * 0.18)
+        if doc:
+            cv.poly("base", taper_poly([a, _lp(a, tip, 0.5), tip], [S * 0.012, S * 0.008, 0]), (60, 18, 80, a8))
+        else:
+            loi_stroke(cv, [a, _lp(a, tip, 0.5), tip], [S * 0.007, S * 0.005, 0], pw * 0.8)
+    for x in (0.72, 0.9):                                             # râu
+        a = X(x, 0.0)
+        pts = [a, X(x - 0.2, 0.35), X(x - 0.45, 0.55)]
+        if doc:
+            cv.line("base", pts, rim + (int(200 * al),), max(1, S * 0.005))
+        else:
+            loi_stroke(cv, pts, [S * 0.005, S * 0.004, 0], pw * 0.8)
+    eye_g = (120, 255, 80) if doc else LOI_MID
+    cv.poly("glow", [X(0.02, -0.24), X(0.34, -0.15), X(0.02, -0.08)], eye_g + (int(240 * max(pw, 0.6) * al),))
+    cv.poly("base", [X(0.1, -0.2), X(0.26, -0.15), X(0.1, -0.12)], ((230, 255, 200) if doc else LOI_CORE) + (a8,))
+
+
+class LoiLong(Vfx):
+    """Lôi long – gõ: rồng sét (thân 3 dải sét bện) bay lượn trên dòng chữ tới con trỏ rồi giáng đầu xuống, nổ;
+    xoá: rồng sét trồi lên từ chỗ xoá, kéo thân bay lùi sang trái rồi tan rã."""
+    name, frames, anchor, box = "dragon", 22, (0.86, 0.74), (2.3, 1.25)
+
+    def init(self):
+        r = self.rnd
+        self.zz = [[r.uniform(-1, 1) for _ in range(80)] for _ in range(3)]
+        self.x0, self.x1 = self.W * 0.04, self.c[0]
+        self.amp = self.S * 0.16
+        self.base = self.c[1] - self.S * 0.42
+        self.burst = [LoiBolt(self.c, _ad(self.c, _dv(a), self.S * r.uniform(0.22, 0.32)), self.S * 0.013, r, 2, 1)
+                      for a in (200, 240, 270, 300, 340)]
+
+    def C(self, s):
+        x = self.x0 + (self.x1 - self.x0) * s
+        y = self.base - self.amp * math.sin(s * 2.4 * math.pi) * (1 - 0.6 * s)
+        if s > 0.9:
+            y += (self.c[1] - y) * _ei((s - 0.9) / 0.1)
+        return (x, y)
+
+    def update(self, f, t):
+        if not self.D and f == 15:
+            self.emit(16, self.c, self.S * 0.05, 10, self.S * 0.011, "spark", spread=(180, 360))
+        if self.D and f == 0:
+            self.emit(10, self.c, self.S * 0.04, 10, self.S * 0.01, "spark", spread=(180, 360))
+        if f % 3 == 0 and f < 16:
+            s = self._head_s(t)
+            self.parts.append(Part(*self.C(max(0, s - 0.08)), self.rnd.uniform(-0.5, 0.5), self.rnd.uniform(0.2, 0.8), 10,
+                                   self.S * 0.01, "mote", 0.95, 0.05))
+
+    def _head_s(self, t):
+        return (_eo(_ph(t, 0.0, 0.68))) if not self.D else 1 - _eo(_ph(t, 0.05, 0.75))
+
+    def draw(self, cv, f, t):
+        hs = self._head_s(t)
+        blen = 0.55
+        dis = _ph(t, 0.72, 1.0) if not self.D else _ph(t, 0.68, 1.0)
+        pw = self.pulse(f, (1, 0.75, 1, 0.5, 0.9, 0.65)) * self.power * (1 - 0.7 * dis)
+        n = 34
+        sp = []
+        for i in range(n):
+            s = hs - blen * i / (n - 1) if not self.D else hs + blen * i / (n - 1)
+            if 0 <= s <= 1:
+                sp.append(self.C(s))
+        if len(sp) >= 3:
+            keep = int(len(sp) * (1 - dis))                    # phân rã từ đuôi lên đầu
+            body = sp[:max(2, keep)]
+            nm = _norms(body)
+            core_w = [self.S * 0.05 * (1 - 0.8 * i / float(max(1, len(body) - 1))) for i in range(len(body))]
+            core_w[-1] = 0
+            cv.poly("aura", taper_poly(body, core_w, 1.6), LOI_AURA + (int(140 * (1 - dis)),))
+            cv.poly("base", taper_poly(body, core_w, 0.75), LOI_DARK + (int(200 * (1 - dis)),))   # khối thân hắc tím
+            for k in range(3):                                  # 3 dải sét bện xoắn quanh xương sống
+                pts, ws = [], []
+                for i, (p, q) in enumerate(zip(body, nm)):
+                    u = i / float(max(1, len(body) - 1))
+                    off = math.sin(i * 0.7 + k * 2.1 + f * 0.6) * self.S * 0.04 * (1 - 0.6 * u) + self.zz[k][i] * self.S * 0.006
+                    pts.append((p[0] + q[0] * off, p[1] + q[1] * off))
+                    ws.append(self.S * 0.014 * (1 - 0.75 * u) * (1.25 if k == 0 else 0.75))
+                ws[-1] = 0
+                loi_stroke(cv, pts, ws, pw, 0.0 if k == 0 else 1.0)
+            for i in range(3, len(body) - 3, 3):                # vây gai sét dọc lưng (răng cưa, nhọn)
+                p, q = body[i], nm[i]
+                u = i / float(len(body))
+                h = self.S * 0.09 * (1 - 0.6 * u)
+                tip = (p[0] - q[0] * h, p[1] - q[1] * h)
+                bk = _ad(p, (q[1], -q[0]), -self.S * 0.02)
+                loi_stroke(cv, [bk, _lp(bk, tip, 0.5), tip], [self.S * 0.008, self.S * 0.006, 0], pw * 0.85)
+            if dis < 0.6:
+                dragon_head(cv, body[0], body[3], self.S * 0.24, f, pw, 1 - dis, "loi", self.S)
+        if not self.D and 14 <= f <= 19:
+            a = f - 14
+            for b in self.burst:
+                b.draw(cv, _eo(a / 2.0), _c01((a - 2) / 3.0), 1.0)
+            if a < 3:
+                loi_flash(cv, self.c, self.S * 0.1, 1.0)
+
+
+class LoiThuong(Vfx):
+    """Lôi thương – gõ: giáo sét lao chéo từ trên xuống cắm xuyên chữ, nổ chấn, giáo rung điện rồi tan;
+    xoá: giáo đang cắm bị rút phăng ra, bay ngược lên kéo theo tia lửa."""
+    name, frames, anchor, box = "gai", 16, (0.36, 0.72), (1.55, 1.25)
+
+    def init(self):
+        r = self.rnd
+        self.start = (self.W * 1.02, self.H * 0.0)
+        d = math.atan2(self.c[1] - self.start[1], self.c[0] - self.start[0])
+        self.dir = (math.cos(d), math.sin(d))
+        self.ang = math.degrees(d)
+        self.len = self.S * 0.62
+        self.shaft = LoiBolt((-self.len, 0), (0, 0), self.S * 0.02, r, branches=3, depth=1, kink=(0.015, 0.04),
+                             spread=(150, 170), blen=(0.15, 0.28))
+        self.burst = [LoiBolt(self.c, _ad(self.c, _dv(a), self.S * r.uniform(0.18, 0.3)), self.S * 0.012, r, 1, 1)
+                      for a in (r.uniform(100, 140), r.uniform(150, 200), r.uniform(-30, 20), r.uniform(30, 70))]
+
+    def _tip(self, t):
+        if not self.D:
+            k = _ei(_ph(t, 0, 0.28))
+            return _lp(self.start, _ad(self.c, self.dir, self.S * 0.05), k)
+        k = _ei(_ph(t, 0.25, 0.7))
+        return _lp(_ad(self.c, self.dir, self.S * 0.05), self.start, k)
+
+    def update(self, f, t):
+        if not self.D and f == 4:
+            self.emit(18, self.c, self.S * 0.05, 11, self.S * 0.011, "spark", drag=0.88)
+            self.emit(5, self.c, self.S * 0.01, 12, self.S * 0.05, "smoke")
+        if self.D and 4 <= f <= 9:
+            tip = self._tip(f / float(self.n - 1))
+            self.emit(3, tip, self.S * 0.02, 8, self.S * 0.009, "spark", spread=(self.ang + 160, self.ang + 200))
+
+    def draw(self, cv, f, t):
+        tip = self._tip(t)
+        a = math.radians(self.ang)
+        co, si = math.cos(a), math.sin(a)
+        xf = lambda p: (tip[0] + p[0] * co - p[1] * si, tip[1] + p[0] * si + p[1] * co)
+        moving = (t < 0.28) if not self.D else (0.25 < t < 0.7)
+        stuck = (not self.D and 0.28 <= t) or (self.D and t <= 0.25)
+        fade = _ph(t, 0.65, 0.95) if not self.D else _ph(t, 0.6, 0.85)
+        pw = (self.pulse(f) if stuck else 1.0) * self.power * (1 - fade)
+        if moving:                                               # bóng mờ phía sau khi lao nhanh
+            for g_ in (2, 1):
+                back = _ad(tip, self.dir, -self.S * 0.12 * g_)
+                xb = lambda p, back=back: (back[0] + p[0] * co - p[1] * si, back[1] + p[0] * si + p[1] * co)
+                self.shaft.draw(cv, 1, 0, 0.25 / g_, 0, None, xf=xb)
+        self.shaft.draw(cv, 1.0, fade, pw, self.S * 0.003, self.jr, xf=xf)
+        if pw > 0.05:                                            # mũi giáo hình thoi, lõi trắng
+            L, w = self.S * 0.1, self.S * 0.035
+            head = [xf((L * 0.9, 0)), xf((0, w)), xf((-L * 0.35, 0)), xf((0, -w))]
+            cv.poly("glow", head, LOI_MID + (int(220 * pw),))
+            cv.poly("base", head, LOI_EDGE + (int(255 * pw),))
+            cv.poly("base", [xf((L * 0.75, 0)), xf((0, w * 0.5)), xf((-L * 0.2, 0)), xf((0, -w * 0.5))], LOI_CORE + (int(255 * pw),))
+        if not self.D and 4 <= f <= 9:
+            k = f - 4
+            for b in self.burst:
+                b.draw(cv, _eo(k / 1.5), _c01((k - 2) / 3.0), 1.0)
+            loi_ring(cv, self.c, self.S * (0.06 + 0.07 * k), self.S * (0.03 + 0.03 * k), 1 - k / 6.0, self.S * 0.008)
+            if k < 2:
+                loi_flash(cv, self.c, self.S * 0.1, 1.0)
+        if self.D and 3 <= f <= 7:
+            loi_flash(cv, self.c, self.S * 0.06, 1 - (f - 3) / 5.0)
+
+
+class TuLoiBungNo(Vfx):
+    """Tử lôi bùng nổ – gõ: chớp trắng, vòm xung kích, 10 tia sét toả lên, đá văng, khói hắc tím bốc;
+    xoá: khói và đá bị hút ngược vào điểm kỳ dị đen, tia sét sập vào, nổ bật nhỏ rồi tắt."""
+    name, frames, anchor, box = "tuno", 18, (0.5, 0.78), (1.7, 1.35)
+
+    def init(self):
+        r = self.rnd
+        self.rays = []
+        for k in range(10):
+            a = 185 + k * 17 + r.uniform(-6, 6)
+            L = self.S * r.uniform(0.38, 0.62)
+            out = _ad(self.c, _dv(a), L)
+            p0, p1 = (out, self.c) if self.D else (self.c, out)
+            self.rays.append(LoiBolt(p0, p1, self.S * 0.02, r, branches=3, depth=2))
+
+    def update(self, f, t):
+        c = self.c
+        if not self.D:
+            if f == 1:
+                self.emit(14, c, self.S * 0.05, 18, self.S * 0.022, "rock", spread=(200, 340), drag=0.97, grav=self.S * 0.005)
+                self.emit(20, c, self.S * 0.06, 10, self.S * 0.012, "spark", spread=(180, 360), drag=0.86)
+            if f in (2, 4, 6, 8):
+                self.emit(4, c, self.S * 0.012, 16, self.S * 0.08, "smoke", spread=(220, 320), drag=0.95, grav=-0.12,
+                          radius=self.S * 0.15)
+        else:
+            if f in (0, 2, 4, 6):
+                self.emit(4, c, self.S * 0.045, 11, self.S * 0.07, "smoke", spread=(180, 360), inward=True,
+                          radius=self.S * 0.55, drag=0.97)
+            if f in (1, 5):
+                self.emit(6, c, self.S * 0.05, 10, self.S * 0.02, "rock", spread=(180, 360), inward=True, radius=self.S * 0.55,
+                          drag=0.97)
+
+    def draw(self, cv, f, t):
+        c = self.c
+        pw = self.pulse(f) * self.power
+        if not self.D:
+            if f <= 1:
+                cv.ell("glow", c, self.S * 0.5, self.S * 0.35, LOI_CORE + (200,))
+                loi_flash(cv, c, self.S * 0.16, 1.0)
+            k = _eo(_ph(t, 0.02, 0.5))
+            if k < 1:
+                loi_ring(cv, c, self.S * (0.1 + 0.6 * k), self.S * (0.06 + 0.42 * k), 1 - k, self.S * 0.014)
+            g, tail = _eo(_ph(t, 0.03, 0.22)), _ph(t, 0.5, 0.88)
+            for b in self.rays:
+                b.draw(cv, g, tail, pw, self.S * 0.006, self.jr)
+        else:
+            g, tail = _ei(_ph(t, 0.05, 0.4)), _ph(t, 0.4, 0.72)
+            for b in self.rays:
+                b.draw(cv, g, tail, pw, self.S * 0.006, self.jr)
+            core = self.S * (0.04 + 0.06 * _ph(t, 0, 0.5)) * (1 - _ph(t, 0.7, 0.85))
+            cv.ell("aura", c, core * 3.2, core * 3.2, LOI_AURA + (210,))
+            cv.ell("base", c, core, core, (6, 0, 12, 255))
+            cv.ell_ring("base", c, core, core, LOI_MID + (255,), 1.5)
+            if 0.82 < t < 0.98:
+                loi_flash(cv, c, self.S * 0.1, 1 - _ph(t, 0.82, 0.98))
+
+
+class MaTrao(Vfx):
+    """Ma trảo – gõ: cổng hắc khí mở, 4 móng vuốt vươn ra rồi cào xé chéo qua chữ, để lại vết cào điện,
+    móng tan thành khói; xoá: móng vuốt chụp lấy chữ, siết lại rồi lôi tuột vào cổng hắc khí bên trái."""
+    name, frames, anchor, box = "slash", 18, (0.5, 0.55), (1.35, 1.25)
+
+    def init(self):
+        r = self.rnd
+        S, c = self.S, self.c
+        if not self.D:
+            self.p0 = (c[0] + S * 0.42, c[1] - S * 0.4)            # cổng mở phía trên phải
+            self.p1 = (c[0] - S * 0.35, c[1] + S * 0.3)            # cào chéo xuống trái
+        else:
+            self.p0 = (c[0] + S * 0.05, c[1])
+            self.p1 = (c[0] - S * 0.55, c[1] - S * 0.05)           # lôi về cổng bên trái
+        self.marks = []
+        for k in range(4):
+            o = (k - 1.5) * S * 0.07
+            a = (c[0] + S * 0.32 + o, c[1] - S * 0.32 + o)
+            b = (c[0] - S * 0.28 + o, c[1] + S * 0.26 + o)
+            m = (c[0] + o * 1.5 + S * 0.06, c[1] + o * 1.5 - S * 0.06)
+            self.marks.append([_lp(_lp(a, m, u), _lp(m, b, u), u) for u in [i / 14.0 for i in range(15)]])
+        self.noise = make_noise(int(self.W) + 8, int(self.H) + 8, self.seed + 3)
+
+    def _claws(self, cv, base, ang, ext, curl, al):
+        """4 móng: thân tối, mép tím điện, lõi sáng. ext = độ vươn, curl = độ quặp."""
+        S = self.S
+        for k in range(4):
+            spread = (k - 1.5) * 15
+            d = ang + spread
+            root = _ad(base, _dv(d + 90), (k - 1.5) * S * 0.035)
+            L = S * (0.26 if k in (1, 2) else 0.2) * ext
+            pts = [root]
+            for i in range(1, 7):
+                u = i / 6.0
+                pts.append(_ad(root, _dv(d + curl * 70 * u * u), L * u))
+            ws = [S * 0.028 * (1 - i / 6.0) + 0.3 for i in range(7)]
+            ws[-1] = 0
+            cv.poly("aura", taper_poly(pts, ws, 2.2), LOI_AURA + (int(150 * al),))
+            cv.poly("base", taper_poly(pts, ws, 1.35), LOI_MID + (int(255 * al),))
+            cv.poly("base", taper_poly(pts, ws, 1.0), (18, 6, 26, int(255 * al)))
+            cv.line("base", pts[1:-1], LOI_CORE + (int(220 * al),), max(0.8, S * 0.004))
+
+    def update(self, f, t):
+        if 0.3 < t < 0.6 and f % 2 == 0:
+            for m in self.marks:
+                p = m[min(14, int(_ph(t, 0.3, 0.55) * 14))]
+                self.parts.append(Part(p[0], p[1], self.rnd.uniform(-1, 1) * self.S * 0.01, self.rnd.uniform(0, 1) * self.S * 0.01,
+                                       10, self.S * 0.009, "spark", 0.9))
+        if f in (12, 14, 16):
+            pos = _lp(self.p0, self.p1, _ph(t, 0.3, 0.6))
+            self.emit(5, pos, self.S * 0.012, 12, self.S * 0.06, "smoke", radius=self.S * 0.1, grav=-0.1)
+
+    def draw(self, cv, f, t):
+        S = self.S
+        port_k = _eo(_ph(t, 0, 0.2)) * (1 - _ph(t, 0.7, 1.0))
+        portal = self.p0 if not self.D else self.p1
+        if port_k > 0.02:                                        # cổng hắc khí xoáy
+            cv.ell("aura", portal, S * 0.2 * port_k, S * 0.16 * port_k, LOI_AURA + (220,))
+            for k in range(3):
+                a = f * 25 + k * 120
+                arc = [_ad(portal, _dv(a + i * 20), S * 0.12 * port_k * (1 - i * 0.08)) for i in range(8)]
+                cv.line("base", arc, LOI_MID + (int(200 * port_k),), S * 0.008)
+        if not self.D:
+            ext = _eo(_ph(t, 0.12, 0.32))
+            sw = _ei(_ph(t, 0.3, 0.52))
+            base = _lp(self.p0, self.p1, sw)
+            ang = 135 - 30 * sw
+            al = 1 - _ph(t, 0.55, 0.85)
+            curl = 0.2 + 0.6 * sw
+            mark_k = _ph(t, 0.32, 0.52)
+        else:
+            ext = _eo(_ph(t, 0.0, 0.18))
+            curl = 0.1 + 0.9 * _eo(_ph(t, 0.18, 0.36))           # chụp & siết
+            pull = _ei(_ph(t, 0.38, 0.78))
+            base = _lp(self.p0, self.p1, pull)
+            ang = -20 - 20 * pull
+            al = 1 - _ph(t, 0.72, 0.95)
+            mark_k = 0
+        if al > 0.02 and ext > 0.02:
+            self._claws(cv, base, ang, ext, curl, al)
+        if mark_k > 0 or (not self.D and t > 0.52):              # vết cào: lõi trắng tím, viền tím, tan từ hai đầu
+            fade = _ph(t, 0.62, 0.98)
+            for m in self.marks:
+                n = max(2, int(15 * mark_k)) if t <= 0.52 else 15
+                seg = m[:n]
+                a0 = int(len(seg) * fade * 0.5)
+                seg = seg[a0:len(seg) - a0] if len(seg) - 2 * a0 >= 2 else []
+                if len(seg) >= 2:
+                    ws = [S * 0.014 * math.sin(math.pi * (i + 0.5) / len(seg)) for i in range(len(seg))]
+                    loi_stroke(cv, seg, ws, 1 - fade * 0.6)
+        if self.D and 0.18 < t < 0.5:
+            loi_flash(cv, self.c, S * 0.05, 1 - _ph(t, 0.18, 0.5))
+
+
+class MaDocLong(Vfx):
+    """Ma độc long – gõ: độc khí bốc từ chữ, rồng độc trồi lên trườn uốn bay đi, nhả độc khí, thân rã thành sương độc;
+    xoá: rồng độc từ xa lao bổ vào chữ, thân bị nuốt dần vào điểm xoá, độc khí xoáy hút vào."""
+    name, frames, anchor, box = "madoc", 22, (0.25, 0.75), (1.9, 1.35)
+    TOX = (110, 235, 80)
+
+    def init(self):
+        self.far = (self.W * 0.82, self.H * 0.3)
+
+    def C(self, s):
+        """Quỹ đạo uốn lượn: từ chữ (s=0) vòng lên phải (s=1)."""
+        c, e = self.c, self.far
+        x = c[0] + (e[0] - c[0]) * s
+        y = c[1] + (e[1] - c[1]) * (s ** 0.8) - math.sin(s * math.pi * 2.0) * self.S * 0.2
+        return (x, y)
+
+    def _hs(self, t):
+        return _eo(_ph(t, 0.05, 0.7)) if not self.D else 1 - _ei(_ph(t, 0.0, 0.62))
+
+    def update(self, f, t):
+        hs = self._hs(t)
+        head = self.C(hs)
+        if f % 2 == 0 and t < 0.8:
+            tail = self.C(max(0, hs - 0.25)) if not self.D else self.C(min(1, hs + 0.25))
+            self.parts.append(Part(tail[0], tail[1], self.rnd.uniform(-0.6, 0.6), -0.4, 16, self.S * 0.05, "gas", 0.96,
+                                   col=self.TOX))
+            self.parts.append(Part(head[0], head[1], self.rnd.uniform(-1, 1), 0.5, 12, self.S * 0.01, "drop", 0.97,
+                                   self.S * 0.004, col=(130, 255, 90)))
+        if not self.D and f < 4:
+            self.emit(3, self.c, self.S * 0.01, 14, self.S * 0.05, "gas", spread=(240, 300), col=self.TOX, grav=-0.15)
+        if not self.D and t > 0.72 and f % 2 == 0:
+            for s in (hs - 0.1, hs - 0.2, hs - 0.3):
+                p = self.C(max(0, s))
+                self.parts.append(Part(p[0], p[1], self.rnd.uniform(-1, 1), -0.3, 14, self.S * 0.06, "gas", 0.95, col=self.TOX))
+        if self.D and f in (8, 11, 14):
+            self.emit(5, self.c, self.S * 0.03, 10, self.S * 0.05, "gas", inward=True, radius=self.S * 0.4, col=self.TOX,
+                      drag=0.97)
+
+    def draw(self, cv, f, t):
+        S = self.S
+        hs = self._hs(t)
+        n = 20
+        blen = 0.42
+        dis = _ph(t, 0.72, 1.0) if not self.D else _ph(t, 0.7, 0.9)
+        segs = []
+        for i in range(n):
+            s = hs - blen * i / (n - 1) if not self.D else hs + blen * i / (n - 1)
+            if self.D and s > 1:
+                break
+            if not self.D and s < 0:
+                break
+            if self.D and hs <= 0.001 and i > 0:
+                break
+            segs.append((self.C(max(0.0, min(1.0, s))), i))
+        if self.D:                                               # bị nuốt vào chữ: các đốt chạm điểm xoá biến mất
+            segs = [(p, i) for p, i in segs if math.hypot(p[0] - self.c[0], p[1] - self.c[1]) > S * 0.04 or i == 0]
+        keep = int(len(segs) * (1 - dis))
+        segs = segs[:keep] if not self.D else (segs if dis < 0.5 else [])
+        if len(segs) >= 2:                                       # thân liền khối: tím đen, viền độc xanh, vảy, gai lưng
+            pts = [p for p, i in segs]
+            ws = [S * (0.065 * (1 - 0.75 * i / float(n)) + 0.01) for p, i in segs]
+            ws[-1] = S * 0.006
+            cv.poly("aura", taper_poly(pts, ws, 2.0), (20, 55, 14, 110))
+            cv.poly("base", taper_poly(pts, ws, 1.18), (96, 228, 72, 240))
+            cv.poly("base", taper_poly(pts, ws, 1.0), (46, 12, 60, 255))
+            nm = _norms(pts)
+            if sum(q[1] for q in nm) > 0:                          # pháp tuyến phía lưng = phía hướng lên màn hình
+                nm = [(-q[0], -q[1]) for q in nm]
+            belly = [(p[0] - q[0] * w * 0.45, p[1] - q[1] * w * 0.45) for p, q, w in zip(pts, nm, ws)]
+            cv.line("base", belly, (110, 70, 130, 200), max(1, S * 0.008))
+            for k in range(1, len(pts) - 1):
+                p, q, w = pts[k], nm[k], ws[k]
+                a, b = (p[0] + q[0] * w * 0.8, p[1] + q[1] * w * 0.8), (p[0] - q[0] * w * 0.3, p[1] - q[1] * w * 0.3)
+                cv.line("base", [a, _lp(a, b, 0.5), b], (90, 40, 115, 220), max(1, S * 0.004))    # vân vảy
+                if k % 2 == 0:
+                    tip = (p[0] + q[0] * w * 2.1, p[1] + q[1] * w * 2.1)
+                    sd = (q[1] * w * 0.5, -q[0] * w * 0.5)
+                    base1 = (p[0] + q[0] * w * 0.9 + sd[0], p[1] + q[1] * w * 0.9 + sd[1])
+                    base2 = (p[0] + q[0] * w * 0.9 - sd[0], p[1] + q[1] * w * 0.9 - sd[1])
+                    cv.poly("base", [base1, tip, base2], (66, 20, 86, 255))
+                    cv.line("base", [base1, tip], (100, 230, 80, 200), 1)
+        if segs and segs[0][1] == 0 and dis < 0.7:               # đầu rồng (dùng chung kiểu đầu với Lôi long)
+            behind = segs[min(3, len(segs) - 1)][0] if len(segs) > 1 else _ad(segs[0][0], (-1, 1))
+            dragon_head(cv, segs[0][0], behind, S * 0.22, f, 1.0, 1 - dis, "doc", S)
+        if self.D and 0.62 < t < 0.85:
+            k = _ph(t, 0.62, 0.85)
+            cv.ell("glow", self.c, S * 0.1 * (1 - k), S * 0.1 * (1 - k), (130, 255, 90, int(220 * (1 - k))))
+            loi_flash(cv, self.c, S * 0.06, 1 - k)
+
+
+class BiNganHoa(Vfx):
+    """Bỉ ngạn hoa – gõ: thân mọc từ chữ, nụ hình thành, 6 cánh cong ngược mở lần lượt, nhuỵ dài vươn ra,
+    cánh rơi, hoa héo rồi tan thành bụi đỏ; xoá: hoa đang nở bị giật ngược – cánh xé bay hút vào chữ, thân rút xuống."""
+    name, frames, anchor, box = "bingan", 24, (0.5, 0.94), (1.15, 1.55)
+    RED, DARK, LIGHT = (214, 20, 44), (110, 0, 22), (255, 120, 140)
+
+    def init(self):
+        r = self.rnd
+        self.top = (self.c[0] + r.uniform(-0.06, 0.06) * self.S, self.c[1] - self.S * 0.78)
+        self.ctrl = (self.c[0] + r.uniform(-0.15, 0.15) * self.S, self.c[1] - self.S * 0.4)
+        self.petals = [(k * 60 + r.uniform(-10, 10) - 90, r.uniform(0.9, 1.1)) for k in range(6)]
+        self.F = self.top
+        self.stam = [(-90 + (k - 2.5) * 26 + r.uniform(-6, 6), r.uniform(0.95, 1.2)) for k in range(6)]
+
+    def stem(self, k):
+        pts = []
+        for i in range(13):
+            u = i / 12.0 * k
+            pts.append(_lp(_lp(self.c, self.ctrl, u), _lp(self.ctrl, self.top, u), u))
+        return pts
+
+    def petal(self, a, open_, droop, scale):
+        """Cánh bỉ ngạn: dải hẹp vươn ra rồi cong ngược ra sau."""
+        F, S = self.F, self.S
+        L = S * 0.3 * scale
+        pts = []
+        for i in range(9):
+            u = i / 8.0
+            ang = a + (1 - open_) * (-90 - a) * 0.85 + (u * u * 110 * open_) * (1 if math.cos(math.radians(a)) >= 0 else -1) + droop * 60 * u
+            pts.append(_ad(pts[-1] if pts else F, _dv(ang), L / 8.0 if pts else 0))
+        ws = [S * 0.024 * math.sin(math.pi * min(0.95, (i + 0.6) / 9.0)) for i in range(9)]
+        ws[-1] = 0
+        return pts, ws
+
+    def update(self, f, t):
+        if 0.4 < t < 0.8 and f % 2 == 0:
+            self.emit(2, self.F, self.S * 0.012, 16, self.S * 0.011, "mote", spread=(200, 340), grav=-0.12, col=(255, 60, 90),
+                      radius=self.S * 0.2)
+        if not self.D and t > 0.55 and f % 2 == 1:
+            a, sc = self.petals[(f // 2) % 6]
+            p = _ad(self.F, _dv(a), self.S * 0.18)
+            self.parts.append(Part(p[0], p[1], self.rnd.uniform(-0.8, 0.8), 0.4, 18, self.S * 0.025, "petal", 0.97, self.S * 0.002,
+                                   rot=self.rnd.uniform(0, 360), vr=self.rnd.uniform(-20, 20)))
+        if not self.D and f == self.n - 6:
+            self.emit(16, self.F, self.S * 0.03, 10, self.S * 0.01, "mote", col=(255, 50, 80), radius=self.S * 0.2, grav=-0.1)
+        if self.D and f in (6, 8, 10):
+            for a, sc in self.petals[(f - 6):(f - 6) + 2]:
+                p = _ad(self.F, _dv(a), self.S * 0.2)
+                dx, dy = self.c[0] - p[0], self.c[1] - p[1]
+                self.parts.append(Part(p[0], p[1], dx * 0.12, dy * 0.12, 8, self.S * 0.03, "petal", 1.0, rot=a, vr=40))
+
+    def draw(self, cv, f, t):
+        S = self.S
+        if not self.D:
+            sk = _eo(_ph(t, 0.0, 0.25))
+            bud = _ph(t, 0.18, 0.3)
+            wither = _ph(t, 0.72, 0.95)
+            stem_al = 1 - _ph(t, 0.85, 1.0)
+        else:
+            sk = 1 - _ei(_ph(t, 0.45, 0.85))
+            bud = 1.0
+            wither = 0.0
+            stem_al = 1 - _ph(t, 0.8, 1.0)
+        st = self.stem(sk)
+        if len(st) >= 2 and stem_al > 0.02:
+            col = tuple(int(c * (1 - 0.5 * wither)) for c in (40, 120, 50))
+            cv.line("base", st, col + (int(255 * stem_al),), S * 0.014)
+            cv.line("glow", st, (200, 30, 60, int(90 * stem_al)), S * 0.02)
+        F = st[-1] if st else self.c
+        self.F = F
+        if bud <= 0 or (sk < 0.9 and not self.D) or (self.D and t > 0.6):
+            return
+        col = tuple(int(self.RED[i] * (1 - wither) + self.DARK[i] * wither) for i in range(3))
+        gk = (1 - wither) * (1 if not self.D else 1 - _ph(t, 0.2, 0.5))
+        if gk > 0.02:
+            cv.ell("glow", F, S * 0.07, S * 0.07, (230, 30, 70, int(150 * gk)))
+            cv.ell("aura", F, S * 0.16, S * 0.16, (60, 0, 20, int(70 * gk)))
+        for k, (a, sc) in enumerate(self.petals):
+            if not self.D:
+                op = _eo(_ph(t, 0.28 + k * 0.04, 0.5 + k * 0.04))
+                al = 1 - _ph(t, 0.8 + k * 0.02, 0.98)
+            else:
+                torn = _ph(t, 0.22 + k * 0.05, 0.3 + k * 0.05)   # cánh bị xé lần lượt
+                op = 1 - 0.5 * torn
+                al = 1 - torn
+            if al <= 0.02:
+                continue
+            pts, ws = self.petal(a, max(0.15, op) * bud, wither, sc)
+            cv.poly("base", taper_poly(pts, ws, 1.3), self.DARK + (int(255 * al),))
+            cv.poly("base", taper_poly(pts, ws, 1.0), col + (int(255 * al),))
+            cv.line("base", pts[:-2], self.LIGHT + (int(200 * al * (1 - wither)),), max(0.7, S * 0.005))
+        for a, sc in self.stam:                                  # nhuỵ dài cong, đầu nhuỵ sáng
+            ok = _eo(_ph(t, 0.42, 0.62)) * (1 - _ph(t, 0.75, 0.9)) if not self.D else 1 - _ph(t, 0.15, 0.4)
+            if ok <= 0.02:
+                continue
+            L = S * 0.36 * sc * ok
+            pts = [F]
+            for i in range(1, 7):
+                u = i / 6.0
+                pts.append(_ad(pts[-1], _dv(a + u * u * 55 * (1 if a > -90 else -1) + wither * 40 * u), L / 6.0))
+            cv.line("base", pts, (230, 40, 60, int(255 * ok)), max(0.8, S * 0.005))
+            cv.ell("glow", pts[-1], S * 0.02, S * 0.02, (255, 90, 120, int(200 * ok)))
+            cv.ell("base", pts[-1], S * 0.008, S * 0.008, (255, 230, 200, int(255 * ok)))
+
+
+class DauLauQuy(Vfx):
+    """Đầu lâu quỷ – gõ: khói tụ lại, đầu lâu hiện ra từ khói (tan-hiện theo nhiễu), bay lên lắc lư, mắt rực tím,
+    kéo đuôi linh hồn, cuối cùng rã thành bụi hồn; xoá: đầu lâu hiện trên cao, há miệng lao bổ xuống chữ rồi vỡ vụn."""
+    name, frames, anchor, box = "skull", 22, (0.5, 0.92), (1.0, 1.75)
+
+    def init(self):
+        r = self.rnd
+        rad = max(6, int(self.S * 0.12))
+        self.sk = [self._tint(_horror_skull(rad, j, 1.0, self.seed)) for j in (0.0, 1.0)]
+        w = max(i.width for i in self.sk)
+        h = max(i.height for i in self.sk)
+        self.noise = make_noise(w + 8, h + 8, self.seed + 11, cell=max(3, w // 10))
+        self.sway = r.uniform(0.6, 1.0) * r.choice((-1, 1))
+        self.y0, self.y1 = self.c[1] - self.S * 0.12, self.S * 0.22
+
+    @staticmethod
+    def _tint(im):
+        r, g, b, a = im.split()
+        gray = Image.merge("RGB", (r, g, b)).convert("L")
+        tinted = Image.merge("RGB", (gray.point(lambda v: int(v * 0.72)), gray.point(lambda v: int(v * 0.55)), gray))
+        return Image.merge("RGBA", (*tinted.split(), a))
+
+    def pos(self, t):
+        if not self.D:
+            k = _ph(t, 0.18, 0.92)
+            y = self.y0 + (self.y1 - self.y0) * _eo(k)
+            x = self.c[0] + math.sin(k * 5.0) * self.S * 0.12 * self.sway
+            return (x, y), math.sin(k * 6.0) * 12 * self.sway, 0.75 + 0.35 * k
+        k = _ei(_ph(t, 0.28, 0.68))
+        y = self.y1 + (self.y0 - self.y1) * k
+        return (self.c[0] + math.sin(t * 9) * self.S * 0.03, y), math.sin(t * 20) * 6, 1.0 - 0.2 * k
+
+    def update(self, f, t):
+        p, rot, sc = self.pos(t)
+        if not self.D:
+            if f < 5:
+                self.emit(3, (self.c[0], self.y0), self.S * 0.03, 8, self.S * 0.07, "smoke", inward=True, radius=self.S * 0.3,
+                          drag=0.95)
+            if 4 < f < self.n - 5 and f % 2 == 0:
+                self.parts.append(Part(p[0] + self.rnd.uniform(-0.05, 0.05) * self.S, p[1] + self.S * 0.12,
+                                       self.rnd.uniform(-0.5, 0.5), self.S * 0.012, 12, self.S * 0.012, "soul", 0.93))
+            if f == self.n - 6:
+                self.emit(14, p, self.S * 0.025, 12, self.S * 0.01, "soul", spread=(200, 340), grav=-0.2, radius=self.S * 0.1)
+        else:
+            if 6 < f < 14:
+                self.parts.append(Part(p[0], p[1] - self.S * 0.1, 0, -self.S * 0.01, 8, self.S * 0.012, "soul", 0.9))
+            if f == int(0.68 * (self.n - 1)) + 1:
+                self.emit(14, self.c, self.S * 0.05, 12, self.S * 0.02, "shard", spread=(180, 360), grav=self.S * 0.004,
+                          col=(205, 195, 230))
+                self.emit(5, self.c, self.S * 0.02, 12, self.S * 0.06, "smoke", spread=(180, 360))
+
+    def draw(self, cv, f, t):
+        S = self.S
+        p, rot, sc = self.pos(t)
+        if not self.D:
+            appear = _ph(t, 0.05, 0.3)
+            gone = _ph(t, 0.74, 0.97)
+            jaw = 1 if (f // 2) % 2 and 0.3 < t < 0.75 else 0
+        else:
+            appear = _ph(t, 0.0, 0.2)
+            gone = 1.0 if t > 0.7 else 0.0
+            jaw = 1 if t > 0.25 else 0
+        if gone >= 1 or appear <= 0:
+            return
+        thr = (1 - appear) * 0.9 + gone * 0.95                  # hiện ra / tan rã theo nhiễu, mép cháy tím
+        im = dissolve(self.sk[jaw], thr, self.noise)
+        cv.ell("aura", p, S * 0.16 * sc, S * 0.2 * sc, LOI_AURA + (int(120 * appear * (1 - gone)),))
+        cv.stamp(im, p, sc, rot)
+        eg = (0.6 + 0.4 * abs(math.sin(f * 1.1))) * appear * (1 - gone)
+        sw, sh = self.sk[0].size
+        for sx in (-1, 1):                                       # mắt rực tím (hốc mắt ~ 38% chiều cao sọ)
+            e = (p[0] + sx * sw * 0.2 * sc, p[1] - sh * 0.1 * sc)
+            cv.ell("glow", e, S * 0.05 * sc, S * 0.04 * sc, LOI_MID + (int(240 * eg),))
+            cv.ell("base", e, S * 0.013 * sc, S * 0.011 * sc, LOI_CORE + (int(255 * eg),))
+        if self.D and 0.6 < t < 0.75:
+            loi_flash(cv, self.c, S * 0.08, 1.0)
+
+
+class SongPhiKiem(Vfx):
+    """Song phi kiếm – gõ: 2 kiếm loé hiện tại chữ, xoay ngắm, phóng vút giao nhau ra hai phía, kiếm quang kéo vệt,
+    loé sao khi đạt tốc độ; xoá: 2 kiếm từ ngoài lao vào đâm trúng chữ cùng lúc, vỡ thành mảnh sáng."""
+    name, frames, anchor, box = "sword", 18, (0.5, 0.62), (1.9, 1.45)
+
+    def init(self):
+        r = self.rnd
+        L = max(24, int(self.S * 0.5))
+        self.img = self._glow(_sword_img(L))
+        c = self.c
+        if not self.D:                                           # bay giao nhau: kiếm trái bay sang phải-trên và ngược lại
+            self.paths = [((c[0] - self.S * 0.12, c[1]), (self.W * 1.15, -self.H * 0.15), 60),
+                          ((c[0] + self.S * 0.12, c[1]), (-self.W * 0.15, -self.H * 0.15), 120)]
+        else:
+            self.paths = [((-self.W * 0.1, -self.H * 0.05), (c[0] - self.S * 0.03, c[1] - self.S * 0.02), 0),
+                          ((self.W * 1.1, -self.H * 0.05), (c[0] + self.S * 0.03, c[1] - self.S * 0.02), 0)]
+        self.lag = [0, 1]                                        # lệch nhịp rất ngắn
+
+    @staticmethod
+    def _glow(im):
+        from PIL import ImageFilter
+        g = im.getchannel("A").filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.GaussianBlur(3))
+        out = Image.new("RGBA", (im.width, im.height), LOI_MID + (0,))
+        out.putalpha(g.point(lambda v: int(v * 0.8)))
+        out.alpha_composite(im)
+        return out
+
+    def state(self, k, f):
+        a, b, _ = self.paths[k]
+        t = (f - self.lag[k]) / float(self.n - 1)
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        ang = math.degrees(math.atan2(dy, dx))
+        if not self.D:
+            aim = _eo(_ph(t, 0.05, 0.28))
+            fly = _ei(_ph(t, 0.3, 0.78))
+            pos = _lp(a, b, fly)
+            rot_dir = -90 + (ang + 90) * aim if aim < 1 else ang
+            return pos, rot_dir, fly, _ph(t, 0, 0.08)
+        fly = _ei(_ph(t, 0.0, 0.42))
+        return _lp(a, b, fly), ang, fly, 1.0
+
+    def update(self, f, t):
+        for k in range(2):
+            pos, rot, fly, ap = self.state(k, f)
+            if not self.D and 0.3 < fly < 0.95:
+                self.parts.append(Part(pos[0], pos[1], self.rnd.uniform(-1, 1), self.rnd.uniform(-1, 1), 8, self.S * 0.009,
+                                       "spark", 0.85))
+        if self.D and f == int(0.42 * (self.n - 1)) + 2:
+            self.emit(22, self.c, self.S * 0.05, 13, self.S * 0.018, "shard", grav=self.S * 0.003, col=(225, 225, 245))
+            self.emit(10, self.c, self.S * 0.05, 9, self.S * 0.01, "spark")
+        if not self.D and f == 1:
+            self.emit(10, self.c, self.S * 0.03, 8, self.S * 0.009, "spark")
+
+    def draw(self, cv, f, t):
+        S = self.S
+        if not self.D and f <= 2:
+            loi_flash(cv, self.c, S * 0.1, 1 - f / 3.0)
+        for k in range(2):
+            pos, rot, fly, ap = self.state(k, f)
+            if self.D and fly >= 1 and t > 0.55:
+                continue
+            a, b, _ = self.paths[k]
+            dv = _dv(rot)
+            if fly > 0.05:                                       # kiếm quang: vệt sáng thuôn phía sau
+                ln = S * (0.25 + 0.9 * min(1.0, fly * 1.6)) * (1 if not self.D else 0.7)
+                pos_t = pos
+                pos = _ad(pos, dv, -S * 0.2)                      # vệt bắt đầu từ chuôi kiếm
+                back = _ad(pos, dv, -ln)
+                nx, ny = -dv[1], dv[0]
+                w = S * 0.018
+                trail = [_ad(pos, (nx, ny), w), _ad(pos, (nx, ny), -w), back]
+                cv.poly("aura", trail, LOI_AURA + (110,))
+                cv.poly("glow", trail, LOI_MID + (190,))
+                cv.poly("base", [_ad(pos, (nx, ny), w * 0.35), _ad(pos, (nx, ny), -w * 0.35), _lp(pos, back, 0.7)],
+                        LOI_CORE + (220,))
+                pos = pos_t
+                for g_ in (1, 2):                                # bóng ảnh kiếm
+                    cv.stamp(self.img, _ad(pos, dv, -S * 0.16 * g_), 1.0, -(rot + 90), 0.3 / g_)
+            cv.stamp(self.img, pos, 1.0, -(rot + 90), max(0.0, min(1.0, ap * 1.5)))
+            if not self.D and 0.45 < fly < 0.62:                 # loé sao khi đạt tốc độ cao
+                tip = _ad(pos, dv, S * 0.2)
+                loi_flash(cv, tip, S * 0.05, 1.0)
+        if self.D and 0.42 <= t < 0.62:
+            loi_flash(cv, self.c, S * 0.12, 1 - _ph(t, 0.42, 0.62))
+            k = _ph(t, 0.42, 0.75)
+            loi_ring(cv, self.c, S * (0.05 + 0.4 * k), S * (0.04 + 0.25 * k), 1 - k, S * 0.01)
+
+
+# ══ danh sách hiệu ứng (giữ dạng (mã, tên, hàm dựng, điểm neo) để giao diện / cài đặt cũ dùng tiếp) ══
+VFX_CLASSES = [LoiTinhBaoPhat, ThienLoiGiang, LoiLienHoi, LoiHoan, LoiXoay, LoiPhatTru, DiaChanLoi, LoiXich, LoiLong,
+               LoiThuong, TuLoiBungNo, MaTrao, MaDocLong, BiNganHoa, DauLauQuy, SongPhiKiem]
+VFX_LABELS = {
+    "bolt": "⚡ Lôi tinh bạo phát", "thunder": "⚡ Thiên lôi giáng", "settia": "⚡ Sấm sét liên hồi", "hoan": "⚡ Lôi hoàn",
+    "xoan": "⚡ Lôi xoáy", "loiphat": "⚡ Lôi phạt trụ", "diachan": "⚡ Địa chấn lôi", "chain": "⚡ Lôi xích liên hoàn",
+    "dragon": "⚡ Lôi long", "gai": "⚡ Lôi thương", "tuno": "⚡ Tử lôi bùng nổ", "slash": "Ma trảo", "madoc": "Ma độc long",
+    "bingan": "Bỉ ngạn hoa nở", "skull": "Đầu lâu quỷ bay lên", "sword": "Song phi kiếm bay vút",
+}
+# mã cũ (bản 3.4) -> mẫu mới gần nhất
+FX_ALIAS = {"kimtinh": "bolt", "novang": "tuno", "chau": "xoan", "xoanvang": "xoan", "datno": "diachan", "song": "tuno",
+            "loikiep": "loiphat", "loiquang": "loiphat", "loian": "loiphat", "cotvang": "loiphat", "longvang": "dragon",
+            "xatim": "xoan", "hammer": "thunder", "darkflame": "tuno", "holy": "bolt", "hellfire": "tuno", "ice": "hoan",
+            "star": "bolt", "shock": "hoan", "shatter": "tuno", "blackhole": "xoan", "explode": "tuno", "plasma": "xoan",
+            "storm": "settia", "spear": "gai", "claw": "slash", "bloodbolt": "bolt", "pillar": "loiphat", "net": "hoan"}
+
+
+def _vfx_maker(cls):
+    def maker(size, seed=0, mode="T", power=1.0, speed=1.0):
+        return cls(size, seed, mode, power, speed).bake()
+    maker.cls = cls
     return maker
 
 
-_B, _G, _P, _S, _Q, _R = (0.5, 0.5), (0.5, 0.86), (0.5, 0.93), (0.5, 0.92), (0.5, 0.5), (0.5, 0.88)
-_SET_IMGS = ["setvang%d" % k for k in range(1, 10)] + ["settim%d" % k for k in range(1, 6)]
-FX_EFFECTS = [
-    ("bolt", "⚡ Lôi tinh bạo phát", make_sprite_fx(["tia_chop"], "burst", 1.3), _B),
-    ("kimtinh", "⚡ Kim lôi tinh (vàng)", make_sprite_fx(["kimtinh1", "kimtinh2", "tinhvang"], "burst", 1.1), _B),
-    ("novang", "⚡ Lôi bạo vàng", make_sprite_fx(["no_vang"], "burst", 1.45), _B),
-    ("hoan", "⚡ Lôi hoàn (vòng sét)", make_sprite_fx(["vongvang", "hoanvang1", "hoanvang2"], "burst", 1.1), _B),
-    ("xoanvang", "⚡ Lốc xoáy vàng", make_sprite_fx(["xoanvang1", "xoanvang2"], "burst", 1.1), _B),
-    ("chau", "⚡ Lôi châu", make_sprite_fx(["chau"], "burst", 1.0), _B),
-    ("datno", "⚡ Địa lôi nổ (vàng)", make_sprite_fx(["no_dat"], "ground", 1.5), _G),
-    ("song", "⚡ Song lôi nổ (vàng tím)", make_sprite_fx(["no_vang_tim"], "ground", 1.5), _G),
-    ("tuno", "⚡ Tử lôi bùng nổ (tím)", make_sprite_fx(["tim_no"], "ground", 1.5), _G),
-    ("diachan", "⚡ Địa chấn lôi (nổ liên hoàn)",
-     make_sprite_fx(["datvang1", "datvang3", "datvang2", "datvang4", "vomvang", "bungvang"], "ground", 1.35), _G),
-    ("thunder", "⚡ Lôi điện giáng (tím)", make_sprite_fx(["loidien1", "loidien2", "loidien3"], "pillar", 1.5), _P),
-    ("loiphat", "⚡ Lôi phạt", make_sprite_fx(["loiphat1", "loiphat2", "loiphat3"], "pillar", 1.5), _P),
-    ("loikiep", "⚡ Lôi kiếp", make_sprite_fx(["loikiep"], "pillar", 1.5), _P),
-    ("loiquang", "⚡ Lôi quang (vàng)", make_sprite_fx(["loiquang"], "pillar", 1.5), _P),
-    ("loian", "⚡ Lôi ấn", make_sprite_fx(["loian"], "pillar", 1.5), _P),
-    ("cotvang", "⚡ Thiên lôi trụ (vàng)", make_sprite_fx(["cotvang1", "cotvang2", "truvong", "luatru"], "pillar", 1.5), _P),
-    ("gai", "⚡ Lôi thương (gai tím)", make_sprite_fx(["gaitim", "cottim"], "pillar", 1.35), _P),
-    ("settia", "⚡ Sấm sét liên hồi", make_sprite_fx(_SET_IMGS, "strike", 1.35), _S),
-    ("dragon", "⚡ Lôi long", make_sprite_fx(["loilong"], "seq", 1.45, frames=9), _Q),
-    ("longvang", "⚡ Kim long cuộn", make_sprite_fx(["longvang1", "longvang2", "longvang3", "vongran"], "seq", 1.3), _Q),
-    ("xatim", "⚡ Tử lôi xà", make_sprite_fx(["xoantim1", "xoantim2", "xoantim3", "xoantim4"], "seq", 1.3), _Q),
-    ("slash", "Ma trảo", make_sprite_fx(["matrao1", "matrao2", "matrao3"], "seq", 1.25), _Q),
-    ("madoc", "Ma độc long", make_sprite_fx(["madoc1", "madoc2", "madoc3"], "seq", 1.3), _Q),
-    ("bingan", "Bỉ ngạn hoa nở", make_sprite_fx(["bingan1", "bingan2", "bingan3", "bingan4"], "seq", 1.3), _Q),
-    ("skull", "Đầu lâu ma quỷ bay lên", make_sprite_fx(["daulau1", "daulau2", "daulau3"], "rise", 1.4), _R),
-    ("sword", "Dòng phi kiếm bay vút",
-     make_sprite_fx(["phikiem1", "phikiem2", "phikiem3", "phikiem4", "phikiem5"], "seq", 1.4), _Q),
-]
+FX_EFFECTS = [(c.name, VFX_LABELS[c.name], _vfx_maker(c), c.anchor) for c in VFX_CLASSES]
 FX_BY_KEY = {e[0]: e for e in FX_EFFECTS}
 FX_THUNDER = tuple(e[0] for e in FX_EFFECTS if e[1].startswith("⚡"))
 
 
 def fx_resolve(key):
-    """Đổi lựa chọn ngẫu nhiên thành một mẫu cụ thể."""
+    """Đổi lựa chọn ngẫu nhiên / mã cũ thành một mẫu cụ thể."""
+    key = FX_ALIAS.get(key, key)
     if key == "random_thunder":
         return random.choice(FX_THUNDER)
     if key == "random" or key not in FX_BY_KEY:
@@ -3944,81 +5421,162 @@ def fx_resolve(key):
 FX_CHOICES = [("random", "★ Ngẫu nhiên (đổi mỗi lần)"), ("random_thunder", "★ Ngẫu nhiên hệ Lôi (sấm sét)")] + [(e[0], e[1]) for e in FX_EFFECTS]
 
 
-class FxPlayer:
-    """Cửa sổ hiệu ứng trong suốt, chuột bấm xuyên qua, không bao giờ lấy focus của ô đang gõ."""
-    VARIANTS = 5
+class _VfxBaker:
+    """Luồng phụ dựng sẵn biến thể hiệu ứng (không làm khựng giao diện / nhân vật)."""
 
-    def __init__(self, app, default_key):
-        self.app = app
-        self.default_key = default_key
-        self.cache = {}                          # (mẫu, cỡ) -> danh sách biến thể
-        self.seq, self.i, self.pos, self.job = [], 0, (0, 0), None
-        self.last_key = None
-        self.played = 0
-        self.lw = None
-        if IS_WIN:
+    def __init__(self):
+        import queue
+        self.q = queue.Queue()
+        self.busy = set()
+        self.th = None
+
+    def ask(self, job, fn):
+        if job in self.busy:
+            return
+        self.busy.add(job)
+        self.q.put((job, fn))
+        if self.th is None or not self.th.is_alive():
+            self.th = threading.Thread(target=self._run, daemon=True)
+            self.th.start()
+
+    def _run(self):
+        while True:
             try:
-                self.win = tk.Toplevel(app.root)
-                self.win.overrideredirect(True)
-                self.win.attributes("-topmost", True)
-                self.win.geometry("1x1+-50+-50")
-                # WS_EX_TRANSPARENT (bấm xuyên) | WS_EX_NOACTIVATE (không giành focus)
-                self.lw = LayeredWin(self.win, extra_ex=0x20 | 0x08000000)
-                self.lw.update(-50, -50, 1, 1, b"\0\0\0\0")
+                job, fn = self.q.get(timeout=5)
+            except Exception:
+                return
+            try:
+                fn()
             except Exception:
                 log_error()
-                self.lw = None
+            self.busy.discard(job)
 
-    def variants(self, key, size):
-        k = (key, size)
-        if k not in self.cache:
+
+VFX_BAKER = _VfxBaker()
+
+
+class FxPlayer:
+    """Phát hiệu ứng tại con trỏ nhập. Mỗi hiệu ứng là một cửa sổ trong suốt riêng (chuột bấm xuyên, không giành focus),
+    tối đa MAX_LIVE cái cùng lúc: gõ dồn thì hiệu ứng chồng lớp, cái cũ nhất bị đẩy nhanh sang pha tan biến."""
+    VARIANTS = 4
+    MAX_LIVE = 3
+    TICK = 40
+
+    def __init__(self, app, default_key, mode="T"):
+        self.app = app
+        self.default_key = default_key
+        self.mode = mode
+        self.cache = {}                          # (mẫu, cỡ, chế độ) -> [dãy frame đã mã hoá]
+        self.live = []                           # hiệu ứng đang chạy: dict(seq, i, pos, anchor, slot)
+        self.slots = []                          # cửa sổ lớp (tạo dần, dùng lại)
+        self.job = None
+        self.last_key = None
+        self.played = 0
+        self.lock = threading.Lock()
+        self.lw = IS_WIN or None                 # tương thích kiểm tra cũ
+
+    def _slot(self):
+        used = {e["slot"] for e in self.live}
+        for k in range(len(self.slots)):
+            if k not in used:
+                return k
+        if not IS_WIN:
+            self.slots.append(None)
+            return len(self.slots) - 1
+        try:
+            w = tk.Toplevel(self.app.root)
+            w.overrideredirect(True)
+            w.attributes("-topmost", True)
+            w.geometry("1x1+-50+-50")
+            lw = LayeredWin(w, extra_ex=0x20 | 0x08000000)     # WS_EX_TRANSPARENT | WS_EX_NOACTIVATE
+            lw.update(-50, -50, 1, 1, b"\0\0\0\0")
+            self.slots.append(lw)
+        except Exception:
+            log_error()
+            self.slots.append(None)
+        return len(self.slots) - 1
+
+    @staticmethod
+    def _enc(frames):
+        return [(im.convert("RGBa").tobytes("raw", "BGRa"), im.width, im.height) for im in frames]
+
+    def variants(self, key, size, mode=None):
+        """Trả về các biến thể đã dựng. Lần đầu dựng 1 biến thể ngay, phần còn lại dựng ở luồng phụ."""
+        mode = mode or self.mode
+        k = (key, size, mode)
+        with self.lock:
+            vs = self.cache.get(k)
+        if not vs:
             maker = FX_BY_KEY[key][2]
-            vs = []
-            for seed in range(self.VARIANTS):
-                vs.append([(im.convert("RGBa").tobytes("raw", "BGRa"), im.width, im.height) for im in maker(size, seed)])
-            if not FX_MISSING:
-                self.cache[k] = vs                        # thiếu ảnh -> không lưu, tải bổ sung xong là dùng ảnh thật
-            else:
-                return vs
-            while len(self.cache) > 16:
-                self.cache.pop(next(iter(self.cache)))
-        return self.cache[k]
+            vs = [self._enc(maker(size, 0, mode))]
+            with self.lock:
+                self.cache[k] = vs
+                while len(self.cache) > 24:
+                    self.cache.pop(next(iter(self.cache)))
+        if len(vs) < self.VARIANTS:
+            def more(k=k, key=key, size=size, mode=mode):
+                maker = FX_BY_KEY[key][2]
+                for seed in range(1, self.VARIANTS):
+                    seq = self._enc(maker(size, seed, mode))
+                    with self.lock:
+                        lst = self.cache.get(k)
+                        if lst is not None and len(lst) < self.VARIANTS:
+                            lst.append(seq)
+            VFX_BAKER.ask(k, more)
+        return vs
 
-    def play(self, x, y, size, key=None):
-        key = key or self.default_key
-        key = fx_resolve(key)
+    def play(self, x, y, size, key=None, mode=None):
+        mode = mode or self.mode
+        key = fx_resolve(key or self.default_key)
         self.last_key = key
-        self.seq = random.choice(self.variants(key, size))
-        self.anchor = FX_BY_KEY[key][3]
-        self.i = 0
-        self.pos = (int(x), int(y))
+        vs = self.variants(key, size, mode)
+        seq = random.choice(list(vs))
+        if len(self.live) >= self.MAX_LIVE:                    # quá tải: cái cũ nhất nhảy sang pha tan biến
+            old = self.live[0]
+            old["i"] = max(old["i"], len(old["seq"]) - 3)
+            if len(self.live) >= self.MAX_LIVE + 1:
+                self._end(self.live.pop(0))
+        self.live.append(dict(seq=seq, i=0, pos=(int(x), int(y)), anchor=FX_BY_KEY[key][3], slot=self._slot()))
         self.played += 1
         if self.job is None:
             self._step()
 
-    def _step(self):
-        if self.i >= len(self.seq):
-            self.job = None
-            if self.lw:
-                self.lw.update(-50, -50, 1, 1, b"\0\0\0\0")
-            return
-        data, w, h = self.seq[self.i]
-        if self.lw:
+    def _end(self, e):
+        lw = self.slots[e["slot"]] if e["slot"] < len(self.slots) else None
+        if lw:
             try:
-                ax, ay = self.anchor
-                self.lw.update(self.pos[0] - int(w * ax), self.pos[1] - int(h * ay), w, h, data)
+                lw.update(-50, -50, 1, 1, b"\0\0\0\0")
             except Exception:
                 log_error()
-        self.i += 1
-        self.job = self.app.root.after(40, self._step)
+
+    def _step(self):
+        alive = []
+        for e in self.live:
+            if e["i"] >= len(e["seq"]):
+                self._end(e)                                     # hết hiệu ứng: ẩn cửa sổ, không để lại hình
+                continue
+            data, w, h = e["seq"][e["i"]]
+            lw = self.slots[e["slot"]] if e["slot"] < len(self.slots) else None
+            if lw:
+                try:
+                    ax, ay = e["anchor"]
+                    lw.update(e["pos"][0] - int(w * ax), e["pos"][1] - int(h * ay), w, h, data)
+                except Exception:
+                    log_error()
+            e["i"] += 1
+            alive.append(e)
+        self.live = alive
+        self.job = self.app.root.after(self.TICK, self._step) if self.live else None
 
 
 class KeyFx:
     def __init__(self, app):
         self.app = app
-        self.bolt = FxPlayer(app, "bolt")         # kênh hiệu ứng khi gõ
-        self.slash = FxPlayer(app, "slash")       # kênh hiệu ứng khi xoá
+        self.bolt = FxPlayer(app, "bolt", "T")    # kênh hiệu ứng khi gõ
+        self.slash = FxPlayer(app, "slash", "D")  # kênh hiệu ứng khi xoá (diễn biến ngược: hút vào, rút về, tan rã)
         self.t_last = {"T": 0.0, "D": 0.0}
+        self.prev_caret = None                    # (vị trí con trỏ nhập, lúc ghi) – để biết nội dung có đổi không
+        self.skipped = 0
         self.hist = {"T": [], "D": []}
         self.cool = {"T": 0.0, "D": 0.0}
         self.last_pos = None
@@ -4062,12 +5620,26 @@ class KeyFx:
         px, py = self.app.root.winfo_pointerxy()
         return (px + 14, py + 18)
 
-    def on_key(self, kind):
+    MIN_GAP = {"T": 0.045, "D": 0.06}           # giữ phím lặp quá dày thì gộp; gõ bình thường lần nào cũng có hiệu ứng
+
+    def _changed(self, pos):
+        """Con trỏ nhập có dịch chuyển so với lần trước không (= nội dung thật sự thay đổi)."""
+        prev = self.prev_caret
+        if prev is None or pos is None:
+            return True
+        (px, py), pt = prev
+        return abs(pos[0] - px) > 1 or abs(pos[1] - py) > 1
+
+    def _remember(self, pos):
+        if pos is not None:
+            self.prev_caret = (pos, time_now())
+
+    def on_key(self, kind, vk=None):
         s = self.app.store.s
         if not s.get("key_fx", True) or self.app.fs_hidden:
             return
         t = time_now()
-        if t - self.t_last[kind] >= (0.07 if kind == "T" else 0.09):     # gõ nhanh / giữ phím: gộp bớt
+        if t - self.t_last[kind] >= self.MIN_GAP[kind]:
             self.t_last[kind] = t
             r = caret_info()                                # 1) con trỏ hệ thống: nhanh, làm ngay
             pos, pw, th = r[0], r[1], (r[2] if len(r) > 2 else None)
@@ -4075,16 +5647,33 @@ class KeyFx:
                 return                                      # ô mật khẩu: không hiệu ứng
             if pos is not None:
                 self._note("con trỏ hệ thống")
-                self._play(kind, pos, th)
+                if vk == 0x2E or self._changed(pos):        # Delete xoá chữ bên phải: con trỏ đứng yên vẫn tính
+                    self._remember(pos)
+                    self._play(kind, pos, th)
+                else:                                       # chưa thấy dịch chuyển: phần mềm có thể chưa kịp xử lý -> xem lại
+                    self.app.root.after(70, lambda: self._recheck(kind, th))
             elif self.finder.available():
                 self.rid += 1                               # 2) hỏi UI Automation / MSAA ở tiến trình phụ
-                self.wait = (self.rid, kind, t, self._pointer())
+                self.wait = (self.rid, kind, t, self._pointer(), vk)
                 self.finder.request(self.rid)
             else:
                 self._note("cạnh chuột")
                 self._play(kind, self._pointer())
             self.t_last[kind] = time_now()                  # lần đầu dựng hình có thể lâu -> tính mốc sau khi phát
         self._react(kind, t)
+
+    def _recheck(self, kind, th):
+        try:
+            r = caret_info()
+            pos = r[0]
+            if pos is not None and self._changed(pos):
+                self._remember(pos)
+                self._play(kind, pos, (r[2] if len(r) > 2 else None) or th)
+            else:
+                self.skipped += 1
+                self._note("nội dung không đổi – bỏ qua")
+        except Exception:
+            log_error()
 
     def warm(self):
         """Nạp sẵn ảnh + dựng sẵn mẫu đang chọn khi máy rảnh, để phím đầu tiên không bị khựng."""
@@ -4099,8 +5688,18 @@ class KeyFx:
         except Exception:
             log_error()
 
-    def poll(self):
-        """Gọi mỗi nhịp từ luồng chính: nhận kết quả tìm con trỏ nhập, quá hạn thì hiện cạnh chuột."""
+    def poll(self, idle=False):
+        """Gọi mỗi nhịp từ luồng chính: nhận kết quả tìm con trỏ nhập, quá hạn thì hiện cạnh chuột.
+        idle (không có phím đang chờ): ghi lại vị trí con trỏ nhập lúc yên – hook luôn nhận phím TRƯỚC phần mềm đích,
+        nên đây chắc chắn là vị trí trước cú bấm tiếp theo (Home, bấm chuột chỗ khác... không bị tính nhầm là sửa chữ)."""
+        self._pn = getattr(self, "_pn", 0) + 1
+        if idle and self._pn % 2 == 0 and self.app.store.s.get("key_fx", True) and not self.wait:
+            try:
+                r = caret_info()
+                if r[0] is not None and not r[1]:
+                    self.prev_caret = (r[0], time_now())
+            except Exception:
+                pass
         while True:
             try:
                 res = self.finder.results.get_nowait()
@@ -4109,15 +5708,20 @@ class KeyFx:
             rid, pos, pw, how = res[:4]
             th = res[4] if len(res) > 4 else None
             if self.wait and rid == self.wait[0]:
-                _, kind, _t, ptr = self.wait
+                _, kind, _t, ptr, vk = self.wait
                 self.wait = None
                 if pw:
                     self._note("ô mật khẩu – bỏ qua")
                     continue
                 self._note(how or "cạnh chuột")
+                if pos is not None and vk != 0x2E and not self._changed(pos):
+                    self.skipped += 1
+                    self._note("nội dung không đổi – bỏ qua")
+                    continue
+                self._remember(pos)
                 self._play(kind, pos or ptr, th if pos else None)
         if self.wait and time_now() - self.wait[2] > 0.25:
-            _, kind, _t, ptr = self.wait
+            _, kind, _t, ptr, _vk = self.wait
             self.wait = None
             self._note("cạnh chuột (phần mềm chậm trả lời)")
             self._play(kind, ptr)
@@ -4640,8 +6244,6 @@ class App:
         self.gmouse.start()
         self.keyfx = KeyFx(self)
         self.updater = Updater(self)
-        if not fx_assets_ok():
-            self.root.after(4000, lambda: self.updater.check(manual=False, install=True))   # tự tải bổ sung ảnh hiệu ứng
         self.root.bind_all("<F5>", lambda e: self.updater.check(manual=True, install=True))
         self._last = now().timestamp()
         self.root.after(50, self.anim_loop)
@@ -6173,9 +7775,9 @@ class Manager:
         self.fxd.set(dict(FX_CHOICES).get(s.get("key_fx_del", "slash")))
         self.fxd.grid(row=5, column=1, sticky="w", padx=6)
         self.fxt.bind("<<ComboboxSelected>>", lambda e: (self.app.set_setting("key_fx_type", lab2k[self.fxt.get()]),
-                                                         self.fx_preview_set(lab2k[self.fxt.get()])))
+                                                         self.fx_preview_set(lab2k[self.fxt.get()], "T")))
         self.fxd.bind("<<ComboboxSelected>>", lambda e: (self.app.set_setting("key_fx_del", lab2k[self.fxd.get()]),
-                                                         self.fx_preview_set(lab2k[self.fxd.get()])))
+                                                         self.fx_preview_set(lab2k[self.fxd.get()], "D")))
         tb = ttk.Frame(kf)
         tb.grid(row=6, column=0, columnspan=2, sticky="w", pady=4)
         ttk.Button(tb, text="⚡ Thử gõ trên màn hình", style="Small.TButton",
@@ -6224,14 +7826,11 @@ class Manager:
         txt = "Vị trí hiệu ứng lần gõ gần nhất: " + (kf.last_info or "chưa gõ")
         if kf.stats:
             txt += "\n" + " • ".join("%s: %s" % (app_name(e) if e != "?" else "?", h) for e, h in list(kf.stats.items())[-5:])
-        if not fx_assets_ok():
-            txt = ("⚠ THIẾU ẢNH HIỆU ỨNG (thư mục HieuUng) – đang tạm dùng sét vẽ sẵn. Bấm F5 để tải bổ sung, "
-                   "hoặc giải nén lại bản .zip đầy đủ.\n") + txt
         self.kdiag.config(text=txt)
         self.win.after(1000, self.kdiag_loop)
 
-    def fx_preview_set(self, key):
-        self._fxp.update(key=key, frames=[], i=0)
+    def fx_preview_set(self, key, mode="T"):
+        self._fxp.update(key=key, mode=mode, frames=[], i=0)
 
     def fx_preview_loop(self):
         """Ô xem trước: phát lặp mẫu đang chọn trên nền tối, có dòng chữ giả làm chỗ gõ."""
@@ -6243,8 +7842,9 @@ class Manager:
                 key = p["key"]
                 key = fx_resolve(key)
                 e = FX_BY_KEY[key]
-                frames = e[2](150, random.randint(0, 99))
-                p.update(frames=frames, i=0, anchor=e[3], name=e[1])
+                mode = p.get("mode", "T")
+                frames = e[2](150, random.randint(0, 99), mode)
+                p.update(frames=frames, i=0, anchor=e[3], name=e[1] + ("  (khi xoá)" if mode == "D" else "  (khi gõ)"))
             cv = self.fxprev
             cv.delete("all")
             cv.create_text(130, 150, text="Nhắc việc|", fill="#cfc6e6", font=(FONT, 13))
@@ -6499,10 +8099,6 @@ class Updater:
         self.busy = False
         self.app.store.s["last_update_check"] = iso(now())
         latest = str(info.get("version", "0"))
-        if ver_tuple(latest) <= ver_tuple(APP_VER) and not fx_assets_ok():
-            self.set_status("Thiếu ảnh hiệu ứng – đang tải bổ sung...")
-            self.download_install(info)                   # cài lại đủ bộ (bản cũ cập nhật thiếu thư mục HieuUng)
-            return
         if ver_tuple(latest) <= ver_tuple(APP_VER):
             self.set_status("Đang dùng bản mới nhất v%s ✓" % APP_VER)
             if manual:
