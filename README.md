@@ -220,3 +220,6 @@ Trên Linux chạy bằng `xvfb-run python3 tests/<tên file>`. Mỗi bộ test 
 - Bộ đệm: hiệu ứng gõ ≤ 100 MB/kênh, khung nhân vật ≤ 160 MB.
 - Đo lag: `python tests/do_lag.py NhanVatAoDen` (hoặc `CoLong`) – in thời gian từng phần, số lần khựng > 100 ms và RAM.
 
+## Bộ nhớ (v3.18)
+- Cài đặt → 🧠 Bộ nhớ: RAM đang dùng, chi tiết bộ đệm, nút 🧹 Xóa bộ nhớ đệm (cũng có trong menu chuột phải), tự dọn khi vượt ngưỡng.
+

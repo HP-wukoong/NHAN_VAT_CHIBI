@@ -1,7 +1,9 @@
 {
-  "version": "3.17",
+  "version": "3.18",
   "date": "2026-11-26",
   "notes": [
-    "Đầu lâu ma quỷ: khi XOÁ trước đây đầu lâu lao bổ xuống chữ – nay sửa lại BAY LÊN: chữ vỡ loé, đầu lâu phóng vọt lên khỏi chữ như hồn thoát xác, toả ra hai bên, nhỏ dần rồi tan trên cao; khi gõ vẫn hiện dần rồi bay lên lắc lư (cả bản dự phòng khi máy thiếu numpy)"
+    "Thêm mục 🧠 Bộ nhớ (tab Cài đặt): RAM thật app đang dùng (cả tiến trình dò con trỏ), thanh đo so với ngưỡng, chi tiết từng bộ đệm (khung nhân vật, ảnh gốc, hiệu ứng gõ, hiệu ứng icon, lớp ảnh hiệu ứng, ảnh nguồn); báo đỏ 'sắp đầy' khi vượt 85% ngưỡng",
+    "Nút 🧹 Xóa bộ nhớ đệm (cả trong menu chuột phải, kèm số MB đang dùng): xoá mọi hình đệm, thu gom rác, trả RAM cho Windows; hình tự vẽ lại dần, mẫu hiệu ứng đang dùng được dựng lại sẵn ở luồng phụ",
+    "Tự dọn khi RAM vượt ngưỡng (chọn 400–1500 MB, mặc định 800 MB; tắt được), có bong bóng báo số MB trước/sau; mỗi lần dọn ghi vào nhật ký"
   ]
 }

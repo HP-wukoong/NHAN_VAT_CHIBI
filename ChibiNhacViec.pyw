@@ -69,7 +69,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.17"
+APP_VER = "3.18"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -368,7 +368,7 @@ DEFAULT_SETTINGS = {
     "sound": True, "talk": True, "break_minutes": 60, "pre_notice": 5,
     "quiet_start": "22:00", "quiet_end": "06:00", "track_apps": True, "auto_adjust": False,
     "autostart": False, "pos": None, "last_greet_date": "", "hide_fullscreen": True,
-    "pack": "", "free_master": True, "free": {}, "assigned_no_free": True, "walk_windows": True, "jump_icons": True, "pha_icon": True,
+    "pack": "", "free_master": True, "free": {}, "assigned_no_free": True, "walk_windows": True, "jump_icons": True, "pha_icon": True, "mem_auto": True, "mem_limit": 800,
     "auto_jump": True, "climb": True, "smooth": True, "triggers": None, "screen_mode": "desktop",
     "update_mode": "notify", "last_update_check": "", "just_updated": "",
     "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0, "key_fx_alpha": 1.0, "key_fx_speed": 1.0, "key_fx_type": "bolt", "key_fx_del": "slash", "key_fx_autosize": True,
@@ -8158,6 +8158,192 @@ class IconFx:
     def hit(self, rect, dirx=1, strong=False):
         self.play("hit", rect, dirx, strong)
 
+def proc_mem(pid=None):
+    """(RAM thực đang dùng, RAM đỉnh, RAM riêng) của tiến trình – MB. pid=None: chính app."""
+    try:
+        if IS_WIN:
+            class PMC(ctypes.Structure):
+                _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
+                            ("PeakWorkingSetSize", ctypes.c_size_t), ("WorkingSetSize", ctypes.c_size_t),
+                            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t), ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t), ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                            ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t),
+                            ("PrivateUsage", ctypes.c_size_t)]
+            k32 = ctypes.windll.kernel32
+            k32.GetCurrentProcess.restype = wintypes.HANDLE
+            k32.OpenProcess.restype = wintypes.HANDLE
+            h = k32.GetCurrentProcess() if pid is None else k32.OpenProcess(0x1000 | 0x0010, False, int(pid))
+            if not h:
+                return 0.0, 0.0, 0.0
+            pmc = PMC()
+            pmc.cb = ctypes.sizeof(PMC)
+            fn = getattr(k32, "K32GetProcessMemoryInfo", None) or ctypes.windll.psapi.GetProcessMemoryInfo
+            fn.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD]
+            ok = fn(h, ctypes.byref(pmc), pmc.cb)
+            if pid is not None:
+                k32.CloseHandle(h)
+            if ok:
+                return pmc.WorkingSetSize / 1e6, pmc.PeakWorkingSetSize / 1e6, pmc.PrivateUsage / 1e6
+            return 0.0, 0.0, 0.0
+        vals = {}
+        with open("/proc/%s/status" % ("self" if pid is None else int(pid))) as fh:
+            for ln in fh:
+                k, _, v = ln.partition(":")
+                if k in ("VmRSS", "VmHWM", "RssAnon"):
+                    vals[k] = float(v.split()[0]) / 1000.0
+        return vals.get("VmRSS", 0.0), vals.get("VmHWM", 0.0), vals.get("RssAnon", vals.get("VmRSS", 0.0))
+    except Exception:
+        return 0.0, 0.0, 0.0
+
+
+def _img_mb(ims):
+    tot = 0
+    for im in ims:
+        try:
+            tot += im.width * im.height * len(im.getbands())
+        except Exception:
+            pass
+    return tot / 1e6
+
+
+def _lay_mb(layers):
+    tot = 0
+    for L in list(layers):
+        for v in vars(L).values():
+            tot += getattr(v, "nbytes", 0) or 0
+        for r in getattr(L, "rocks", []) or []:
+            tot += r[0].width * r[0].height * 4
+    return tot / 1e6
+
+
+class MemManager:
+    """Quản lý bộ nhớ: đo RAM thật của app (+ tiến trình phụ dò con trỏ), chi tiết từng bộ đệm, nút xoá bộ nhớ đệm,
+    tự dọn khi vượt ngưỡng."""
+
+    def __init__(self, app):
+        self.app = app
+        self.last_auto = 0.0
+        self.last_clean = None              # (lúc dọn, MB trước, MB sau, tự động?)
+        self.peak_seen = 0.0
+        try:
+            app.root.after(15000, self.watch)
+        except Exception:
+            pass
+
+    def limit(self):
+        try:
+            return max(200, int(self.app.store.s.get("mem_limit", 800)))
+        except Exception:
+            return 800
+
+    def report(self):
+        """dict: rss, peak, private, helper, limit, items [(nhãn, MB, giới hạn MB hoặc None)], cache_mb, full"""
+        app = self.app
+        rss, peak, priv = proc_mem()
+        self.peak_seen = max(self.peak_seen, rss)
+        helper = 0.0
+        try:
+            p = app.keyfx.finder.proc
+            if p is not None and p.poll() is None:
+                helper = proc_mem(p.pid)[0]
+        except Exception:
+            pass
+        items = []
+        pet = getattr(app, "pet", None)
+        if pet is not None:
+            items.append(("Khung nhân vật đã vẽ", getattr(pet, "cache_bytes", 0) / 1e6, PET_CACHE_MB))
+            if pet.pack is not None:
+                items.append(("Ảnh gốc nhân vật", _img_mb(list(pet.pack.images.values())), None))
+        kf = getattr(app, "keyfx", None)
+        if kf is not None:
+            items.append(("Hình hiệu ứng gõ phím", kf.bolt.cache_mb() + kf.slash.cache_mb(), 2 * FX_CACHE_MB))
+        ic = getattr(app, "icon_fx", None)
+        if ic is not None:
+            mb = _img_mb([f for fr, _a in list(ic.ready.values()) for f in fr]) + _img_mb(list(ic.shots.values()))
+            items.append(("Hình icon trúng chiêu", mb, None))
+        items.append(("Lớp ảnh hiệu ứng (đã bóc tách)", _lay_mb(_FX_LAY.values()), None))
+        items.append(("Ảnh nguồn hiệu ứng", _img_mb(list(_FX_SRC.values()) + list(_SKULL_CACHE.values())), None))
+        cache = sum(i[1] for i in items)
+        lim = self.limit()
+        full = rss >= lim * 0.85 or any(l and mb >= l * 0.9 for _, mb, l in items)
+        return dict(rss=rss, peak=max(peak, self.peak_seen), private=priv, helper=helper, limit=lim, items=items,
+                    cache_mb=cache, full=full)
+
+    def clear(self, auto=False):
+        """Xoá mọi bộ đệm hình (vẽ lại / dựng lại dần khi cần), thu gom rác, trả RAM cho Windows. -> (MB trước, MB sau)"""
+        import gc
+        app = self.app
+        before = proc_mem()[0]
+        try:
+            self.freed = self.report()["cache_mb"]
+        except Exception:
+            self.freed = 0.0
+        pet = getattr(app, "pet", None)
+        if pet is not None:
+            pet.cache.clear()
+            pet.cache_bytes, pet.cache_sizes = 0, {}
+            if pet.pack is not None:
+                pet.pack.images.clear()
+        kf = getattr(app, "keyfx", None)
+        players = [kf.bolt, kf.slash] if kf is not None else []
+        ic = getattr(app, "icon_fx", None)
+        if ic is not None:
+            players.append(ic.player)
+            ic.ready.clear()
+            with ic.lock:
+                ic.shots.clear()
+        for pl in players:
+            with pl.lock:
+                pl.cache.clear()
+            pl.pending.clear()
+        _FX_LAY.clear()
+        _FX_SRC.clear()
+        _SKULL_CACHE.clear()
+        try:
+            m = getattr(app, "manager", None)
+            if m is not None and m.alive() and getattr(m, "_fxp", None):
+                m._fxp["frames"] = []
+        except Exception:
+            pass
+        gc.collect()
+        if IS_WIN:                                             # trả phần RAM vừa rảnh cho Windows
+            try:
+                k32 = ctypes.windll.kernel32
+                k32.GetCurrentProcess.restype = wintypes.HANDLE
+                k32.SetProcessWorkingSetSize(k32.GetCurrentProcess(), ctypes.c_size_t(-1), ctypes.c_size_t(-1))
+            except Exception:
+                pass
+        else:
+            try:
+                ctypes.CDLL("libc.so.6").malloc_trim(0)
+            except Exception:
+                pass
+        after = proc_mem()[0]
+        self.last_clean = (time_now(), before, after, auto)
+        fx_log("%s bộ nhớ đệm: xoá %.0f MB hình đệm, RAM %.0f MB -> %.0f MB" % ("Tự dọn" if auto else "Xoá", self.freed,
+                                                                             before, after))
+        if kf is not None:
+            kf.warm()                                          # dựng lại sẵn mẫu đang dùng ở luồng phụ
+        return before, after
+
+    def watch(self):
+        try:
+            s = self.app.store.s
+            if s.get("mem_auto", True) and time_now() - self.last_auto > 120:
+                r = self.report()
+                if r["rss"] > r["limit"]:
+                    self.last_auto = time_now()
+                    b, a = self.clear(auto=True)
+                    self.app.say("Đã tự dọn bộ nhớ đệm 🧹", "RAM %.0f MB → %.0f MB (ngưỡng %d MB)" % (b, a, r["limit"]),
+                                 timeout=5)
+        except Exception:
+            log_error()
+        try:
+            self.app.root.after(10000, self.watch)
+        except Exception:
+            pass
+
+
 class KeyFx:
     def __init__(self, app):
         self.app = app
@@ -8531,6 +8717,7 @@ class KeyFx:
                                                          sys.version.split()[0], "có" if numpy_ok() else "THIẾU"),
                "Mẫu gõ: %s • mẫu xoá: %s • cỡ %d px" % (self.app.store.s.get("key_fx_type"), self.app.store.s.get("key_fx_del"),
                                                         self.size()),
+               "RAM app: %.0f MB" % proc_mem()[0],
                title] + ["- " + x for x in probs + lines]
         if self.stats:
             out.append("Cách tìm con trỏ theo phần mềm: " + " • ".join("%s: %s" % (app_name(e) if e != "?" else "?", h)
@@ -9112,6 +9299,7 @@ class App:
         self.gmouse.start()
         self.keyfx = KeyFx(self)
         self.icon_fx = IconFx(self)
+        self.mem = MemManager(self)
         self.root.after(1500, lambda: ensure_numpy(self))
         self.updater = Updater(self)
         self.root.bind_all("<F5>", lambda e: self.updater.check(manual=True, install=True))
@@ -9636,6 +9824,11 @@ class App:
         m.add_cascade(label="Im lặng (dời nhắc)", menu=qm)
         m.add_command(label="Ẩn 15 phút", command=lambda: self.hide(15))
         m.add_command(label="⟳  Kiểm tra cập nhật (F5)", command=lambda: self.updater.check(manual=True))
+        try:
+            rss = proc_mem()[0]
+        except Exception:
+            rss = 0
+        m.add_command(label="🧹  Dọn bộ nhớ đệm (đang dùng %.0f MB)" % rss, command=self.mem_clear_ui)
         m.add_separator()
         m.add_command(label="Thoát", command=self.quit)
         x, y = (e.x_root, e.y_root) if e is not None else self.root.winfo_pointerxy()
@@ -9643,6 +9836,11 @@ class App:
             m.tk_popup(x, y)
         finally:
             m.grab_release()
+
+    def mem_clear_ui(self):
+        b, a = self.mem.clear()
+        self.say("Đã xoá bộ nhớ đệm 🧹", "Xoá %.0f MB hình đệm – RAM %.0f MB → %.0f MB. Hình sẽ được vẽ lại dần khi cần." % (
+            self.mem.freed, b, a), timeout=5)
 
     def run_cmd(self, cmd, e=None):
         try:
@@ -10611,7 +10809,31 @@ class Manager:
                  "(đổi tất cả ở tab Điều khiển) • Kéo thả để túm/ném • Ctrl + lăn chuột trên nhân vật = phóng to/thu nhỏ\n"
                  "Bấm 'Xong' / 'Bỏ qua' khi được nhắc và dùng 'Ghi nhận việc vừa làm' để chibi học thói quen của bạn.\n"
                  "Dữ liệu: " + DATA_FILE)
-        ttk.Label(f, text=help_, foreground=C_MUTED, justify="left").grid(row=12, column=0, columnspan=3, sticky="w", pady=(16, 0))
+        ttk.Label(f, text=help_, foreground=C_MUTED, justify="left").grid(row=13, column=0, columnspan=3, sticky="w", pady=(16, 0))
+        # ── bộ nhớ ──
+        mf = ttk.Frame(f)
+        mf.grid(row=12, column=0, columnspan=3, sticky="we", pady=(16, 0))
+        ttk.Label(mf, text="🧠  Bộ nhớ", style="H.TLabel").grid(row=0, column=0, columnspan=4, sticky="w")
+        self.mem_lbl = tk.Label(mf, text="", font=(FONT, 10, "bold"), bg=C_BG, fg="#5ee07a", anchor="w", justify="left")
+        self.mem_lbl.grid(row=1, column=0, columnspan=4, sticky="w")
+        self.mem_bar = ttk.Progressbar(mf, length=460, maximum=100)
+        self.mem_bar.grid(row=2, column=0, columnspan=4, sticky="w", pady=(2, 2))
+        self.mem_detail = ttk.Label(mf, text="", style="Muted.TLabel", justify="left")
+        self.mem_detail.grid(row=3, column=0, columnspan=4, sticky="w")
+        mb = ttk.Frame(mf)
+        mb.grid(row=4, column=0, columnspan=4, sticky="w", pady=(4, 0))
+        ttk.Button(mb, text="🧹 Xóa bộ nhớ đệm", style="Accent.TButton", command=self._mem_clear).pack(side="left")
+        self.mem_auto_v = tk.BooleanVar(value=s.get("mem_auto", True))
+        ttk.Checkbutton(mb, text="Tự dọn khi vượt ngưỡng", variable=self.mem_auto_v,
+                        command=lambda: self.app.set_setting("mem_auto", self.mem_auto_v.get())).pack(side="left", padx=10)
+        ttk.Label(mb, text="Ngưỡng:").pack(side="left")
+        self.mem_lim = ttk.Combobox(mb, state="readonly", width=9, values=["400 MB", "600 MB", "800 MB", "1000 MB", "1500 MB"])
+        self.mem_lim.set("%d MB" % int(s.get("mem_limit", 800)))
+        self.mem_lim.pack(side="left", padx=4)
+        self.mem_lim.bind("<<ComboboxSelected>>", lambda e: self.app.set_setting("mem_limit", int(self.mem_lim.get().split()[0])))
+        self.mem_msg = ttk.Label(mf, text="", style="Muted.TLabel")
+        self.mem_msg.grid(row=5, column=0, columnspan=4, sticky="w")
+        self.mem_loop()
         # ── hiệu ứng gõ phím ──
         kf = ttk.Frame(f)
         kf.grid(row=11, column=0, columnspan=3, sticky="we", pady=(14, 0))
@@ -10766,6 +10988,42 @@ class Manager:
                 self.kfix_msg.config(text=FX_LOG)
         except Exception:
             log_error()
+
+    def _mem_clear(self):
+        b, a = self.app.mem.clear()
+        self.mem_msg.config(text="✅ Đã xoá %.0f MB bộ nhớ đệm hình – RAM %.0f MB → %.0f MB (%s). Hình sẽ được vẽ lại dần "
+                                 "khi cần." % (self.app.mem.freed, b, a, dt.datetime.now().strftime("%H:%M:%S")))
+        self.mem_loop(once=True)
+
+    def mem_loop(self, once=False):
+        """Bảng bộ nhớ: RAM thật + từng bộ đệm, đổi màu đỏ khi sắp đầy."""
+        if not self.alive():
+            return
+        try:
+            r = self.app.mem.report()
+            lim = r["limit"]
+            pct = min(100.0, 100.0 * r["rss"] / lim) if lim else 0
+            if r["full"]:
+                head, col = "⚠ Bộ nhớ sắp đầy – nên bấm 'Xóa bộ nhớ đệm'", "#ff6b6b"
+            else:
+                head, col = "✅ Bộ nhớ ổn định", "#5ee07a"
+            self.mem_lbl.config(text="%s  •  RAM đang dùng %.0f MB / ngưỡng %d MB  (đỉnh %.0f MB%s)" % (
+                head, r["rss"], lim, r["peak"], (", tiến trình dò con trỏ %.0f MB" % r["helper"]) if r["helper"] else ""),
+                fg=col)
+            self.mem_bar["value"] = pct
+            lines = []
+            for lab, mb, l in r["items"]:
+                lines.append("• %s: %.0f MB%s" % (lab, mb, (" / %d MB" % l) if l else ""))
+            lines.append("• Tổng bộ đệm hình: %.0f MB (phần còn lại là Python, giao diện, thư viện)" % r["cache_mb"])
+            lc = self.app.mem.last_clean
+            if lc:
+                lines.append("• Lần dọn gần nhất: %s – %.0f MB → %.0f MB%s" % (
+                    dt.datetime.fromtimestamp(lc[0]).strftime("%H:%M:%S"), lc[1], lc[2], " (tự động)" if lc[3] else ""))
+            self.mem_detail.config(text="\n".join(lines))
+        except Exception:
+            log_error()
+        if not once:
+            self.win.after(2000, self.mem_loop)
 
     def kdiag_loop(self):
         """Cho biết phần mềm vừa gõ tìm được con trỏ nhập bằng cách nào (để kiểm tra Chrome, Zalo...)."""
