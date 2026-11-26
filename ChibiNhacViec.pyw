@@ -69,7 +69,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.16"
+APP_VER = "3.17"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -6038,7 +6038,8 @@ class BiNganHoa(Vfx):
 
 class DauLauQuy(Vfx):
     """Đầu lâu quỷ – gõ: khói tụ lại, đầu lâu hiện ra từ khói (tan-hiện theo nhiễu), bay lên lắc lư, mắt rực tím,
-    kéo đuôi linh hồn, cuối cùng rã thành bụi hồn; xoá: đầu lâu hiện trên cao, há miệng lao bổ xuống chữ rồi vỡ vụn."""
+    kéo đuôi linh hồn, cuối cùng rã thành bụi hồn; xoá: chữ vỡ vụn loé sáng, đầu lâu há miệng phóng vọt lên khỏi chữ
+    rồi tan trên cao (cả hai kiểu đều BAY LÊN)."""
     name, frames, anchor, box = "skull", 22, (0.5, 0.92), (1.0, 1.75)
 
     def init(self):
@@ -6064,9 +6065,10 @@ class DauLauQuy(Vfx):
             y = self.y0 + (self.y1 - self.y0) * _eo(k)
             x = self.c[0] + math.sin(k * 5.0) * self.S * 0.12 * self.sway
             return (x, y), math.sin(k * 6.0) * 12 * self.sway, 0.75 + 0.35 * k
-        k = _ei(_ph(t, 0.28, 0.68))
-        y = self.y1 + (self.y0 - self.y1) * k
-        return (self.c[0] + math.sin(t * 9) * self.S * 0.03, y), math.sin(t * 20) * 6, 1.0 - 0.2 * k
+        k = _ph(t, 0.04, 0.78)                                   # xoá: phóng vọt lên nhanh hơn, lắc mạnh hơn
+        y = self.y0 + (self.y1 - self.y0) * _eo(k) ** 0.8
+        x = self.c[0] + math.sin(k * 7.0) * self.S * 0.16 * self.sway
+        return (x, y), math.sin(k * 9.0) * 16 * self.sway, 1.0 - 0.3 * k
 
     def update(self, f, t):
         p, rot, sc = self.pos(t)
@@ -6080,12 +6082,12 @@ class DauLauQuy(Vfx):
             if f == self.n - 6:
                 self.emit(14, p, self.S * 0.025, 12, self.S * 0.01, "soul", spread=(200, 340), grav=-0.2, radius=self.S * 0.1)
         else:
-            if 6 < f < 14:
-                self.parts.append(Part(p[0], p[1] - self.S * 0.1, 0, -self.S * 0.01, 8, self.S * 0.012, "soul", 0.9))
-            if f == int(0.68 * (self.n - 1)) + 1:
+            if f == 1:                                           # chữ bị xoá vỡ vụn
                 self.emit(14, self.c, self.S * 0.05, 12, self.S * 0.02, "shard", spread=(180, 360), grav=self.S * 0.004,
                           col=(205, 195, 230))
                 self.emit(5, self.c, self.S * 0.02, 12, self.S * 0.06, "smoke", spread=(180, 360))
+            if 2 < f < self.n - 6 and f % 2 == 0:                 # đuôi linh hồn kéo theo khi bay lên
+                self.parts.append(Part(p[0], p[1] + self.S * 0.12, 0, self.S * 0.012, 10, self.S * 0.012, "soul", 0.92))
 
     def draw(self, cv, f, t):
         S = self.S
@@ -6095,9 +6097,9 @@ class DauLauQuy(Vfx):
             gone = _ph(t, 0.74, 0.97)
             jaw = 1 if (f // 2) % 2 and 0.3 < t < 0.75 else 0
         else:
-            appear = _ph(t, 0.0, 0.2)
-            gone = 1.0 if t > 0.7 else 0.0
-            jaw = 1 if t > 0.25 else 0
+            appear = _ph(t, 0.0, 0.14)
+            gone = _ph(t, 0.62, 0.9)
+            jaw = 1 if (f // 2) % 2 else 0
         if gone >= 1 or appear <= 0:
             return
         thr = (1 - appear) * 0.9 + gone * 0.95                  # hiện ra / tan rã theo nhiễu, mép cháy tím
@@ -6110,8 +6112,8 @@ class DauLauQuy(Vfx):
             e = (p[0] + sx * sw * 0.2 * sc, p[1] - sh * 0.1 * sc)
             cv.ell("glow", e, S * 0.05 * sc, S * 0.04 * sc, LOI_MID + (int(240 * eg),))
             cv.ell("base", e, S * 0.013 * sc, S * 0.011 * sc, LOI_CORE + (int(255 * eg),))
-        if self.D and 0.6 < t < 0.75:
-            loi_flash(cv, self.c, S * 0.08, 1.0)
+        if self.D and f < 3:
+            loi_flash(cv, self.c, S * 0.08, 1.0 - f / 3.0)
 
 
 class SongPhiKiem(Vfx):
@@ -7004,8 +7006,9 @@ def skull_sprite(k):
 
 class DauLauBay(Vfx):
     """Đầu lâu ma quỷ (chỉ đầu lâu, bóc từ ảnh): gõ – từng cái hiện ra theo nhiễu, nhỏ trước to sau, bay lên lắc lư,
-    mắt loé theo nhịp, tan dần ở trên cao; xoá – các đầu lâu lao bổ xuống chữ, thu nhỏ rồi biến mất."""
-    name, frames, anchor, box = "skull", 22, (0.5, 0.95), (1.2, 2.0)
+    mắt loé theo nhịp, tan dần ở trên cao; xoá – chữ vỡ loé, các đầu lâu PHÓNG VỌT LÊN khỏi chữ như hồn thoát xác,
+    toả ra hai bên, nghiêng theo đà bay, nhỏ dần rồi tan trên cao (cả hai kiểu đều BAY LÊN)."""
+    name, frames, anchor, box = "skull", 22, (0.5, 0.95), (1.6, 2.0)
 
     def init(self):
         r = self.rnd
@@ -7022,8 +7025,10 @@ class DauLauBay(Vfx):
         self.ok = bool(self.items)
 
     def draw(self, cv, f, t):
+        if self.D and f < 3:                                       # chữ bị xoá vỡ loé, hồn đầu lâu bật ra
+            loi_flash(cv, self.c, self.S * 0.08, 1.0 - f / 3.0)
         for j, it in enumerate(self.items):
-            u = (t - it["t0"]) / 0.62
+            u = (t - it["t0"] * (0.6 if self.D else 1.0)) / (0.55 if self.D else 0.62)
             if u < 0 or u > 1:
                 continue
             if not self.D:
@@ -7032,12 +7037,13 @@ class DauLauBay(Vfx):
                 rot = math.sin(u * 8) * 10 * it["sway"]
                 sc = it["sc"] * (0.6 + 0.4 * _eo(_ph(u, 0, 0.3)))
                 thr = (1 - _ph(u, 0, 0.25)) * 0.9 + _ph(u, 0.72, 1.0) * 0.95
-            else:
-                y = self.c[1] - self.S * (1.4 - 1.3 * _ei(u))
-                x = self.c[0] + it["x"] * (1 - _ei(u))
-                rot = math.sin(u * 14) * 6
-                sc = it["sc"] * (1.0 - 0.7 * _ph(u, 0.7, 1.0))
-                thr = (1 - _ph(u, 0, 0.2)) * 0.9 + _ph(u, 0.85, 1.0) * 0.95
+            else:                                                      # xoá: phóng vọt lên, toả ra hai bên
+                e = _eo(u) ** 0.8
+                y = self.c[1] - self.S * (0.1 + 1.45 * e)
+                x = self.c[0] + it["x"] * 0.3 + it["sway"] * self.S * 0.32 * e
+                rot = -it["sway"] * 22 * e + math.sin(u * 12) * 5
+                sc = it["sc"] * (1.0 - 0.45 * u)
+                thr = (1 - _ph(u, 0, 0.12)) * 0.9 + _ph(u, 0.6, 1.0) * 0.95
             im = dissolve(it["im"], thr, it["noise"])                           # hiện ra / tan theo nhiễu, mép cháy tím
             cv.stamp(im, (x, y), sc, rot)
             eye = 0.5 + 0.5 * abs(math.sin(f * 0.9 + j))                        # mắt loé theo nhịp

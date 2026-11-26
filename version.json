@@ -1,10 +1,7 @@
 {
-  "version": "3.16",
+  "version": "3.17",
   "date": "2026-11-26",
   "notes": [
-    "CHỐNG ĐƠ: dò cửa sổ và icon desktop chuyển sang luồng phụ, gửi tin cho Explorer có giới hạn chờ – Explorer / cửa sổ khác bị treo cũng không làm app đơ nữa (trước đây có thể đơ hẳn)",
-    "CHỐNG LAG: dựng hình hiệu ứng icon, hình hiệu ứng gõ phím, chụp màn hình đều làm ở luồng phụ (hàng ưu tiên: hình cần phát ngay làm trước); chụp màn hình 1 lần cho mọi icon; xoay nghiêng khi bay nhanh gấp ~8 lần. Đo trên máy thử: nhịp chậm nhất từ 160 ms còn ~20 ms, không còn lần khựng nào trên 100 ms",
-    "CHỐNG NGỐN RAM: bộ đệm hiệu ứng gõ giới hạn 100 MB/kênh (trước có thể vượt 1 GB khi dùng nhiều cỡ chữ / cỡ hiệu ứng to), bộ đệm khung nhân vật giới hạn 160 MB; cỡ hiệu ứng gom theo bậc",
-    "Phím gõ lúc hình chưa dựng xong không bị mất hiệu ứng: giữ lại và phát ngay khi xong; đổi mẫu hiệu ứng là dựng sẵn ngay"
+    "Đầu lâu ma quỷ: khi XOÁ trước đây đầu lâu lao bổ xuống chữ – nay sửa lại BAY LÊN: chữ vỡ loé, đầu lâu phóng vọt lên khỏi chữ như hồn thoát xác, toả ra hai bên, nhỏ dần rồi tan trên cao; khi gõ vẫn hiện dần rồi bay lên lắc lư (cả bản dự phòng khi máy thiếu numpy)"
   ]
 }
