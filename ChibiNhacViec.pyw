@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.12"
+APP_VER = "3.13"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -367,7 +367,7 @@ DEFAULT_SETTINGS = {
     "sound": True, "talk": True, "break_minutes": 60, "pre_notice": 5,
     "quiet_start": "22:00", "quiet_end": "06:00", "track_apps": True, "auto_adjust": False,
     "autostart": False, "pos": None, "last_greet_date": "", "hide_fullscreen": True,
-    "pack": "", "free_master": True, "free": {}, "assigned_no_free": True, "walk_windows": True, "jump_icons": True,
+    "pack": "", "free_master": True, "free": {}, "assigned_no_free": True, "walk_windows": True, "jump_icons": True, "pha_icon": True,
     "auto_jump": True, "climb": True, "smooth": True, "triggers": None, "screen_mode": "desktop",
     "update_mode": "notify", "last_update_check": "", "just_updated": "",
     "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0, "key_fx_alpha": 1.0, "key_fx_speed": 1.0, "key_fx_type": "bolt", "key_fx_del": "slash", "key_fx_autosize": True,
@@ -623,10 +623,12 @@ BEHAVIOR_LABELS = {
     "BieuCam_HoaCuong": "Hóa cuồng", "BaKhi_NapNang": "Nạp năng lượng", "BaKhi_NoKhi": "Nổ khí",
     "BaKhi_FullCombo": "FULL COMBO", "TapLuyen_DanhBong": "Đánh bóng (tập)", "TapLuyen_ChayBo": "Chạy bộ (tập)",
     "TapLuyen_LaoTapLuyen": "Lao tập luyện", "ChuotThu_ChayTheoChuot": "Đuổi theo chuột",
+    "BayLuon_PhaIcon": "Bay phá icon (tinh nghịch)", "BayLuon_TuDo": "Bay lượn toàn màn hình",
+    "BayLuon_ChocChuot": "Bay chọc chuột",
 }
 GROUP_LABELS = {"ChienDau": "Chiến đấu", "HacLong": "Hắc Long", "DiChuyen": "Di chuyển", "VaCham": "Va chạm",
                 "TrangThai": "Trạng thái", "BieuCam": "Biểu cảm", "BaKhi": "Bá khí", "TapLuyen": "Tập luyện",
-                "NghiNgoi": "Nghỉ ngơi", "ChuotThu": "Theo chuột"}
+                "NghiNgoi": "Nghỉ ngơi", "ChuotThu": "Theo chuột", "BayLuon": "Bay lượn"}
 CORE_BEHAVIORS = ("Stand", "StandAlt", "Walk", "Run", "Dash")
 SYSTEM_BEHAVIORS = ("Fall", "Land", "Dragged", "Thrown", "GrabWall", "ClimbWall", "GrabCeiling", "ClimbCeiling")
 
@@ -761,7 +763,37 @@ class ShimejiPack:
         for bl in B:
             if _local(bl.tag) == "BehaviorList":
                 self._parse_behaviors(bl, None)
+        self.xk = {}                             # khung vẽ thêm (tools/dung_ao_den.py): tên -> neo
+        try:
+            xf = os.path.join(conf, "x_khung.json")
+            if os.path.isfile(xf):
+                with open(xf, encoding="utf-8") as fh:
+                    self.xk = json.load(fh) or {}
+        except Exception:
+            log_error()
+            self.xk = {}
+        if any(k.startswith("x_bay") for k in self.xk):
+            self._inject_fly()
         self.ok = bool(self.actions) and bool(self.behaviors)
+
+    FLY_BEHAVIORS = (("BayLuon_PhaIcon", "icons", 7), ("BayLuon_TuDo", "free", 6), ("BayLuon_ChocChuot", "tease", 4))
+
+    def _inject_fly(self):
+        """Bộ có khung bay ngang -> thêm hành vi bay tự do toàn màn hình (chạy bằng code, không sửa XML của bộ)."""
+        for name, mode, freq in self.FLY_BEHAVIORS:
+            if name in self.actions:
+                continue
+            a = ActionSpec()
+            a.name, a.type, a.cls = name, "Embedded", "FreeFly"
+            a.attrs = {"Mode": mode}
+            self.actions[name] = a
+            b = BehaviorSpec()
+            b.name, b.action, b.freq, b.cond, b.add = name, name, freq, "floor", True
+            self.behaviors[name] = b
+            self.order.append(name)
+            for ob in self.behaviors.values():               # cho vào danh sách "việc kế tiếp" của các hành vi đứng đất
+                if ob.name != name and any(n == "Walk" for n, _, _ in ob.nexts):
+                    ob.nexts.append((name, freq, None))
 
     def _parse_action(self, a):
         s = ActionSpec()
@@ -1169,6 +1201,235 @@ class Engine:
     def dir(self):
         return 1 if self.look_right else -1
 
+    # ── khung vẽ thêm (x_*.png): quay người, cất cánh, bay ngang ──
+    def xp(self, name, dur=1):
+        k = getattr(self.pack, "xk", {}).get(name)
+        if not k:
+            return None
+        q = Pose()
+        q.img, q.imgr, q.ax, q.ay, q.vx, q.vy, q.dur = name + ".png", "", float(k[0]), float(k[1]), 0.0, 0.0, dur
+        return q
+
+    def xps(self, prefix, n, dur=1):
+        return [q for q in (self.xp("%s%d" % (prefix, i), dur) for i in range(n)) if q]
+
+    def turn(self, new_right):
+        """Quay người khi đổi hướng (người thật xoay thân chứ không lật tức thì)."""
+        q = self.xps("x_quay", 2)
+        if len(q) < 2 or self.env.on_floor(self.ax, self.ay) is None:
+            self.look_right = new_right
+            return
+        self.look_right = not new_right
+        for p in (q[0], q[1]):
+            yield p
+            yield p
+        self.look_right = new_right
+        for p in (q[1], q[0]):
+            yield p
+            yield p
+
+    def _poses_of(self, *names):
+        for nm in names:
+            sp = self.pack.actions.get(nm)
+            if sp and sp.poses:
+                return sp.poses
+        return []
+
+    # ── BAY TỰ DO TOÀN MÀN HÌNH (tinh nghịch, phá icon) ──
+    TAUNTS = ("Bùm! 💥", "Hehe, trúng rồi!", "Icon này ngứa mắt ghê~", "Xí! Né đi chứ!", "Thêm phát nữa nhé?",
+              "Ai bảo đứng đó 😝", "Rắc!", "Haha, run rồi kìa!")
+
+    def _fly_bounds(self):
+        ar = self.env.areas or [self.env.area_at(self.ax, self.ay)]
+        return ar
+
+    def _fly_clamp(self):
+        """Giữ trong vùng màn hình – nhiều màn hình thì bay xuyên qua chỗ giáp ranh được."""
+        ar = self._fly_bounds()
+        for a in ar:
+            if a[0] <= self.ax <= a[2] and a[1] + 70 <= self.ay <= a[3]:
+                return
+        best = None
+        for a in ar:
+            x = max(a[0] + 20, min(a[2] - 20, self.ax))
+            y = max(a[1] + 70, min(a[3], self.ay))
+            d = abs(x - self.ax) + abs(y - self.ay)
+            if best is None or d < best[0]:
+                best = (d, x, y)
+        self.ax, self.ay = best[1], best[2]
+
+    def _rand_point(self):
+        a = random.choice(self._fly_bounds())
+        return (random.uniform(a[0] + 70, a[2] - 70), random.uniform(a[1] + 90, a[3] - 60))
+
+    def _icon_targets(self, n):
+        z = self.env.zoom
+        out = []
+        icons = list(self.env.icon_plats)
+        if not icons and IS_WIN:
+            try:
+                icons = desktop_icon_platforms()               # đang tắt "nhảy lên icon" vẫn lấy được icon để phá
+            except Exception:
+                icons = []
+        random.shuffle(icons)
+        for p in icons[:n]:
+            w = p.x2 - p.x1
+            out.append((p.x1, p.y, p.x2, p.y + w))              # toạ độ màn hình
+        return out
+
+    def _fly_to(self, tx, ty, st, max_t=220, near=16, hover_end=False):
+        """Bay lượn tới (tx, ty): lái mượt (tăng tốc, ôm cua), nghiêng thân theo hướng bay, lượn nhấp nhô.
+        st = trạng thái chung {vx, vy, t}."""
+        bay, up, dn = st["bay"], st["up"], st["dn"]
+        hov = st["hov"]
+        for _ in range(max_t):
+            st["t"] += 1
+            dx, dy = tx - self.ax, ty - self.ay
+            d = math.hypot(dx, dy)
+            if d < near:
+                break
+            top = min(20.0, 5.0 + d / 14.0)
+            if hover_end and d < 90:
+                top = max(2.5, d / 9.0)                         # tới gần thì phanh lại
+            dvx, dvy = dx / d * top, dy / d * top
+            st["vx"] += (dvx - st["vx"]) * 0.13
+            st["vy"] += (dvy - st["vy"]) * 0.13
+            wob = math.sin(st["t"] * 0.22) * 0.9
+            self.ax += st["vx"]
+            self.ay += st["vy"] + wob
+            self._fly_clamp()
+            vx, vy = st["vx"], st["vy"]
+            if abs(vx) > 1.2:
+                self.look_right = vx > 0
+            sp = math.hypot(vx, vy)
+            k = st["t"] // 2
+            if sp < 4.0 and hov:
+                yield hov[k % len(hov)]
+            elif vy < -abs(vx) * 0.7 and up:
+                yield up[k % len(up)]
+            elif vy > abs(vx) * 0.7 and dn:
+                yield dn[k % len(dn)]
+            else:
+                yield bay[k % len(bay)]
+
+    def _hover(self, n, st):
+        hov = st["hov"] or st["bay"]
+        for i in range(n):
+            st["t"] += 1
+            self.ay += math.sin(st["t"] * 0.3) * 0.8
+            yield hov[(st["t"] // 3) % len(hov)]
+
+    def _smash(self, rect, st):
+        """Bay tới cạnh icon, tung chiêu – đúng nhịp ra đòn thì icon trúng đòn (loá, nứt, rung, văng hồn, sao xoay)."""
+        z = self.env.zoom
+        x1, y1, x2, y2 = rect
+        cx, cy = (x1 + x2) / 2.0 / z, (y1 + y2) / 2.0 / z
+        side = -1 if self.ax < cx else 1
+        iw = (x2 - x1) / z
+        yield from self._fly_to(cx + side * (iw / 2 + 34), cy + 48, st, hover_end=True, near=8)
+        self.look_right = side < 0
+        names = [n for n in ("DamThep", "Punch", "KiemKhi", "DamSongAm", "DamLienHoan") if self._poses_of(n)]
+        if not names:
+            return
+        poses = self._poses_of(random.choice(names))
+        seq = []
+        for p in poses:
+            seq += [p] * p.dur
+        seq = seq[:46]
+        hit_at = max(1, int(len(seq) * 0.45))
+        hits = 2 if random.random() < 0.35 else 1
+        for i, p in enumerate(seq):
+            if i == hit_at or (hits == 2 and i == min(len(seq) - 2, hit_at + 9)):
+                try:
+                    self.app.icon_fx.hit(rect, -side, strong=(i != hit_at))
+                except Exception:
+                    log_error()
+                st["vx"], st["vy"] = side * 3.5, -1.5               # giật lùi sau cú đánh
+            if i > hit_at:
+                self.ax += st["vx"] * 0.3
+                st["vx"] *= 0.85
+            yield p
+        if random.random() < 0.4:
+            self._taunt()
+        if random.random() < 0.45:
+            lp = self._poses_of("CuoiMaQuai")
+            for p in lp[:6]:
+                for _ in range(min(3, p.dur)):
+                    yield p
+
+    def _taunt(self):
+        try:
+            b = self.app.bubble
+            if b.msg and b.msg.get("kind") in ("reminder", "break"):
+                return
+            self.app.say(random.choice(self.TAUNTS), timeout=2)
+        except Exception:
+            pass
+
+    def act_freefly(self, spec, a):
+        bay = self.xps("x_bay", 8)
+        if not bay:
+            return
+        st = dict(vx=0.0, vy=0.0, t=0, bay=bay, up=self.xps("x_baylen", 4), dn=self.xps("x_bayxuong", 4),
+                  hov=[p for p in self.fly_poses() if p.img.lower().startswith("hl_hover")])
+        mode = a.get("Mode", "free")
+        cc = self.xps("x_catcanh", 4)
+        if self.env.on_floor(self.ax, self.ay) is not None and cc:     # khuỵu gối lấy đà -> bật vút lên
+            for q in cc[:2]:
+                for _ in range(3):
+                    yield q
+            for i, q in enumerate(cc[2:]):
+                for _ in range(3):
+                    self.ay -= 9
+                    yield q
+            st["vy"] = -12.0
+            st["vx"] = self.dir() * 3.0
+        plan = []
+        if mode == "icons" and self.app.store.s.get("pha_icon", True):
+            icons = self._icon_targets(random.randint(2, 4))
+            try:
+                self.app.icon_fx.prepare(icons)                    # chụp hình icon trước khi nhân vật bay tới che
+            except Exception:
+                log_error()
+            for r in icons:
+                if random.random() < 0.6:
+                    plan.append(("pt", self._rand_point()))
+                plan.append(("icon", r))
+            if not icons:
+                mode = "free"
+        if mode == "tease":
+            plan += [("tease", None), ("pt", self._rand_point()), ("tease", None)]
+        if mode == "free" or not plan:
+            plan += [("pt", self._rand_point()) for _ in range(random.randint(3, 6))]
+            if random.random() < 0.5:
+                plan.insert(random.randint(0, len(plan)), ("tease", None))
+        for kind, arg in plan:
+            if kind == "pt":
+                yield from self._fly_to(arg[0], arg[1], st)
+                if random.random() < 0.25:
+                    yield from self._hover(random.randint(10, 22), st)
+            elif kind == "icon":
+                yield from self._smash(arg, st)
+            elif kind == "tease":                                   # lượn vòng quanh con chuột, rồi vụt đi
+                cx, cy = self.env.cursor
+                yield from self._fly_to(cx + 80, cy + 30, st, hover_end=True, near=20)
+                ph = random.uniform(0, 6.28)
+                for k in range(46):
+                    cx, cy = self.env.cursor
+                    ang = ph + k * 0.2
+                    tx, ty = cx + math.cos(ang) * 95, cy + 40 + math.sin(ang) * 55
+                    yield from self._fly_to(tx, ty, st, max_t=1, near=0)
+                if random.random() < 0.5:
+                    self._taunt()
+        # hạ cánh: thả rơi theo đà rồi tiếp đất
+        self.vx, self.vy = st["vx"] * 0.6, max(st["vy"], 0.0)
+        fall = self.pack.actions.get("Fall")
+        if fall:
+            yield from self.act_fall(fall, dict(fall.attrs))
+        if self.env.on_floor(self.ax, self.ay) is not None and "Land" in self.pack.actions:
+            yield from self.run_action("Land")
+
+
     # ── các kiểu hành động ──
     def run_action(self, name, attrs=None, depth=0):
         spec = self.pack.actions.get(name)
@@ -1196,6 +1457,8 @@ class Engine:
                 yield from self.act_jump(spec, a)
             elif spec.cls == "Dragged":
                 yield from self.act_dragged(spec, a)
+            elif spec.cls == "FreeFly":
+                yield from self.act_freefly(spec, a)
             else:
                 yield from self.act_animate(spec, a)
         elif t == "Move":
@@ -1243,6 +1506,7 @@ class Engine:
         tx = self.ev(a, "TargetX", None)
         ty = self.ev(a, "TargetY", None)
         area = self.env.area_at(self.ax, self.ay)
+        was_right = self.look_right
         if tx is not None:
             tx = max(area[0], min(area[2], tx))
             if abs(tx - self.ax) < 1 and (ty is None or spec.border == "Floor"):
@@ -1255,20 +1519,25 @@ class Engine:
                 self.look_right = True
             elif area[2] - self.ax < 60:
                 self.look_right = False
+        if spec.border == "Floor" and self.look_right != was_right:
+            yield from self.turn(self.look_right)                 # đổi hướng: xoay người rồi mới bước
         total = sum(p.dur for p in spec.poses)
         limit = total * random.randint(2, 5) if tx is None and spec.border != "Wall" else 2000
         it = self.cycle(spec.poses)
         jump_checked = 0
         for i in range(limit):
             p = next(it)
-            sp = abs(p.vx)
+            ramp = min(1.0, 0.35 + 0.16 * i) if spec.border == "Floor" else 1.0     # bước đầu chậm, nhanh dần
+            sp = abs(p.vx) * ramp
             if tx is not None:
                 d = tx - self.ax
+                if spec.border == "Floor" and abs(d) < abs(p.vx) * 5:
+                    sp = max(abs(p.vx) * 0.35, min(sp, abs(d) / 3.0))               # gần tới thì chậm lại
                 step = min(sp, abs(d))
                 self.ax += step * (1 if d > 0 else -1)
                 self.look_right = d > 0 if abs(d) > 0.5 else self.look_right
             else:
-                self.ax += p.vx * (-1 if self.look_right else 1)
+                self.ax += p.vx * ramp * (-1 if self.look_right else 1)
             if spec.border != "Floor":
                 if ty is not None and p.vy:
                     d = ty - self.ay
@@ -1355,32 +1624,34 @@ class Engine:
         self.ay = a2[3]
 
     def jump_to(self, tx, ty, speed=None, poses=None):
-        if poses is None:
-            for nm in ("NhayLen", "Jumping", "Jump", "JumpToLeftWall", "Fall"):
-                sp = self.pack.actions.get(nm)
-                if sp and sp.poses:
-                    poses = sp.poses
-                    if speed is None:
-                        speed = float(sp.attrs.get("VelocityParam", 18) or 18)
-                    break
-        if not poses:
+        """Nhảy như người thật: khuỵu gối lấy đà, bật theo đường parabol (lên – đỉnh – xuống), tiếp đất."""
+        up_p = poses or self._poses_of("NhayLen", "Jumping", "Jump", "JumpToLeftWall")
+        dn_p = poses or self._poses_of("Fall") or up_p
+        if not up_p:
             return
-        speed = speed or 18
-        it = self.cycle(poses)
-        for _ in range(400):
-            p = next(it)
-            dx = tx - self.ax
-            dy = ty - self.ay - abs(dx) / 2.0
-            d = math.hypot(dx, dy)
-            if abs(dx) > 0.5:
-                self.look_right = dx > 0
-            if d <= speed:
-                self.ax, self.ay = tx, ty
-                yield p
-                break
-            self.ax += speed * dx / d
-            self.ay += speed * dy / d
+        if speed is None:
+            sp_ = self.pack.actions.get("NhayLen")
+            speed = float(sp_.attrs.get("VelocityParam", 18) or 18) if sp_ else 18.0
+        if poses is None and self.env.on_floor(self.ax, self.ay) is not None:
+            for q in self.xps("x_catcanh", 2):
+                yield q
+                yield q
+        x0, y0 = self.ax, self.ay
+        dx, dy = tx - x0, ty - y0
+        if abs(dx) > 0.5:
+            self.look_right = dx > 0
+        n = max(8, min(60, int(math.hypot(dx, dy) / max(4.0, speed * 0.75))))
+        H = max(22.0, abs(dx) * 0.22) + max(0.0, -dy) * 0.35
+        iu, idn = self.cycle(up_p), self.cycle(dn_p)
+        prev = y0
+        for i in range(1, n + 1):
+            t = i / float(n)
+            self.ax = x0 + dx * t
+            self.ay = y0 + dy * t - 4 * H * t * (1 - t)
+            p = next(iu) if self.ay < prev else next(idn)
+            prev = self.ay
             yield p
+        self.ax, self.ay = tx, ty
         if self.env.on_floor(self.ax, self.ay) is not None and "Land" in self.pack.actions:
             yield from self.run_action("Land")
 
@@ -6713,6 +6984,19 @@ class FxPlayer:
         if self.job is None:
             self._step()
 
+    def play_frames(self, x, y, frames, anchor=(0.5, 0.5)):
+        """Phát một dãy khung có sẵn (vd icon trúng đòn) tại (x, y) màn hình."""
+        seq = self._enc(frames)
+        if len(self.live) >= self.MAX_LIVE:
+            self._end(self.live.pop(0))
+        e = dict(seq=seq, i=0, pos=(int(x), int(y)), anchor=anchor, slot=self._slot())
+        self.live.append(e)
+        lw = self.slots[e["slot"]] if e["slot"] < len(self.slots) else None
+        if lw:
+            self._top(lw)
+        if self.job is None:
+            self._step()
+
     def _end(self, e):
         lw = self.slots[e["slot"]] if e["slot"] < len(self.slots) else None
         if lw:
@@ -6758,6 +7042,148 @@ class FxPlayer:
         except Exception:
             sp = 1.0
         return max(20, int(round(self.TICK / sp)))
+
+
+def _icon_mask(icon):
+    """Tách icon khỏi nền desktop đã chụp: điểm khác màu nền viền (trung vị 4 cạnh) + bo góc mềm."""
+    import numpy as np
+    a = np.asarray(icon.convert("RGB")).astype(np.float32)
+    h, w = a.shape[:2]
+    edge = np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]])
+    bg = np.median(edge, 0)
+    diff = np.abs(a - bg).max(2)
+    al = np.clip((diff - 16) / 28.0, 0, 1)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    r = 0.2 * min(w, h)
+    dx = np.maximum(np.maximum(r - xx, xx - (w - 1 - r)), 0)
+    dy = np.maximum(np.maximum(r - yy, yy - (h - 1 - r)), 0)
+    al *= np.clip((r + 1 - np.hypot(dx, dy)) / 2.0, 0, 1)
+    out = icon.convert("RGBA")
+    out.putalpha(Image.fromarray((al * 255).astype(np.uint8)))
+    return out
+
+
+def icon_hit_frames(icon, dirx=1, strong=False, seed=0):
+    """Khung hình icon trúng đòn (vẽ đè đúng chỗ icon thật): loá – rung nứt – hồn icon văng xoay – bụi – sao xoay –
+    vết nứt lành lại. Trả về (frames, neo)."""
+    from PIL import ImageDraw
+    r = random.Random(seed)
+    iw, ih = icon.size
+    W, H = int(iw * 5.2), int(ih * 4.4)
+    cx, cy = W / 2.0, H * 0.56
+    ox, oy = int(cx - iw / 2.0), int(cy - ih / 2.0)
+    try:
+        ghost = _icon_mask(icon)
+    except Exception:
+        ghost = icon.convert("RGBA")
+    cracks = []
+    for _ in range(4 if strong else 3):                       # vết nứt toả từ điểm trúng đòn
+        a = r.uniform(0, 6.28)
+        pts = [(cx + dirx * iw * 0.12, cy)]
+        L = r.uniform(0.35, 0.55) * iw
+        for k in range(1, 5):
+            a += r.uniform(-0.6, 0.6)
+            pts.append((pts[0][0] + math.cos(a) * L * k / 4, pts[0][1] + math.sin(a) * L * k / 4))
+        cracks.append(pts)
+    puffs = [(r.uniform(-0.6, 0.6) * iw, r.uniform(0.2, 0.55) * ih, r.uniform(0.18, 0.3) * iw) for _ in range(5)]
+    n = 20 if strong else 18
+    frames = []
+    for f in range(n):
+        im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        # bụi tung (sau lưng icon)
+        if 1 <= f <= 10:
+            u = (f - 1) / 9.0
+            for px, py, pr in puffs:
+                rr = pr * (0.6 + 1.2 * u)
+                d.ellipse((cx + px * (1 + u) - rr, cy + py - rr * 0.7 - u * ih * 0.3, cx + px * (1 + u) + rr,
+                           cy + py + rr * 0.7 - u * ih * 0.3), fill=(200, 192, 182, int(150 * (1 - u))))
+        # bản sao icon đè đúng chỗ: rung, nứt, rồi lành
+        if f < n - 2:
+            sh = int(round(r.uniform(-3, 3) * max(0.0, 1 - f / 8.0))) if 1 <= f <= 8 else 0
+            im.alpha_composite(icon.convert("RGBA"), (ox + sh, oy + (1 if f in (1, 3) else 0)))
+            if f <= 2:
+                d.rectangle((ox + sh, oy, ox + sh + iw, oy + ih), fill=(255, 255, 255, (200, 120, 50)[f]))
+            ca = 255 if f < 11 else int(255 * max(0.0, 1 - (f - 11) / 6.0))
+            if f >= 1 and ca > 0:
+                for pts in cracks:
+                    q = [(x + sh, y) for x, y in pts]
+                    d.line(q, fill=(20, 16, 24, ca), width=max(1, iw // 24))
+                    d.line([(x + 1, y + 1) for x, y in q], fill=(255, 255, 255, ca // 2), width=1)
+        # loá + tia lửa tại điểm trúng
+        if f <= 3:
+            k = 1 - f / 4.0
+            rr = iw * (0.45 + 0.35 * f)
+            d.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), fill=(255, 250, 235, int(170 * k)))
+            for j in range(10 if strong else 7):
+                a = j * 6.28 / (10 if strong else 7) + r.uniform(-0.2, 0.2)
+                L1, L2 = iw * (0.3 + 0.2 * f), iw * (0.75 + 0.45 * f)
+                d.line((cx + math.cos(a) * L1, cy + math.sin(a) * L1, cx + math.cos(a) * L2, cy + math.sin(a) * L2),
+                       fill=(255, 230, 150, int(255 * k)), width=2)
+        # hồn icon văng ra, xoay tít, mờ dần
+        if 2 <= f <= 15:
+            u = (f - 2) / 13.0
+            sc = 1.0 - 0.45 * u
+            g = ghost.resize((max(2, int(iw * sc)), max(2, int(ih * sc))), Image.BICUBIC)
+            g = g.rotate(-dirx * (f - 2) * 30, Image.BICUBIC, expand=True)
+            gx = cx + dirx * u * W * 0.4 - g.width / 2.0
+            gy = cy - math.sin(u * math.pi) * H * 0.38 - g.height / 2.0 + u * ih * 0.3
+            g.putalpha(g.getchannel("A").point(lambda v, k=0.95 * (1 - u * u): int(v * k)))
+            im.alpha_composite(g, (int(gx), int(gy)))
+        # sao xoay chóng mặt trên đầu icon
+        if 5 <= f:
+            k = 1.0 if f < n - 5 else max(0.0, (n - f) / 5.0)
+            for j in range(3):
+                a = f * 0.55 + j * 2.09
+                sx_, sy_ = cx + math.cos(a) * iw * 0.45, oy - ih * 0.12 + math.sin(a) * ih * 0.12
+                rr = max(3.0, iw * 0.09)
+                star = [(sx_ + math.cos(t * 0.6283 - 1.5708) * (rr if t % 2 == 0 else rr * 0.45),
+                         sy_ + math.sin(t * 0.6283 - 1.5708) * (rr if t % 2 == 0 else rr * 0.45)) for t in range(10)]
+                d.polygon(star, fill=(255, 220, 60, int(255 * k)))
+        frames.append(im)
+    frames.append(Image.new("RGBA", (W, H), (0, 0, 0, 0)))
+    return frames, (cx / W, cy / H)
+
+
+class IconFx:
+    """Icon desktop trúng đòn khi nhân vật bay phá: CHỈ vẽ đè hình lên màn hình, không di chuyển / sửa icon thật."""
+
+    def __init__(self, app):
+        self.app = app
+        self.player = FxPlayer(app, "bolt", "T")
+        self.player.MAX_LIVE = 4
+        self.shots = {}
+        self.n = 0
+
+    def _grab(self, rect):
+        x1, y1, x2, y2 = (int(round(v)) for v in rect)
+        w, h = max(8, x2 - x1), max(8, y2 - y1)
+        if IS_WIN:
+            try:
+                from PIL import ImageGrab
+                return ImageGrab.grab(bbox=(x1, y1, x1 + w, y1 + h), all_screens=True).convert("RGBA")
+            except Exception:
+                log_error()
+        im = Image.new("RGBA", (w, h), (40, 46, 60, 255))            # (máy không chụp được màn hình) icon giả
+        from PIL import ImageDraw
+        d = ImageDraw.Draw(im)
+        d.rounded_rectangle((w * 0.12, h * 0.25, w * 0.88, h * 0.85), radius=max(2, w // 10), fill=(250, 200, 70, 255))
+        d.rectangle((w * 0.12, h * 0.18, w * 0.45, h * 0.3), fill=(240, 180, 50, 255))
+        return im
+
+    def prepare(self, rects):
+        self.shots = {}
+        for r in rects:
+            self.shots[tuple(r)] = self._grab(r)
+
+    def hit(self, rect, dirx=1, strong=False):
+        r = tuple(rect)
+        icon = self.shots.get(r)
+        if icon is None:
+            icon = self.shots[r] = self._grab(r)
+        self.n += 1
+        frames, anchor = icon_hit_frames(icon, dirx, strong, self.n)
+        self.player.play_frames((r[0] + r[2]) / 2.0, (r[1] + r[3]) / 2.0, frames, anchor)
 
 
 class KeyFx:
@@ -7655,6 +8081,7 @@ class App:
         self.gmouse = GlobalMouse(self)
         self.gmouse.start()
         self.keyfx = KeyFx(self)
+        self.icon_fx = IconFx(self)
         self.root.after(1500, lambda: ensure_numpy(self))
         self.updater = Updater(self)
         self.root.bind_all("<F5>", lambda e: self.updater.check(manual=True, install=True))
@@ -8790,6 +9217,7 @@ class Manager:
                                ("walk_windows", "Đi / đứng trên cửa sổ đang mở", True),
                                ("jump_icons", "Nhảy lên biểu tượng thư mục, file desktop", True),
                                ("auto_jump", "Thấy vật cản phía trước thì nhảy lên", True),
+                               ("pha_icon", "Bay toàn màn hình & phá icon desktop (chỉ là hiệu ứng, icon không bị đụng tới)", True),
                                ("climb", "Leo tường, leo trần", True),
                                ("smooth", "Hiển thị mịn (giữ hào quang) – mở lại app", True)):
             v = tk.BooleanVar(value=s.get(key, dflt))

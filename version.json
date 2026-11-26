@@ -1,10 +1,11 @@
 {
-  "version": "3.12",
+  "version": "3.13",
   "date": "2026-11-26",
   "notes": [
-    "VÁ DỨT ĐIỂM hiệu ứng gõ chập chờn / mất hẳn: (1) Windows âm thầm gỡ hook bàn phím khi máy bận, khoá máy, ngủ -> app tự phát hiện và cài lại; (2) ẩn nhân vật làm mất luôn hiệu ứng gõ -> nay vẫn chạy; (3) cửa sổ phóng to (thanh tác vụ tự ẩn, màn hình phụ) bị nhận nhầm là toàn màn hình -> đã sửa; (4) bộ dò con trỏ sập 3 lần là tắt vĩnh viễn -> nay nghỉ 1 phút rồi tự thử lại; (5) phần mềm không báo vị trí con trỏ làm hiệu ứng bị bỏ qua mãi -> tự chuyển sang hiện theo cú gõ; (6) cửa sổ hiệu ứng bị che / kẹt / vẽ lỗi -> luôn nổi trên cùng, tự tạo lại; (7) đổi cỡ chữ làm khựng -> dựng hình ở luồng phụ",
-    "Bảng tình trạng hiệu ứng gõ (ổn định / đang lỗi gì), nút 'Khắc phục & làm mới', 'Sao chép báo cáo lỗi', 'Mở nhật ký' (ChibiData/hieu_ung_go.log); bong bóng báo khi app tự khôi phục",
-    "Thanh trượt cỡ hiệu ứng mở rộng: giảm tới ×0.05 (hiệu ứng nhỏ nhất ~16 px)",
-    "Cổ Long – Tuyệt kỹ Long tộc (Long uy) làm lại bằng ảnh tia sét của bạn: mây sấm kéo tới, thiên lôi giáng thân, lôi trận 15 tia giáng dồn dập trước–sau–trái–phải, kết bằng Vạn lôi tề giáng 5 tia cùng lúc, chạm đất nổ + vòng chấn, dư chấn điện bò mặt đất (92 khung)"
+    "Áo Đen bay tự do TOÀN MÀN HÌNH (cả nhiều màn hình): khuỵu gối lấy đà rồi vút lên, bay lượn mượt (tăng tốc, ôm cua, nhấp nhô, nghiêng người lên/xuống theo hướng bay), khăn đỏ và vạt áo bay phần phật",
+    "Tinh nghịch: 'Bay phá icon' – lao tới icon desktop tung đấm thép / kiếm khí / sóng âm: icon loá, nứt, rung, hồn icon văng xoay, sao chóng mặt rồi lành lại; đánh xong cười ma quái, buông câu trêu. Chỉ là hiệu ứng vẽ đè – icon thật KHÔNG bị di chuyển hay sửa",
+    "Thêm 'Bay lượn toàn màn hình' và 'Bay chọc chuột' (lượn vòng quanh con trỏ); bật/tắt từng hành vi và gán cho thao tác chuột như các chiêu khác; tuỳ chọn tắt riêng phần phá icon",
+    "Vẽ thêm 22 khung từ nét vẽ gốc: bay ngang (8), bay chúi lên (4), bổ nhào (4), cất cánh (4), quay người (2)",
+    "Động tác như người thật: đổi hướng thì xoay người, bước đi nhanh dần / chậm lại khi tới nơi, nhảy có lấy đà và bay theo đường parabol"
   ]
 }

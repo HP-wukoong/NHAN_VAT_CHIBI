@@ -198,3 +198,10 @@ Trên Linux chạy bằng `xvfb-run python3 tests/<tên file>`. Mỗi bộ test 
 - Nhân vật không hiện, hoặc hào quang có viền hồng: vào **Nhân vật**, bỏ tick **Hiển thị mịn**, rồi mở lại app.
 - Lăn chuột không ăn: bật *Settings → Bluetooth & devices → Mouse → Scroll inactive windows when I hover over them*.
 - Phím Ctrl + Alt + X không chạy: có phần mềm khác đã chiếm tổ hợp phím này.
+
+## Áo Đen bay lượn & phá icon (v3.13)
+- Hành vi mới (nhóm **Bay lượn**): *Bay phá icon (tinh nghịch)*, *Bay lượn toàn màn hình*, *Bay chọc chuột* – tự xuất hiện khi rảnh, bật/tắt hoặc gán cho thao tác chuột ở tab Điều khiển.
+- Phá icon chỉ là hiệu ứng vẽ đè lên màn hình; icon thật không bị di chuyển. Tắt ở Nhân vật → "Bay toàn màn hình & phá icon desktop".
+- Khung vẽ thêm (bay, bổ nhào, cất cánh, quay người) dựng từ nét vẽ gốc bằng `python tools/dung_ao_den.py`; neo ghi ở `NhanVat/NhanVatAoDen/conf/x_khung.json`.
+- Xem thử chuyến bay: `python tests/xem_bay_ao_den.py BayLuon_PhaIcon 3 bay.gif`.
+
