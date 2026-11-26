@@ -109,5 +109,28 @@ def main():
     print(len(CUTS), "hiệu ứng ->", OUT)
 
 
+# ảnh riêng cho Lôi tinh liên hoàn / Lôi thương: xoay cho trục chính nằm ngang (đầu tia, mũi thương quay về bên phải)
+XOAY = {
+    "loi_lienhoan": ("8_loi_lienhoan.png", -70.0, 480, 0.62),  # tia sét dọc chéo -> nằm ngang (ép dẹt để chạy sát dòng chữ)
+    "loi_thuong": ("9_loi_thuong.png", -28.3, 480, 1.0),       # thương chéo -> nằm ngang, mũi bên phải
+}
+
+
+def xoay():
+    os.makedirs(OUT, exist_ok=True)
+    for name, (fn, ang, md, sy) in XOAY.items():
+        im = Image.open(os.path.join(SRC, fn)).convert("RGBA")
+        im = im.rotate(ang, Image.BICUBIC, expand=True)
+        a = im.getchannel("A").point(lambda v: 0 if v < 10 else v)
+        im.putalpha(a)
+        im = im.crop(a.getbbox())
+        z = min(1.0, md / float(max(im.size)))
+        im = im.resize((max(1, int(im.width * z)), max(1, int(im.height * z * sy))), Image.LANCZOS)
+        im.save(os.path.join(OUT, name + ".png"), optimize=True)
+        print(name, im.size)
+
+
 if __name__ == "__main__":
-    main()
+    if "--xoay" not in sys.argv:
+        main()
+    xoay()

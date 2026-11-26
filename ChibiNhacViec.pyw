@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.10"
+APP_VER = "3.11"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -5767,8 +5767,8 @@ def img_flash(cv, c, r, k, tint):
         cv.poly("base", [_ad(c, _dv(a - 6), r * 0.28), _ad(c, _dv(a), ln), _ad(c, _dv(a + 6), r * 0.28)], (255, 250, 230, int(220 * k)))
 
 
-class LoiTinhLienHoan(Vfx):
-    """Lôi tinh liên hoàn – MỘT tia sét lôi xanh mảnh chạy dọc trên dòng chữ: đầu tia là tinh điểm sáng lao từ đầu dòng tới
+class LoiTinhVe(Vfx):
+    """(Bản dự phòng vẽ bằng nét) Lôi tinh liên hoàn – MỘT tia sét lôi xanh mảnh chạy dọc trên dòng chữ: đầu tia là tinh điểm sáng lao từ đầu dòng tới
     con trỏ, thân tia bám sát mặt chữ, tới nơi thì chớp loá, cả dòng giật sáng 2-3 nhịp rồi rút dần vào con trỏ.
     Xoá: tia phóng ngược từ con trỏ về đầu dòng, nhạt dần."""
     name, frames, anchor, box = "lientinh", 20, (0.93, 0.6), (3.0, 0.9)
@@ -5779,8 +5779,21 @@ class LoiTinhLienHoan(Vfx):
         b = (self.c[0], self.c[1])
         if self.D:
             a, b = b, a
-        self.bolt = LoiBolt(a, b, S * 0.0075, r, branches=6, depth=1, kink=(0.004, 0.011), seg=(0.018, 0.035),
-                            blen=(0.02, 0.045), spread=(35, 75)).set_pal(LOI_XANH)
+        # đường gấp khúc kiểu tia sấm: các đoạn chéo lên / xuống luân phiên, góc gãy sắc
+        n = max(6, int(math.hypot(b[0] - a[0], b[1] - a[1]) / (S * 0.17)))
+        pts = [a]
+        sg = r.choice((-1, 1))
+        for i in range(1, n):
+            q = _lp(a, b, (i + r.uniform(-0.38, 0.38)) / float(n))
+            q = (q[0], q[1] + sg * S * r.uniform(0.03, 0.1))
+            pv = pts[-1]                                          # khấc nhỏ giữa hai góc gãy lớn: sét thật không thẳng tắp
+            mid = _lp(pv, q, r.uniform(0.35, 0.65))
+            pts.append((mid[0] + r.uniform(-1, 1) * S * 0.02, mid[1] + r.uniform(-1, 1) * S * 0.018))
+            pts.append(q)
+            sg = -sg if r.random() < 0.85 else sg
+        pts.append(b)
+        self.bolt = LoiBolt(a, b, S * 0.008, r, branches=4, depth=1, blen=(0.025, 0.05), spread=(35, 70),
+                            pts=pts).set_pal(LOI_XANH)
         self.ok = True
 
     def at(self, s):
@@ -5807,7 +5820,7 @@ class LoiTinhLienHoan(Vfx):
 
     def draw(self, cv, f, t):
         g, tl, pw = self.state(f, t)
-        self.bolt.draw(cv, g, tl, pw, self.S * 0.005, self.jr, kid_power=0.75)
+        self.bolt.draw(cv, g, tl, pw, self.S * 0.0025, self.jr, kid_power=0.75)
         S = self.S
         if t < 0.5:                                               # tinh điểm ở đầu tia
             h = self.at(g)
@@ -5832,8 +5845,8 @@ class LoiTinhLienHoan(Vfx):
                                  _ad(e, _dv(d + 6), S * 0.012)], LOI_XANH[0] + (int(220 * k),))
 
 
-class LoiThuongTu(Vfx):
-    """Lôi thương – cây thương sấm sét: mũi lá có ngạnh răng cưa hình tia chớp, sống giữa trắng loá, đai chắn với hai cánh
+class LoiThuongVe(Vfx):
+    """(Bản dự phòng vẽ bằng nét) Lôi thương – cây thương sấm sét: mũi lá có ngạnh răng cưa hình tia chớp, sống giữa trắng loá, đai chắn với hai cánh
     sét vuốt ngược, cán dài có sét quấn xoắn, chuôi kim cương. Gõ: thương phóng chéo xuống, kéo bóng mờ, cắm xuyên chữ –
     chớp loá, sóng chấn, nổ (bóc từ ảnh nổ nếu có), đá văng; thương rung bần bật, sét quấn cán giật liên hồi rồi tan thành
     tia lửa. Xoá: thương đang cắm bị rút phăng ngược lên."""
@@ -5849,6 +5862,16 @@ class LoiThuongTu(Vfx):
         self.L = S * 1.25
         self.hit = _ad(self.c, self.dir, S * 0.05)                     # mũi cắm sâu vào chữ
         self.ph = r.uniform(0, 6.28)
+        L = self.L / S
+        n = 7                                                        # thân thương: tia sét gấp khúc cố định
+        x0 = -0.47
+        self.zig = [(x0, 0.0)]
+        sg = r.choice((-1, 1))
+        for i in range(1, n):
+            self.zig.append((x0 + (-L - x0) * (i + r.uniform(-0.15, 0.15)) / n, sg * r.uniform(0.045, 0.065)))
+            sg = -sg
+        self.zig.append((-L, 0.0))
+        self.zig.append((-L - 0.06, sg * 0.03))                      # đuôi nhọn hất như ngọn sét
         self.arcs = [LoiBolt((0, 0), (r.uniform(-1, 1) * S * 0.25, -S * r.uniform(0.05, 0.22)), S * 0.006, r, 1, 1)
                      for _ in range(5)]
         self.boom = None
@@ -5876,15 +5899,13 @@ class LoiThuongTu(Vfx):
 
         A = lambda v: int(v * k)
         B = 0.42                                                     # chiều dài mũi thương (theo S)
-        cv.line("aura", [P(0, 0), P(-L, 0)], LOI_AURA + (A(110),), S * 0.12)
-        cv.line("glow", [P(-0.05 * S, 0), P(-L, 0)], LOI_MID + (A(140),), S * 0.045)
-        # cán
-        for hw, col in ((0.018, LOI_EDGE), (0.011, LOI_MID), (0.004, LOI_CORE)):
-            cv.poly("base", [P(-(B + 0.05) * S, hw * S), P(-L, hw * S * 0.8), P(-L, -hw * S * 0.8), P(-(B + 0.05) * S, -hw * S)],
-                    col + (A(255),))
-        # chuôi: khâu tròn nhỏ + 2 sợi điện tua
-        cv.ell("base", P(-L, 0), S * 0.024, S * 0.024, LOI_EDGE + (A(255),))
-        cv.ell("base", P(-L, 0), S * 0.012, S * 0.012, LOI_CORE + (A(230),))
+        zp = [P(x * S, y * S) for x, y in self.zig]
+        cv.line("aura", [P(0, 0)] + zp, LOI_AURA + (A(110),), S * 0.13)
+        cv.line("glow", [P(-0.05 * S, 0)] + zp, LOI_MID + (A(150),), S * 0.05)
+        m = len(zp)
+        ws = [S * (0.026 - 0.016 * i / float(m - 1)) for i in range(m)]
+        ws[-1] = S * 0.003                                           # thân sét thon dần, đuôi nhọn
+        loi_stroke(cv, zp, ws, k)
         # đai chắn + 2 cánh sét vuốt ngược (gấp khúc như tia chớp)
         x0 = -B * S
         for sg in (1, -1):
@@ -5908,15 +5929,17 @@ class LoiThuongTu(Vfx):
         cv.poly("base", inner, LOI_MID + (A(255),))
         cv.poly("base", [P(0, 0), P(-0.15 * S, 0.014 * S), P(-(B - 0.01) * S, 0.008 * S), P(-(B - 0.01) * S, -0.008 * S),
                          P(-0.15 * S, -0.014 * S)], LOI_CORE + (A(255),))           # sống giữa trắng loá
-        # sét quấn xoắn quanh cán
+        # tia lách tách bật ra từ các góc gãy của thân
         if coil > 0.05:
-            n = 26
-            pts = []
-            for i in range(n + 1):
-                x = -0.52 * S - (L - 0.58 * S) * i / float(n)
-                y = 0.04 * S * math.sin(i * 1.15 + self.ph + f * 1.7) + self.jr.uniform(-1, 1) * S * 0.006
-                pts.append(P(x, y))
-            loi_stroke(cv, pts, [S * 0.0055] * len(pts), coil * k)
+            for i, (x, y) in enumerate(self.zig[1:-2], 1):
+                if (f + i) % 3:
+                    continue
+                q = P(x * S, y * S)
+                sd = 1 if y > 0 else -1
+                d1 = (nv[0] * sd, nv[1] * sd)
+                a1 = _ad(_ad(q, d1, S * 0.05), dv, self.jr.uniform(-1, 1) * S * 0.03)
+                a2 = _ad(_ad(a1, d1, S * 0.04), dv, self.jr.uniform(-1, 1) * S * 0.04)
+                loi_stroke(cv, [q, a1, a2], [S * 0.006, S * 0.004, S * 0.002], coil * k)
 
     def update(self, f, t):
         S = self.S
@@ -5979,6 +6002,176 @@ class LoiThuongTu(Vfx):
         if self.D and 0.3 * (self.n - 1) <= f <= 0.3 * (self.n - 1) + 3:
             loi_flash(cv, self.c, S * 0.07, 0.8)
 
+
+
+def _tip_of(L, side=1):
+    """Điểm mũi (đầu nhọn nhất) của ảnh nằm ngang: cột xa nhất phía phải (side=1) / trái (-1) còn đặc."""
+    import numpy as np
+    m = L.al > 0.45
+    cols = np.where(m.any(0))[0]
+    if not len(cols):
+        return (L.w if side > 0 else 0, L.h / 2.0)
+    x = int(cols[-1] if side > 0 else cols[0])
+    ys = np.where(m[:, x])[0]
+    return (float(x), float(ys.mean()))
+
+
+class LoiTinhLienHoan(Vfx):
+    """Lôi tinh liên hoàn – dựng từ ẢNH TIA SÉT của bạn (xoay nằm ngang, bóc lớp): tia sét chạy dọc trên dòng chữ từ đầu
+    dòng tới con trỏ – đầu tia là tinh điểm loá, thân và các nhánh hiện dần theo mép răng cưa; tới nơi chớp loá, cả tia
+    giật sáng từng nhánh theo nhịp rồi rút dần vào con trỏ. Xoá: tia phóng ngược từ con trỏ về đầu dòng."""
+    name, frames, anchor, box = "lientinh", 20, (0.93, 0.55), (3.1, 1.15)
+
+    def init(self):
+        r, S = self.rnd, self.S
+        self.L = fx_layers("loi_lienhoan", S * 2.8, origin=(0.0, 0.5), reveal="wipe", wipe=0.0, nsec=8)
+        self.ok = self.L.ok
+        if not self.ok:
+            return
+        self.pin = _tip_of(self.L, 1)                                   # ngọn tia bên phải rơi đúng con trỏ
+        self.tail = _tip_of(self.L, -1)
+        self.gain = [[(0.55 if r.random() < 0.3 else (1.5 if r.random() > 0.75 else 1.0)) for _ in range(8)]
+                     for _ in range(self.n)]
+
+    def state(self, t):
+        if t < 0.45:
+            h = 1.1 * _eo(_ph(t, 0.0, 0.45))
+            return max(0.0, h - 0.5), h
+        if t < 0.75:
+            return 0.0, 1.15
+        return 1.15 * _ph(t, 0.75, 1.0), 1.15
+
+    def head(self, h):
+        """Vị trí đầu tia trên khung (theo thân chính, nội suy gốc -> ngọn)."""
+        L = self.L
+        u = _c01(h / 1.05)
+        if self.D:
+            u = 1 - u
+        x = self.tail[0] + (self.pin[0] - self.tail[0]) * u
+        y = self.tail[1] + (self.pin[1] - self.tail[1]) * u
+        return (self.c[0] + x - self.pin[0], self.c[1] + y - self.pin[1])
+
+    def update(self, f, t):
+        lo, hi = self.state(t)
+        if t < 0.45:
+            self.emit(2, self.head(hi), self.S * 0.02, 6, self.S * 0.006, "spark")
+        if f == int(0.45 * (self.n - 1)) + 1:
+            self.emit(12, self.c if not self.D else self.head(1.1), self.S * 0.04, 8, self.S * 0.008, "spark")
+
+    def draw(self, cv, f, t):
+        L, S = self.L, self.S
+        lo, hi = self.state(t)
+        hold = 0.45 <= t < 0.75
+        g = self.gain[f] if hold else [1.3] * 8
+        im, cm = L.frame(lo, hi, g, 1.6 if hold and self.pulse(f) > 0.6 else 1.1, 0.0, 1.0, inv=self.D, soft=0.04,
+                         jitter=((f % 3) - 1) if hold else 0)
+        pw = 0.65 + 0.35 * self.pulse(f) if hold else 1.0
+        _place(cv, im, self.pin, self.c, 1.0, 0, pw)
+        _place(cv, _tinted(cm, L.tint, 1.3), self.pin, self.c, 1.0, 0, pw, "glow")
+        if t < 0.47:                                                    # tinh điểm ở đầu tia
+            loi_flash(cv, self.head(hi), S * 0.035, 0.9)
+        a = f - (int(0.45 * (self.n - 1)) + 1)
+        if 0 <= a < 3:                                                  # chớp loá tại đích
+            loi_flash(cv, self.c if not self.D else self.head(1.1), S * 0.08, 1.0 - a * 0.35)
+
+
+class LoiThuongTu(Vfx):
+    """Lôi thương – dựng từ ẢNH THƯƠNG SẤM SÉT của bạn (bóc lớp lõi trắng / thân tím / khói tối): thương hiện ra từ mũi
+    về chuôi rồi phóng chéo xuống, kéo bóng mờ, cắm xuyên chữ – chớp loá, sóng chấn, nổ, đá văng; thương rung, các mạch
+    sét trên thân chớp tắt từng đoạn, rồi tan dần từ chuôi về mũi. Xoá: thương đang cắm bị rút phăng ngược lên."""
+    name, frames, anchor, box = "loithuong", 20, (0.30, 0.8), (1.9, 1.75)
+
+    def init(self):
+        r, S = self.rnd, self.S
+        self.start = (self.W * 1.12, -self.H * 0.2)
+        d = math.atan2(self.c[1] - self.start[1], self.c[0] - self.start[0])
+        self.ang = math.degrees(d)
+        self.dir = (math.cos(d), math.sin(d))
+        self.hit = _ad(self.c, self.dir, S * 0.05)
+        self.sp = fx_layers("loi_thuong", S * 1.45, origin=(1.0, 0.5), reveal="wipe", wipe=180.0, nsec=7)
+        self.ok = self.sp.ok
+        if not self.ok:
+            return
+        self.pin = _tip_of(self.sp, 1)
+        self.boom = None
+        try:
+            bm = fx_layers("no_vang_tim", S * 0.85, origin=(0.5, 0.82), nsec=8, rocks=True)
+            self.boom = bm if bm.ok else None
+        except Exception:
+            self.boom = None
+        self.arcs = [LoiBolt((0, 0), (r.uniform(-1, 1) * S * 0.25, -S * r.uniform(0.05, 0.22)), S * 0.006, r, 1, 1)
+                     for _ in range(5)]
+        self.gain = [[(0.6 if r.random() < 0.3 else (1.5 if r.random() > 0.7 else 1.0)) for _ in range(7)]
+                     for _ in range(self.n)]
+        self.hit_f = int(0.2 * (self.n - 1)) + 1
+
+    def tip(self, t):
+        if not self.D:
+            return _lp(self.start, self.hit, _ei(_ph(t, 0.04, 0.2)))
+        return _lp(self.hit, self.start, _ei(_ph(t, 0.3, 0.62)))
+
+    def update(self, f, t):
+        S = self.S
+        if not self.D and f == self.hit_f:
+            self.emit(20, self.c, S * 0.05, 11, S * 0.01, "spark", spread=(180, 360))
+            if self.boom:
+                for img, cx, cy, a in self.boom.rocks:
+                    pp = Part(self.c[0] + (cx - self.boom.w / 2) * 0.6, self.c[1], math.cos(a) * S * 0.03,
+                              -abs(math.sin(a)) * S * 0.04, 14, 1.0, "sprite", 0.97, S * 0.004, vr=self.rnd.uniform(-20, 20))
+                    pp.img = img
+                    self.parts.append(pp)
+        if self.D and 0.3 * (self.n - 1) <= f <= 0.55 * (self.n - 1):
+            self.emit(4, self.c, S * 0.03, 8, S * 0.008, "spark", spread=(200, 340))
+
+    def draw(self, cv, f, t):
+        S = self.S
+        tp = self.tip(t)
+        if not self.D:
+            moving = t < 0.2
+            stuck = t >= 0.2
+            a = f - self.hit_f
+            shake = 5.0 * math.exp(-a * 0.35) * math.sin(a * 2.6) if a >= 0 else 0.0
+            hi = 1.15 * _eo(_ph(t, 0.0, 0.1)) if t < 0.7 else 1.15 * (1 - _ph(t, 0.7, 0.96))   # hiện từ mũi, tan từ chuôi
+        else:
+            moving = 0.3 <= t <= 0.62
+            stuck = t < 0.3
+            shake = 2.0 * math.sin(f * 2.4) if stuck else 0.0
+            hi = 1.15 * (1 - _ph(t, 0.6, 0.85))
+        if not self.D:                                                  # nổ chấn sau lưng thương
+            a = f - self.hit_f
+            if 0 <= a < 7:
+                u = a / 6.0
+                rx = S * (0.15 + 0.6 * _eo(u))
+                loi_ring(cv, self.c, rx, rx * 0.28, 1.0 - u, S * 0.012)
+            if self.boom and 0 <= a < 10:
+                u = a / 9.0
+                gn = [1.6 if a < 2 else (0.35 if (a + s_) % 4 == 0 else 1.1) for s_ in range(8)]
+                bim, bcm = self.boom.frame(_ph(u, 0.45, 0.97) * 1.15, _eo(_ph(u, 0, 0.3)) * 1.15, gn, 1.5 if a < 2 else 1.0,
+                                           1.0, _ph(u, 0.3, 0.8))
+                bpin = (self.boom.w * 0.5, self.boom.h * 0.82)
+                _place(cv, bim, bpin, self.c, 0.75 + 0.2 * _eo(u))
+                _place(cv, _tinted(bcm, self.boom.tint, 1.3), bpin, self.c, 0.75 + 0.2 * _eo(u), 0, 1.0, "glow")
+        if hi > 0.02:
+            g = self.gain[f] if stuck else [1.4] * 7
+            im, cm = self.sp.frame(0.0, hi, g, 1.5 if (stuck and self.pulse(f) > 0.6) else 1.1, 1.0, 0.0,
+                                   jitter=((f % 3) - 1) if stuck else 0)
+            rot = -self.ang + shake
+            if moving:                                                  # bóng mờ khi lao
+                back = -1 if not self.D else 1
+                for g_ in (2, 1):
+                    _place(cv, im, self.pin, _ad(tp, self.dir, back * S * 0.18 * g_), 1.0, rot, 0.22 / g_)
+            _place(cv, im, self.pin, tp, 1.0, rot)
+            _place(cv, _tinted(cm, self.sp.tint, 1.4), self.pin, tp, 1.0, rot, 1.0, "glow")
+        if stuck and hi > 0.3:                                          # điện toé quanh chỗ cắm
+            for j, arc in enumerate(self.arcs):
+                if (f + j) % 2 == 0:
+                    arc.draw(cv, 1.0, 0.0, 0.85, S * 0.004, self.jr, xf=lambda q, c=self.c: (c[0] + q[0], c[1] + q[1]))
+        if not self.D:
+            a = f - self.hit_f
+            if 0 <= a < 3:
+                loi_flash(cv, self.c, S * 0.08, 1.0 - a * 0.35)
+        elif 0.3 * (self.n - 1) <= f <= 0.3 * (self.n - 1) + 3:
+            loi_flash(cv, self.c, S * 0.07, 0.8)
 
 SKULLS = [("daulau2", 45, 65, 27), ("daulau2", 163, 70, 25), ("daulau3", 65, 105, 28), ("daulau3", 105, 40, 22),
           ("daulau1", 40, 75, 22), ("daulau2", 131, 31, 13), ("daulau3", 25, 50, 13), ("daulau3", 167, 60, 12)]
@@ -6130,8 +6323,8 @@ IMG_FX = [
         move=((0.0, -0.4), (0.0, 0.0)), ease=_ei)], None, "spark", grow=0.2, fade=0.6, base=SongPhiKiem),
 ]
 
-LoiTinhLienHoan.fallback = LoiXich
-LoiThuongTu.fallback = LoiThuong
+LoiTinhLienHoan.fallback = LoiTinhVe
+LoiThuongTu.fallback = LoiThuongVe
 
 
 # ══ danh sách hiệu ứng (giữ dạng (mã, tên, hàm dựng, điểm neo) để giao diện / cài đặt cũ dùng tiếp) ══

@@ -12,7 +12,9 @@ for key in C.FX_BY_KEY:
         except Exception:
             ok = False
         check(ok, "thiếu numpy vẫn có hình: %s (%s)" % (key, m))
-check("lientinh" not in C.FX_BROKEN and "loithuong" not in C.FX_BROKEN, "Lôi tinh / Lôi thương vẽ thuần, không cần numpy")
+for cls in (C.LoiTinhVe, C.LoiThuongVe):
+    fr = cls(60, 0, "T").bake()
+    check(sum(1 for f in fr if f.getbbox()) > 10, "bản dự phòng %s vẽ thuần, không cần numpy" % cls.__name__)
 check(C.numpy_ok() is False, "nhận biết đúng máy thiếu numpy")
 print("\n%d/%d đạt" % (sum(RESULTS), len(RESULTS)))
 sys.exit(0 if all(RESULTS) else 1)

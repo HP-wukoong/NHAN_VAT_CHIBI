@@ -1,10 +1,10 @@
 {
-  "version": "3.10",
+  "version": "3.11",
   "date": "2026-11-26",
   "notes": [
-    "SỬA LỖI hiệu ứng gõ không hoạt động: máy thiếu thư viện numpy làm hỏng toàn bộ hiệu ứng. Nay app tự cài numpy ở chế độ nền (ChayChibi.bat cũng tự cài); trong lúc chưa có, hiệu ứng tự chuyển sang bản vẽ dự phòng thay vì mất hẳn",
-    "Lỗi ở một mẫu hiệu ứng không còn làm treo việc bắt phím / chuyển động nhân vật; tab Hiệu ứng gõ phím báo rõ tình trạng",
-    "Lôi tinh liên hoàn: làm lại thành MỘT tia sét lôi xanh mảnh chạy dọc trên dòng chữ tới con trỏ, chớp loá rồi rút dần (không toả ra nữa)",
-    "Lôi thương: vẽ lại thành cây thương sấm sét thật sự – mũi lá to có ngạnh hình tia chớp, sống trắng loá, đai chắn hai cánh sét, cán dài có sét quấn xoắn; phóng xuống cắm vào chữ, rung bần bật, sóng chấn + nổ"
+    "Lôi tinh liên hoàn dựng từ ẢNH TIA SÉT của bạn (bóc lớp, xoay nằm ngang): tia chạy dọc dòng chữ tới con trỏ, đầu tia loá, các nhánh chớp tắt theo nhịp rồi rút dần; xoá thì chạy ngược",
+    "Lôi thương dựng từ ẢNH THƯƠNG SẤM SÉT của bạn: hiện ra từ mũi, phóng chéo cắm vào chữ, nổ chấn + sóng + đá văng, thân rung và mạch sét chớp tắt, tan dần từ chuôi về mũi; xoá thì rút phăng lên",
+    "Bản vẽ bằng nét (tia gấp khúc, thương thân sét gấp khúc) giữ làm dự phòng khi máy thiếu numpy",
+    "Giữ các sửa lỗi của 3.10: tự cài numpy, hiệu ứng lỗi không làm treo bắt phím"
   ]
 }
