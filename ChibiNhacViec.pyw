@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.9"
+APP_VER = "3.10"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -5767,158 +5767,217 @@ def img_flash(cv, c, r, k, tint):
         cv.poly("base", [_ad(c, _dv(a - 6), r * 0.28), _ad(c, _dv(a), ln), _ad(c, _dv(a + 6), r * 0.28)], (255, 250, 230, int(220 * k)))
 
 
-def to_blue(im):
-    """Đổi sợi sét sang lôi xanh theo độ sáng: tối -> xanh thẫm, vừa -> xanh điện, sáng -> trắng xanh; làm mảnh sợi:
-    điểm mờ nhạt (quầng rộng của ảnh gốc) bị cắt bớt."""
-    import numpy as np
-    a = np.asarray(im).astype(np.float32) / 255.0
-    lum = a[..., :3].max(2)
-    c0, c1, c2 = (np.array(LOI_XANH[2]) / 255.0, np.array(LOI_XANH[1]) / 255.0, np.array(LOI_XANH[0]) / 255.0)
-    t = np.clip(lum, 0, 1)[..., None]
-    rgb = np.where(t < 0.6, c0 + (c1 - c0) * (t / 0.6), c1 + (c2 - c1) * ((t - 0.6) / 0.4))
-    al = a[..., 3] * np.clip((lum - 0.35) / 0.3, 0, 1)                         # bỏ phần tối/khói -> sợi mảnh, sạch
-    return Image.fromarray((np.dstack([rgb, al]) * 255).astype(np.uint8), "RGBA")
-
-
 class LoiTinhLienHoan(Vfx):
-    """Lôi tinh liên hoàn – gõ: tinh cầu sét (bóc từ ảnh) nổ nối tiếp dọc dòng chữ, mỗi lần nổ tia sét nhảy cung sang
-    điểm kế, cuối cùng nổ lớn tại con trỏ; xoá: nổ tại chữ bị xoá rồi giật lùi sang trái, nhỏ dần và tắt."""
-    name, frames, anchor, box = "lientinh", 24, (0.78, 0.55), (2.7, 1.4)
-    SRCS = ("tia_chop", "kimtinh1", "no_vang", "kimtinh2")
+    """Lôi tinh liên hoàn – MỘT tia sét lôi xanh mảnh chạy dọc trên dòng chữ: đầu tia là tinh điểm sáng lao từ đầu dòng tới
+    con trỏ, thân tia bám sát mặt chữ, tới nơi thì chớp loá, cả dòng giật sáng 2-3 nhịp rồi rút dần vào con trỏ.
+    Xoá: tia phóng ngược từ con trỏ về đầu dòng, nhạt dần."""
+    name, frames, anchor, box = "lientinh", 20, (0.93, 0.6), (3.0, 0.9)
 
     def init(self):
-        r = self.rnd
-        n = 5
-        xs = [self.c[0] - k * self.S * 0.42 for k in range(n)]
-        pts = [(x, self.c[1] - (0 if k == 0 else r.uniform(0.0, 0.12) * self.S)) for k, x in enumerate(xs)]
-        self.order = pts[::-1] if not self.D else pts                  # gõ: từ trái dồn về con trỏ; xoá: từ con trỏ lùi ra
-        self.nodes = []
-        for k, p in enumerate(self.order):
-            last = (k == n - 1) if not self.D else (k == 0)
-            sz = self.S * (0.95 if last else 0.5 + 0.05 * r.random()) * (1 if not self.D else 1 - 0.12 * k)
-            L = fx_layers(self.SRCS[k % len(self.SRCS)], sz, nsec=8)
-            self.nodes.append((k * 3, p, L, last))
-        self.ok = all(L.ok for _, _, L, _ in self.nodes)
-        self.hops = [LoiBolt(a, b, self.S * 0.006, r, branches=2, depth=1, lift=0.3).set_pal(LOI_XANH)
-                     for a, b in zip(self.order, self.order[1:])]
-        self.gain = [[(1.6 if j < 2 else (0.3 if r.random() < 0.25 else (1.4 if r.random() > 0.8 else 1.0))) for _ in range(8)]
-                     for j in range(12)]
+        r, S = self.rnd, self.S
+        a = (self.c[0] - S * 2.7, self.c[1] - S * r.uniform(0.0, 0.08))
+        b = (self.c[0], self.c[1])
+        if self.D:
+            a, b = b, a
+        self.bolt = LoiBolt(a, b, S * 0.0075, r, branches=6, depth=1, kink=(0.004, 0.011), seg=(0.018, 0.035),
+                            blen=(0.02, 0.045), spread=(35, 75)).set_pal(LOI_XANH)
+        self.ok = True
+
+    def at(self, s):
+        return self.bolt._cut(max(0.0, s - 0.002), max(0.002, s))[-1]
+
+    def state(self, f, t):
+        """(đầu tia, đuôi tia, độ sáng)"""
+        if t < 0.46:                                              # tia chạy: đầu lao, thân dài ~40% dòng bám theo
+            g = _eo(_ph(t, 0.0, 0.46))
+            return g, max(0.0, g - 0.4), 1.0
+        if t < 0.76:                                              # tới nơi: cả dòng giật sáng theo nhịp, lúc đứt lúc liền
+            p = self.pulse(f)
+            return 1.0, (0.0 if p > 0.6 else 0.45), 0.55 + 0.45 * p
+        u = _ph(t, 0.76, 1.0)                                     # rút dần về phía con trỏ
+        return 1.0, u, 0.9 - 0.5 * u
 
     def update(self, f, t):
-        for t0, p, L, last in self.nodes:
-            if f == t0 + 1:
-                self.emit(14 if last else 6, p, self.S * (0.05 if last else 0.03), 9, self.S * 0.006, "spark_b")
+        g, tl, pw = self.state(f, t)
+        if t < 0.46:
+            self.emit(2, self.at(g), self.S * 0.02, 6, self.S * 0.005, "spark_b")
+        hit = int(0.46 * (self.n - 1)) + 1
+        if f == hit:
+            self.emit(10, self.at(1.0), self.S * 0.04, 8, self.S * 0.006, "spark_b")
 
     def draw(self, cv, f, t):
-        for t0, p, L, last in self.nodes:
-            a = f - t0
-            life = 12 if last else 9
-            if a < 0 or a >= life:
-                continue
-            u = a / float(life - 1)
-            hi = _eo(_ph(u, 0, 0.3)) * 1.15
-            lo = _ph(u, 0.5, 0.97) * 1.15
-            if self.ok:
-                im, cm = L.frame(lo, hi, self.gain[min(a, 11)], 1.6 if a < 2 else 1.0, 0.0, _ph(u, 0.35, 0.8),
-                                 jitter=(a % 3) - 1)
-                im = to_blue(im)                                  # một màu lôi xanh, chỉ giữ sợi sét (bỏ khói)
-                pin = (L.w / 2.0, L.h / 2.0)
-                sc = 0.8 + 0.25 * _eo(_ph(u, 0, 0.4))
-                _place(cv, im, pin, p, sc, a * 4)
-                _place(cv, _tinted(cm, LOI_XANH[1], 1.1), pin, p, sc, a * 4, 1.0, "glow")
-            if a < 2:
-                img_flash(cv, p, self.S * (0.08 if last else 0.045), 1.0 - a * 0.3, LOI_XANH[1])
-        for i, h in enumerate(self.hops):                         # tia sét nhảy cung nối điểm vừa nổ sang điểm kế
-            a = f - (i * 3 + 1)
-            if 0 <= a < 5:
-                h.draw(cv, _eo(min(1.0, (a + 1) / 2.0)), _c01((a - 2) / 3.0), (1.0, 1.0, 0.6, 0.9, 0.35)[a], self.S * 0.004, self.jr)
+        g, tl, pw = self.state(f, t)
+        self.bolt.draw(cv, g, tl, pw, self.S * 0.005, self.jr, kid_power=0.75)
+        S = self.S
+        if t < 0.5:                                               # tinh điểm ở đầu tia
+            h = self.at(g)
+            cv.ell("aura", h, S * 0.09, S * 0.09, LOI_XANH[3] + (110,))
+            cv.ell("glow", h, S * 0.05, S * 0.05, LOI_XANH[1] + (230,))
+            cv.ell("base", h, S * 0.016, S * 0.016, LOI_XANH[0] + (255,))
+            for k in range(4):
+                a = k * 90 + f * 25
+                cv.poly("base", [_ad(h, _dv(a - 10), S * 0.008), _ad(h, _dv(a), S * 0.05), _ad(h, _dv(a + 10), S * 0.008)],
+                        LOI_XANH[0] + (220,))
+        hit = int(0.46 * (self.n - 1)) + 1
+        a = f - hit
+        if 0 <= a < 3:                                            # chớp loá tại đích
+            e = self.at(1.0)
+            k = 1.0 - a * 0.35
+            cv.ell("aura", e, S * 0.22, S * 0.22, LOI_XANH[3] + (int(110 * k),))
+            cv.ell("glow", e, S * 0.12, S * 0.12, LOI_XANH[1] + (int(230 * k),))
+            cv.ell("base", e, S * 0.03, S * 0.03, LOI_XANH[0] + (int(255 * k),))
+            for i in range(6):
+                d = i * 60 + 15
+                cv.poly("base", [_ad(e, _dv(d - 6), S * 0.012), _ad(e, _dv(d), S * (0.12 if i % 2 else 0.07)),
+                                 _ad(e, _dv(d + 6), S * 0.012)], LOI_XANH[0] + (int(220 * k),))
 
 
 class LoiThuongTu(Vfx):
-    """Lôi thương – gõ: giáo sét (thân bóc từ cột lôi điện trong ảnh, mũi kim cương lõi trắng) lao chéo xuống, kéo bóng mờ,
-    cắm xuyên chữ: nổ chấn (bóc từ ảnh nổ), đá văng, giáo rung toé điện rồi tan; xoá: giáo đang cắm bị rút phăng lên trời."""
-    name, frames, anchor, box = "loithuong", 18, (0.32, 0.8), (1.7, 1.6)
+    """Lôi thương – cây thương sấm sét: mũi lá có ngạnh răng cưa hình tia chớp, sống giữa trắng loá, đai chắn với hai cánh
+    sét vuốt ngược, cán dài có sét quấn xoắn, chuôi kim cương. Gõ: thương phóng chéo xuống, kéo bóng mờ, cắm xuyên chữ –
+    chớp loá, sóng chấn, nổ (bóc từ ảnh nổ nếu có), đá văng; thương rung bần bật, sét quấn cán giật liên hồi rồi tan thành
+    tia lửa. Xoá: thương đang cắm bị rút phăng ngược lên."""
+    name, frames, anchor, box = "loithuong", 20, (0.30, 0.8), (1.9, 1.75)
 
     def init(self):
-        r = self.rnd
-        self.start = (self.W * 1.05, -self.H * 0.08)
+        r, S = self.rnd, self.S
+        self.start = (self.W * 1.12, -self.H * 0.2)
         d = math.atan2(self.c[1] - self.start[1], self.c[0] - self.start[0])
         self.ang = math.degrees(d)
         self.dir = (math.cos(d), math.sin(d))
-        self.shaft = fx_layers("loiphat2", self.S * 0.95, origin=(0.5, 0.0), reveal="down", nsec=5)
-        self.boom = fx_layers("no_vang_tim", self.S * 0.95, origin=(0.5, 0.82), nsec=8, rocks=True)
-        self.ok = self.shaft.ok and self.boom.ok
-        self.arcs = [LoiBolt((0, 0), (r.uniform(-1, 1) * self.S * 0.12, -self.S * r.uniform(0.15, 0.4)), self.S * 0.008, r, 1, 1)
+        self.nv = (-self.dir[1], self.dir[0])
+        self.L = S * 1.25
+        self.hit = _ad(self.c, self.dir, S * 0.05)                     # mũi cắm sâu vào chữ
+        self.ph = r.uniform(0, 6.28)
+        self.arcs = [LoiBolt((0, 0), (r.uniform(-1, 1) * S * 0.25, -S * r.uniform(0.05, 0.22)), S * 0.006, r, 1, 1)
                      for _ in range(5)]
-        self.rocked = False
+        self.boom = None
+        try:
+            bm = fx_layers("no_vang_tim", S * 0.85, origin=(0.5, 0.82), nsec=8, rocks=True)
+            self.boom = bm if bm.ok else None
+        except Exception:
+            self.boom = None
+        self.ok = True
+        self.hit_f = int(0.2 * (self.n - 1)) + 1
 
     def tip(self, t):
-        hit = _ad(self.c, self.dir, self.S * 0.04)
         if not self.D:
-            return _lp(self.start, hit, _ei(_ph(t, 0, 0.22)))
-        return _lp(hit, self.start, _ei(_ph(t, 0.3, 0.7)))
+            return _lp(self.start, self.hit, _ei(_ph(t, 0, 0.2)))
+        return _lp(self.hit, self.start, _ei(_ph(t, 0.3, 0.62)))
+
+    def spear(self, cv, tp, k, f, shake=0.0, coil=1.0):
+        S, L, dv, nv = self.S, self.L, self.dir, self.nv
+        if k <= 0.02:
+            return
+
+        def P(x, y):
+            y = y + shake * (-x / L)                                   # rung: mũi đứng yên, chuôi quẫy
+            return (tp[0] + dv[0] * x + nv[0] * y, tp[1] + dv[1] * x + nv[1] * y)
+
+        A = lambda v: int(v * k)
+        B = 0.42                                                     # chiều dài mũi thương (theo S)
+        cv.line("aura", [P(0, 0), P(-L, 0)], LOI_AURA + (A(110),), S * 0.12)
+        cv.line("glow", [P(-0.05 * S, 0), P(-L, 0)], LOI_MID + (A(140),), S * 0.045)
+        # cán
+        for hw, col in ((0.018, LOI_EDGE), (0.011, LOI_MID), (0.004, LOI_CORE)):
+            cv.poly("base", [P(-(B + 0.05) * S, hw * S), P(-L, hw * S * 0.8), P(-L, -hw * S * 0.8), P(-(B + 0.05) * S, -hw * S)],
+                    col + (A(255),))
+        # chuôi: khâu tròn nhỏ + 2 sợi điện tua
+        cv.ell("base", P(-L, 0), S * 0.024, S * 0.024, LOI_EDGE + (A(255),))
+        cv.ell("base", P(-L, 0), S * 0.012, S * 0.012, LOI_CORE + (A(230),))
+        # đai chắn + 2 cánh sét vuốt ngược (gấp khúc như tia chớp)
+        x0 = -B * S
+        for sg in (1, -1):
+            wing = [P(x0, sg * 0.025 * S), P(x0 - 0.04 * S, sg * 0.09 * S), P(x0 - 0.065 * S, sg * 0.07 * S),
+                    P(x0 - 0.13 * S, sg * 0.15 * S), P(x0 - 0.10 * S, sg * 0.06 * S), P(x0 - 0.075 * S, sg * 0.045 * S),
+                    P(x0 - 0.05 * S, sg * 0.025 * S)]
+            cv.poly("base", wing, LOI_EDGE + (A(255),))
+            cv.line("base", [P(x0 - 0.01 * S, sg * 0.035 * S), P(x0 - 0.04 * S, sg * 0.085 * S), P(x0 - 0.065 * S, sg * 0.068 * S),
+                             P(x0 - 0.12 * S, sg * 0.14 * S)], LOI_CORE + (A(230),), max(1.0, S * 0.007))
+        cv.poly("base", [P(x0 + 0.01 * S, 0.05 * S), P(x0 - 0.06 * S, 0.05 * S), P(x0 - 0.06 * S, -0.05 * S),
+                         P(x0 + 0.01 * S, -0.05 * S)], LOI_EDGE + (A(255),))
+        cv.poly("base", [P(x0, 0.033 * S), P(x0 - 0.05 * S, 0.033 * S), P(x0 - 0.05 * S, -0.033 * S), P(x0, -0.033 * S)],
+                LOI_MID + (A(255),))
+        # mũi thương: lá dài to bản, mép có ngạnh răng cưa hình tia chớp
+        up = [(0, 0), (-0.08, 0.05), (-0.15, 0.085), (-0.18, 0.055), (-0.26, 0.105), (-0.29, 0.07), (-0.37, 0.06), (-B, 0.03)]
+        blade = [P(x * S, y * S) for x, y in up] + [P(x * S, -y * S) for x, y in reversed(up[1:])]
+        cv.poly("glow", blade, LOI_MID + (A(240),))
+        cv.poly("base", blade, LOI_EDGE + (A(255),))
+        inner = [P(x * S * 0.96 - 0.012 * S, y * S * 0.55) for x, y in up] + \
+                [P(x * S * 0.96 - 0.012 * S, -y * S * 0.55) for x, y in reversed(up[1:])]
+        cv.poly("base", inner, LOI_MID + (A(255),))
+        cv.poly("base", [P(0, 0), P(-0.15 * S, 0.014 * S), P(-(B - 0.01) * S, 0.008 * S), P(-(B - 0.01) * S, -0.008 * S),
+                         P(-0.15 * S, -0.014 * S)], LOI_CORE + (A(255),))           # sống giữa trắng loá
+        # sét quấn xoắn quanh cán
+        if coil > 0.05:
+            n = 26
+            pts = []
+            for i in range(n + 1):
+                x = -0.52 * S - (L - 0.58 * S) * i / float(n)
+                y = 0.04 * S * math.sin(i * 1.15 + self.ph + f * 1.7) + self.jr.uniform(-1, 1) * S * 0.006
+                pts.append(P(x, y))
+            loi_stroke(cv, pts, [S * 0.0055] * len(pts), coil * k)
 
     def update(self, f, t):
-        hit_f = int(0.22 * (self.n - 1)) + 1
-        if not self.D and f == hit_f and self.ok and not self.rocked:
-            self.rocked = True
-            self.emit(18, self.c, self.S * 0.05, 11, self.S * 0.011, "spark", spread=(180, 360))
-            for img, cx, cy, a in self.boom.rocks:
-                pp = Part(self.c[0] + (cx - self.boom.w / 2) * 0.6, self.c[1], math.cos(a) * self.S * 0.03,
-                          -abs(math.sin(a)) * self.S * 0.04, 14, 1.0, "sprite", 0.97, self.S * 0.004, vr=self.rnd.uniform(-20, 20))
-                pp.img = img
-                self.parts.append(pp)
-        if self.D and 5 <= f <= 11:
-            tp = self.tip(f / float(self.n - 1))
-            self.emit(3, tp, self.S * 0.02, 8, self.S * 0.009, "spark", spread=(self.ang + 160, self.ang + 200))
+        S = self.S
+        if not self.D and f == self.hit_f:
+            self.emit(20, self.c, S * 0.05, 11, S * 0.01, "spark", spread=(180, 360))
+            if self.boom:
+                for img, cx, cy, a in self.boom.rocks:
+                    pp = Part(self.c[0] + (cx - self.boom.w / 2) * 0.6, self.c[1], math.cos(a) * S * 0.03,
+                              -abs(math.sin(a)) * S * 0.04, 14, 1.0, "sprite", 0.97, S * 0.004, vr=self.rnd.uniform(-20, 20))
+                    pp.img = img
+                    self.parts.append(pp)
+        if not self.D and f == int(0.7 * (self.n - 1)):                     # thương tan thành tia lửa dọc cán
+            for i in range(8):
+                p = _ad(self.hit, self.dir, -self.L * i / 8.0)
+                self.emit(2, p, S * 0.02, 9, S * 0.007, "spark", grav=S * 0.002)
+        if self.D and 0.3 * (self.n - 1) <= f <= 0.55 * (self.n - 1):
+            self.emit(4, self.c, S * 0.03, 8, S * 0.008, "spark", spread=(200, 340))
 
     def draw(self, cv, f, t):
-        if not self.ok:
-            return
+        S = self.S
         tp = self.tip(t)
-        rot = 90 - self.ang                                       # trục dọc ảnh (đỉnh -> đáy) quay theo hướng lao
-        moving = t < 0.22 if not self.D else 0.3 < t < 0.7
-        fade = _ph(t, 0.62, 0.95) if not self.D else _ph(t, 0.62, 0.85)
-        pw = (1.0 if moving else self.pulse(f)) * (1 - fade)
-        pin = (self.shaft.w * 0.5, self.shaft.h * 0.98)
-        gains = [1.6 if moving else (1.4 if (f + k) % 3 == 0 else 0.7) for k in range(5)]
-        im, cm = self.shaft.frame(0.0, 1.15, gains, 1.4, 0.6, 0.6, jitter=0 if moving else (f % 3) - 1)
-        if moving:                                                # bóng mờ khi lao nhanh
-            for g_ in (2, 1):
-                _place(cv, im, pin, _ad(tp, self.dir, -self.S * 0.14 * g_), 1.0, rot, 0.25 / g_)
-        _place(cv, im, pin, tp, 1.0, rot, max(0.0, 1 - fade))
-        _place(cv, _tinted(cm, self.shaft.tint, 1.5), pin, tp, 1.0, rot, max(0.0, 1 - fade), "glow")
-        if pw > 0.05:                                             # mũi giáo kim cương lõi trắng
-            dv = self.dir
-            nv = (-dv[1], dv[0])
-            L, w = self.S * 0.11, self.S * 0.04
-            head = [_ad(tp, dv, L * 0.5), _ad(tp, nv, w), _ad(tp, dv, -L * 0.6), _ad(tp, nv, -w)]
-            cv.poly("glow", head, LOI_MID + (int(230 * pw),))
-            cv.poly("base", head, LOI_EDGE + (int(255 * pw),))
-            cv.poly("base", [_ad(tp, dv, L * 0.38), _ad(tp, nv, w * 0.5), _ad(tp, dv, -L * 0.35), _ad(tp, nv, -w * 0.5)],
-                    LOI_CORE + (int(255 * pw),))
-        stuck = (not self.D and t >= 0.22) or (self.D and t <= 0.3)
-        if stuck and fade < 0.9:                                  # giáo cắm: điện toé quanh chỗ cắm
-            k = f % 5
-            for j, a in enumerate(self.arcs):
-                if (f + j) % 2 == 0:
-                    a.draw(cv, 1.0, 0.0, 0.9 * (1 - fade), self.S * 0.003, self.jr,
-                           xf=lambda q, c=self.c: (c[0] + q[0], c[1] + q[1]))
         if not self.D:
-            hit = int(0.22 * (self.n - 1)) + 1
-            a = f - hit
-            if 0 <= a < 10:                                       # nổ chấn bóc từ ảnh nổ vàng tím
+            moving = t < 0.2
+            fade = _ph(t, 0.7, 0.95)
+            a = f - self.hit_f
+            shake = (S * 0.06 * math.exp(-a * 0.35) * math.sin(a * 2.6)) if a >= 0 else 0.0
+        else:
+            moving = 0.3 <= t <= 0.62
+            fade = _ph(t, 0.55, 0.85)
+            shake = S * 0.025 * math.sin(f * 2.4) if t < 0.3 else 0.0
+        k = 1.0 - fade
+        if moving:                                                   # bóng mờ + vệt sáng khi lao
+            back = -1 if not self.D else 1
+            for g_ in (2, 1):
+                self.spear(cv, _ad(tp, self.dir, back * S * 0.16 * g_), 0.22 / g_ * k, f, 0, 0)
+            cv.line("glow", [tp, _ad(tp, self.dir, -S * 1.6)], LOI_MID + (int(120 * k),), S * 0.05)
+        if not self.D:
+            a = f - self.hit_f
+            if 0 <= a < 3:
+                loi_flash(cv, self.c, S * 0.08, 1.0 - a * 0.35)
+            if 0 <= a < 7:
+                u = a / 6.0
+                rx = S * (0.15 + 0.6 * _eo(u))
+                loi_ring(cv, self.c, rx, rx * 0.28, 1.0 - u, S * 0.012)
+            if self.boom and 0 <= a < 10:                             # nổ chấn (bóc từ ảnh nổ vàng tím)
                 u = a / 9.0
-                g = [1.6 if a < 2 else (0.35 if (a + s_) % 4 == 0 else 1.1) for s_ in range(8)]
-                bim, bcm = self.boom.frame(_ph(u, 0.45, 0.97) * 1.15, _eo(_ph(u, 0, 0.3)) * 1.15, g, 1.5 if a < 2 else 1.0,
+                gn = [1.6 if a < 2 else (0.35 if (a + s_) % 4 == 0 else 1.1) for s_ in range(8)]
+                bim, bcm = self.boom.frame(_ph(u, 0.45, 0.97) * 1.15, _eo(_ph(u, 0, 0.3)) * 1.15, gn, 1.5 if a < 2 else 1.0,
                                            1.0, _ph(u, 0.3, 0.8))
                 bpin = (self.boom.w * 0.5, self.boom.h * 0.82)
-                _place(cv, bim, bpin, self.c, 0.8 + 0.2 * _eo(u))
-                _place(cv, _tinted(bcm, self.boom.tint, 1.4), bpin, self.c, 0.8 + 0.2 * _eo(u), 0, 1.0, "glow")
-                if a < 2:
-                    img_flash(cv, self.c, self.S * 0.12, 1.0 - a * 0.4, self.boom.tint)
-        elif 2 <= f <= 6:
-            img_flash(cv, self.c, self.S * 0.07, 1 - (f - 2) / 5.0, self.shaft.tint)
+                _place(cv, bim, bpin, self.c, 0.75 + 0.2 * _eo(u))
+                _place(cv, _tinted(bcm, self.boom.tint, 1.3), bpin, self.c, 0.75 + 0.2 * _eo(u), 0, 1.0, "glow")
+        stuck = (not self.D and t >= 0.2) or (self.D and t < 0.3)
+        coil = (self.pulse(f) if stuck else 0.6) * k
+        self.spear(cv, tp, k, f, shake, coil)
+        if stuck and k > 0.1:                                        # điện toé quanh chỗ cắm
+            for j, arc in enumerate(self.arcs):
+                if (f + j) % 2 == 0:
+                    arc.draw(cv, 1.0, 0.0, 0.85 * k, S * 0.004, self.jr, xf=lambda q, c=self.c: (c[0] + q[0], c[1] + q[1]))
+        if self.D and 0.3 * (self.n - 1) <= f <= 0.3 * (self.n - 1) + 3:
+            loi_flash(cv, self.c, S * 0.07, 0.8)
 
 
 SKULLS = [("daulau2", 45, 65, 27), ("daulau2", 163, 70, 25), ("daulau3", 65, 105, 28), ("daulau3", 105, 40, 22),
@@ -6093,12 +6152,88 @@ FX_ALIAS = {"chain": "lientinh", "gai": "loithuong", "chau": "xoan", "xoanvang":
             "pillar": "cotvang", "net": "hoan"}
 
 
+FX_BROKEN = {}                       # mẫu hiệu ứng dựng lỗi -> lý do (hiện ở tab Cài đặt để dễ kiểm tra)
+NUMPY_STATE = {"s": "?"}             # ok / thiếu / đang cài / lỗi cài
+
+
+def numpy_ok():
+    try:
+        import numpy  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+def ensure_numpy(app):
+    """Hiệu ứng gõ phím cần thư viện numpy. Máy chưa có thì tự cài ở luồng phụ (không làm đứng app), cài xong dùng ngay."""
+    if numpy_ok():
+        NUMPY_STATE["s"] = "ok"
+        return
+
+    def run():
+        import subprocess
+        import importlib
+        import site
+        NUMPY_STATE["s"] = "đang cài"
+        exe = sys.executable
+        d = os.path.dirname(exe)
+        for cand in ("python.exe", "python3.exe"):
+            if os.path.exists(os.path.join(d, cand)):
+                exe = os.path.join(d, cand)
+                break
+        base = [exe, "-m", "pip", "install", "--disable-pip-version-check", "--quiet"]
+        lib = os.path.join(BASE_DIR, "ThuVien")
+        tries = [base + ["--no-index", "--find-links", lib, "numpy"], base + ["numpy"], base + ["--user", "numpy"]]
+        for cmd in tries:
+            try:
+                subprocess.run(cmd, cwd=BASE_DIR, timeout=600, capture_output=True,
+                               creationflags=0x08000000 if IS_WIN else 0)            # CREATE_NO_WINDOW
+            except Exception:
+                continue
+            try:
+                site.addsitedir(site.getusersitepackages())
+            except Exception:
+                pass
+            importlib.invalidate_caches()
+            sys.modules.pop("numpy", None)
+            if numpy_ok():
+                NUMPY_STATE["s"] = "ok"
+                FX_BROKEN.clear()
+
+                def done():
+                    for pl in (app.keyfx.bolt, app.keyfx.slash):
+                        with pl.lock:
+                            pl.cache.clear()                     # dựng lại hiệu ứng bằng ảnh đầy đủ
+                    app.say("Đã cài xong thư viện numpy ✓", "Hiệu ứng gõ phím hoạt động đầy đủ rồi nhé!", timeout=6)
+                    app.keyfx.warm()
+                app.root.after(0, done)
+                return
+        NUMPY_STATE["s"] = "lỗi cài"
+        log_error_msg("Không cài được numpy – hiệu ứng gõ phím dùng bản vẽ dự phòng")
+    NUMPY_STATE["s"] = "thiếu"
+    threading.Thread(target=run, daemon=True).start()
+
+
 def _vfx_maker(cls):
     def maker(size, seed=0, mode="T", power=1.0, speed=1.0):
-        fx = cls(size, seed, mode, power, speed)
-        if not getattr(fx, "ok", True) and getattr(cls, "fallback", None):
-            return cls.fallback(size, seed, mode, power, speed).bake()     # thiếu ảnh: dùng bản vẽ bằng code
-        return fx.bake()
+        try:
+            fx = cls(size, seed, mode, power, speed)
+            if not getattr(fx, "ok", True) and getattr(cls, "fallback", None):
+                return cls.fallback(size, seed, mode, power, speed).bake()     # thiếu ảnh: dùng bản vẽ bằng code
+            return fx.bake()
+        except Exception:
+            # lỗi khi dựng (thường do máy thiếu numpy): KHÔNG để mất hiệu ứng – chuyển sang bản vẽ bằng code
+            if cls.name not in FX_BROKEN:
+                FX_BROKEN[cls.name] = traceback.format_exc().strip().splitlines()[-1][:120]
+                log_error()
+            for fb in (getattr(cls, "fallback", None), LoiXich):
+                if fb is None:
+                    continue
+                try:
+                    return fb(size, seed, mode, power, speed).bake()
+                except Exception:
+                    continue
+            raise
     maker.cls = cls
     return maker
 
@@ -6325,10 +6460,18 @@ class KeyFx:
         self.last_size = self.size(text_h)
         if text_h:
             self.last_info = self.last_info + " • cỡ chữ %dpx" % text_h
-        if kind == "T":
-            self.bolt.play(pos[0], pos[1], self.last_size, s.get("key_fx_type", "bolt"))
-        else:
-            self.slash.play(pos[0], pos[1], self.last_size, s.get("key_fx_del", "slash"))
+        try:
+            if kind == "T":
+                self.bolt.play(pos[0], pos[1], self.last_size, s.get("key_fx_type", "bolt"))
+            else:
+                self.slash.play(pos[0], pos[1], self.last_size, s.get("key_fx_del", "slash"))
+        except Exception:                                  # một mẫu lỗi không được làm hỏng cả vòng xử lý phím
+            log_error()
+            try:
+                (self.bolt if kind == "T" else self.slash).play(pos[0], pos[1], self.last_size, "lientinh" if kind == "T"
+                                                               else "loithuong")
+            except Exception:
+                pass
 
     def _pointer(self):
         px, py = self.app.root.winfo_pointerxy()
@@ -6957,6 +7100,7 @@ class App:
         self.gmouse = GlobalMouse(self)
         self.gmouse.start()
         self.keyfx = KeyFx(self)
+        self.root.after(1500, lambda: ensure_numpy(self))
         self.updater = Updater(self)
         self.root.bind_all("<F5>", lambda e: self.updater.check(manual=True, install=True))
         self._last = now().timestamp()
@@ -8554,6 +8698,14 @@ class Manager:
             return
         kf = self.app.keyfx
         txt = "Vị trí hiệu ứng lần gõ gần nhất: " + (kf.last_info or "chưa gõ")
+        st = NUMPY_STATE.get("s")
+        if st == "đang cài":
+            txt = "⏳ Đang tự cài thư viện numpy cho hiệu ứng (cần mạng, vài phút)...\n" + txt
+        elif st in ("thiếu", "lỗi cài"):
+            txt = ("⚠ Máy thiếu thư viện numpy nên hiệu ứng đang dùng bản vẽ dự phòng. Cách sửa: chạy lại ChayChibi.bat khi "
+                   "có mạng, hoặc mở cmd gõ:  py -m pip install numpy\n") + txt
+        elif FX_BROKEN:
+            txt = "⚠ Mẫu lỗi (đang dùng bản dự phòng): " + ", ".join(FX_BROKEN) + "\n" + txt
         if kf.stats:
             txt += "\n" + " • ".join("%s: %s" % (app_name(e) if e != "?" else "?", h) for e, h in list(kf.stats.items())[-5:])
         self.kdiag.config(text=txt)

@@ -44,6 +44,18 @@ pause
 exit /b 1
 
 :run
+rem ---- numpy: can cho hieu ung go phim (thieu thi app van chay, hieu ung dung ban du phong) ----
+%PY% -c "import numpy" >nul 2>nul
+if not errorlevel 1 goto :startapp
+echo  Dang cai numpy cho hieu ung go phim - chi lan dau...
+%PY% -m pip install --quiet --disable-pip-version-check --no-index --find-links "%~dp0ThuVien" numpy >nul 2>nul
+%PY% -c "import numpy" >nul 2>nul
+if not errorlevel 1 goto :startapp
+%PY% -m pip install --quiet --disable-pip-version-check numpy
+%PY% -c "import numpy" >nul 2>nul
+if errorlevel 1 echo  Chua cai duoc numpy - hieu ung go phim se dung ban du phong. App se tu thu cai lai khi co mang.
+
+:startapp
 set "PYW="
 where pyw >nul 2>nul && set "PYW=pyw -3"
 if not defined PYW (

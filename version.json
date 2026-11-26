@@ -1,9 +1,10 @@
 {
-  "version": "3.9",
+  "version": "3.10",
   "date": "2026-11-26",
   "notes": [
-    "Hiệu ứng Đầu lâu: chỉ giữ đầu lâu (bóc riêng 8 đầu lâu từ ảnh), bỏ khói/xoáy thừa; đầu lâu hiện dần nhỏ→to, bay lên lắc lư, mắt loé; khi xoá lao bổ xuống chữ",
-    "Thêm 2 thanh trượt ở tab Hiệu ứng gõ phím: Độ đậm (trong suốt 15–100%) và Tốc độ xuất hiện (chậm ×0.4 – nhanh ×2.0), áp dụng cả ô xem trước",
-    "Lôi tinh liên hoàn: sợi sét mảnh, một màu lôi xanh"
+    "SỬA LỖI hiệu ứng gõ không hoạt động: máy thiếu thư viện numpy làm hỏng toàn bộ hiệu ứng. Nay app tự cài numpy ở chế độ nền (ChayChibi.bat cũng tự cài); trong lúc chưa có, hiệu ứng tự chuyển sang bản vẽ dự phòng thay vì mất hẳn",
+    "Lỗi ở một mẫu hiệu ứng không còn làm treo việc bắt phím / chuyển động nhân vật; tab Hiệu ứng gõ phím báo rõ tình trạng",
+    "Lôi tinh liên hoàn: làm lại thành MỘT tia sét lôi xanh mảnh chạy dọc trên dòng chữ tới con trỏ, chớp loá rồi rút dần (không toả ra nữa)",
+    "Lôi thương: vẽ lại thành cây thương sấm sét thật sự – mũi lá to có ngạnh hình tia chớp, sống trắng loá, đai chắn hai cánh sét, cán dài có sét quấn xoắn; phóng xuống cắm vào chữ, rung bần bật, sóng chấn + nổ"
   ]
 }

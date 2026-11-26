@@ -69,7 +69,9 @@ Kèm theo là trường "khoảng cách tới tâm năng lượng" và các rẻ
 
 **Tuỳ chỉnh** (Cài đặt → ⚡ Hiệu ứng gõ phím): Hệ số cỡ, **Độ đậm** (độ trong suốt 15–100%), **Tốc độ xuất hiện** (×0.4 chậm – ×2.0 nhanh).
 
-Đầu lâu chỉ dùng phần đầu lâu bóc riêng từ ảnh; Lôi tinh liên hoàn dùng sợi sét mảnh một màu lôi xanh.
+Đầu lâu chỉ dùng phần đầu lâu bóc riêng từ ảnh. Lôi tinh liên hoàn là một tia sét lôi xanh mảnh chạy dọc dòng chữ. Lôi thương là cây thương sấm sét vẽ bằng nét.
+
+**Thư viện:** hiệu ứng dựng từ ảnh cần `numpy`. `ChayChibi.bat` và app tự cài khi có mạng; nếu chưa cài được, hiệu ứng tự dùng bản vẽ dự phòng (vẫn chạy). Cài tay: `py -m pip install numpy`.
 
 **Mỗi frame diễn ra:**
 - Sét lan dần từ tâm theo mép răng cưa.
