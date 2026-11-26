@@ -113,6 +113,7 @@ def main():
 XOAY = {
     "loi_lienhoan": ("8_loi_lienhoan.png", -70.0, 480, 0.62),  # tia sét dọc chéo -> nằm ngang (ép dẹt để chạy sát dòng chữ)
     "loi_thuong": ("9_loi_thuong.png", -28.3, 480, 1.0),       # thương chéo -> nằm ngang, mũi bên phải
+    "loi_truc": ("8_loi_lienhoan.png", 0.0, 560, 1.0),          # tia sét dựng đứng (giáng từ trời) cho Long Uy của Cổ Long
 }
 
 

@@ -71,6 +71,8 @@ Kèm theo là trường "khoảng cách tới tâm năng lượng" và các rẻ
 
 Đầu lâu chỉ dùng phần đầu lâu bóc riêng từ ảnh. Lôi tinh liên hoàn và Lôi thương dựng từ hai ảnh riêng của bạn (`tools/hieu_ung_nguon/8_loi_lienhoan.png`, `9_loi_thuong.png`, cắt bằng `python tools/cat_hieu_ung.py --xoay`); bản vẽ bằng nét gấp khúc dùng khi thiếu numpy.
 
+**Ổn định & khắc phục:** tab Cài đặt có bảng tình trạng (✅ ổn định / ⚠ đang lỗi gì) và nút **🛠 Khắc phục & làm mới** (cài lại hook bàn phím, khởi động lại bộ dò con trỏ, tạo lại cửa sổ hiệu ứng, dựng lại hình rồi phát thử). App tự canh gác mỗi 2 giây: Windows gỡ hook thì tự cài lại. Lỗi được ghi ở `ChibiData/hieu_ung_go.log`; nút **📋 Sao chép báo cáo lỗi** chép toàn bộ tình trạng + nhật ký để gửi người sửa.
+
 **Thư viện:** hiệu ứng dựng từ ảnh cần `numpy`. `ChayChibi.bat` và app tự cài khi có mạng; nếu chưa cài được, hiệu ứng tự dùng bản vẽ dự phòng (vẫn chạy). Cài tay: `py -m pip install numpy`.
 
 **Mỗi frame diễn ra:**

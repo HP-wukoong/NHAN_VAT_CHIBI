@@ -394,12 +394,21 @@ def key(name):
     return KEYS[name]
 
 
+TIP_KEYS = ("hu_loi_truc",)
+
+
 def file_key(name):
     """Ảnh hiệu ứng của người dùng trong HieuUng/ (chạy tools/cat_hieu_ung.py trước). Neo = giữa đáy."""
     im = Image.open(os.path.join(os.path.dirname(HERE), "HieuUng", name[3:] + ".png")).convert("RGBA")
     k = Key.__new__(Key)
     k.name, k.im = name, im
     k.anchor = (im.width / 2.0, im.height * 0.96)
+    if name in TIP_KEYS:                                     # tia sét giáng: neo = mũi nhọn thấp nhất (điểm chạm đất)
+        A = np.asarray(im.getchannel("A"))
+        ys, xs = np.nonzero(A > 120)
+        y0 = ys.max()
+        low = ys >= y0 - 6
+        k.anchor = (float(xs[low].mean()), float(y0))
     k.center = (im.width / 2.0, im.height / 2.0)
     k.mouth = k.center
     k.pts = []
@@ -1569,39 +1578,111 @@ def S_mini():
 
 @defset("ult")
 def S_ult():
-    segs = [("aura3", 10), ("ult1", 7), ("ult2", 7), ("ult3", 7), ("ult4", 7), ("ult2", 7), ("ult3", 7), ("roar4", 10), ("walk3", 6)]
-    T = 68
+    """Tuyệt kỹ Long tộc – LONG UY: mây sấm kéo tới, thiên lôi giáng thẳng xuống thân rồng, rồi lôi trận giáng dồn dập
+    quanh rồng (trước – sau, trái – phải, nhanh dần), kết bằng VẠN LÔI TỀ GIÁNG 5 tia cùng lúc; sét dùng ảnh tia sét
+    của người dùng (HieuUng/loi_truc.png): loá trắng – chớp tắt – tái giáng – tàn, chạm đất nổ + vòng chấn."""
+    segs = [("aura3", 12), ("ult1", 8), ("ult2", 8), ("ult3", 8), ("ult4", 8), ("ult2", 8), ("ult3", 8), ("ult4", 10),
+            ("roar4", 12), ("walk3", 10)]
+    T = 92
     seq = tl(segs, 2)
+    # lịch giáng: (khung, x, sau lưng?, hệ số cao, lật?)
+    plan = [(16, -110, False, 0.95, 0), (21, 140, True, 0.85, 1), (26, -210, True, 0.9, 0), (30, 90, False, 1.0, 1),
+            (34, -300, False, 0.95, 1), (37, 200, True, 0.8, 0), (40, -60, True, 0.9, 1), (43, -360, True, 0.85, 0),
+            (46, 160, False, 1.0, 0), (48, -170, False, 0.95, 1), (50, 240, True, 0.8, 1), (52, -250, True, 0.9, 0),
+            (54, 40, False, 1.0, 0), (56, -410, True, 0.8, 1), (58, 120, False, 0.95, 1)]
+    FIN = 62
+    final = [(-330, True, 0.95, 0), (-170, False, 1.05, 1), (10, False, 1.1, 0), (170, True, 0.9, 1), (-460, True, 0.8, 1)]
+    LIFE = (1.0, 0.92, 0.3, 0.88, 0.5, 0.22, 0.08)                   # loá – giữ – tắt – tái giáng – tàn
+
+    def strike(F, x, a, back, hk, flip, big=False):
+        if a < 0 or a >= len(LIFE):
+            return
+        al = LIFE[a]
+        gy = -10 if back else 6
+        H = (360 if back else 400) * hk * (1.15 if big else 1.0)
+        k = key("hu_loi_truc")
+        sy = H / (k.im.height * SCALE)
+        sx = sy * (0.85 if back else 1.0) * (-1 if flip else 1)
+        lay, glay = ("bg", "bgg") if back else ("fg", "fgg")
+        fl = 0.85 if a == 0 else (0.45 if a == 3 else 0.0)
+        F.sprite("hu_loi_truc", (x, gy), sx=sx * 1.04, sy=sy * 1.02, alpha=al * 0.9, pivot="anchor", layer=glay, flash=0.6)
+        F.placed.pop()                                               # quầng sáng (lớp mờ)
+        F.sprite("hu_loi_truc", (x, gy), sx=sx, sy=sy, alpha=al, pivot="anchor", layer=lay, flash=fl)
+        F.placed.pop()
+        # chạm đất: loá tròn dẹt, nổ nhỏ, bụi đá, vòng chấn
+        F.ell((x, gy), 34 * al + 10, 9 * al + 3, fill=(215, 175, 255, int(230 * al)), layer=glay)
+        F.ell((x, gy), 12 * al + 3, 4 * al + 1, fill=(255, 245, 255, int(255 * al)), layer=lay)
+        if a <= 4:
+            kb = key("hu_no_vang_tim")
+            dz = (150.0 if big else 105.0) / kb.im.width / SCALE * (0.6 + 0.12 * a)
+            F.sprite("hu_no_vang_tim", (x, gy + 2), sx=dz, sy=dz * 0.8, alpha=(1 - a / 5.0) * 0.9, pivot="anchor", layer=lay)
+            F.placed.pop()
+        if 1 <= a <= 5:
+            ring(F, (x, gy), 16 + a * (14 if big else 9), 4 + a * 2.5, 1 - a / 6.0)
+            dust(F, (x + (a - 3) * 6, gy - 2), 6 + a * 2.5, 0.6 - a * 0.1, back)
+        # loé trong mây ở gốc tia
+        F.ell((x + (40 if not flip else -40) * hk, -380), 38, 12, fill=(160, 110, 255, int(85 * al)), layer="bgg")
 
     def f(F, i):
         a, b, m = seq[i]
-        spin = (i - 10) * 4 if 10 <= i < 52 else 0
-        pulse = 1 + 0.05 * math.sin(i * 1.1) if 10 <= i < 52 else 1
-        sh = shake(i, 2.2) if 10 <= i <= 58 else (0, 0)
-        fl = 0.8 if i in (10, 52) else (0.45 if i in (11, 24, 38, 53) else 0)
-        info = pair(F, a, b, m, pos=sh, rot=math.sin(math.radians(spin)) * 4, sx=pulse, sy=pulse, pivot="anchor",
-                    glow=kfv(i, [(0, 0.3), (10, 0.55), (58, 0.55), (68, 0.2)]), flash=fl)
-        c = info["center"]
+        act = 12 <= i < 76
+        spin = (i - 12) * 4 if act else 0
+        pulse = 1 + 0.05 * math.sin(i * 1.1) if act else 1
+        sh = shake(i, 3.2 if i in (12, 13, FIN, FIN + 1) else 2.0) if 12 <= i <= 78 else (0, 0)
+        fl = 0.9 if i in (12, FIN) else (0.45 if i in (13, 30, 46, 54, FIN + 1) else 0)
         r = random.Random(i * 13)
-        if i < 10:                                           # tụ khí: hạt sáng hút vào, quả cầu vàng hiện
-            for _ in range(12):
-                p = add(c, dirv(r.uniform(0, 360)), 90 * (1 - i / 10.0) + 10)
+        # mây sấm tím đen (sau lưng mọi thứ)
+        cl = kfv(i, [(0, 0.0), (10, 0.9), (76, 0.9), (92, 0.0)])
+        if cl > 0.01:
+            rc = random.Random(5)
+            for n in range(16):                                        # cụm mây bồng, mép mờ, không thành dải
+                cx = -470 + n * 50 + rc.uniform(-25, 25) + math.sin(i * 0.08 + n) * 8
+                cy = -392 + rc.uniform(-6, 14)
+                rx, ry = 40 + rc.uniform(0, 45), 14 + rc.uniform(0, 16)
+                F.ell((cx, cy), rx, ry, fill=(30, 16, 56, int(95 * cl)), layer="bgg")
+                F.ell((cx + 6, cy - 3), rx * 0.6, ry * 0.55, fill=(58, 30, 104, int(70 * cl)), layer="bgg")
+            if 4 <= i < 12 and i % 2 == 0:                              # chớp ngầm trong mây khi tụ khí
+                F.ell((r.uniform(-400, 250), -384), 46, 13, fill=(170, 110, 255, 100), layer="bgg")
+        info = pair(F, a, b, m, pos=sh, rot=math.sin(math.radians(spin)) * 4, sx=pulse, sy=pulse, pivot="anchor",
+                    glow=kfv(i, [(0, 0.3), (12, 0.65), (76, 0.65), (92, 0.2)]), flash=fl)
+        c = info["center"]
+        if i < 12:                                           # tụ khí: hạt sáng hút vào, quả cầu hiện
+            for _ in range(14):
+                p = add(c, dirv(r.uniform(0, 360)), 100 * (1 - i / 12.0) + 10)
                 F.line([p, add(p, dirv(r.uniform(0, 360)), 4)], (235, 220, 255, 230), 0.9)
-            F.fxsprite("fx_orb", add(c, (0, -70)), scale=0.4 + 0.05 * i, rot=i * 20, alpha=0.6 + 0.04 * i)
-        if 10 <= i < 58:                                     # sét trời giáng quanh, vòng long uy lan ra
-            for _ in range(2):
-                x = c[0] + r.choice((-1, 1)) * r.uniform(70, 200)
-                bolt(F, (x + r.uniform(-30, 30), -250), (x, -1), r, 2.0, 1.0, branches=3, back=r.random() < 0.5)
-                F.ell((x, -1), 22, 6, fill=(200, 160, 255, 230), layer="bgg")
-            for t0 in range(10, 58, 6):
+            F.fxsprite("fx_orb", add(c, (0, -70)), scale=0.4 + 0.045 * i, rot=i * 20, alpha=0.6 + 0.035 * i)
+        # THIÊN LÔI GIÁNG THÂN
+        strike(F, 0, i - 12, False, 1.12, 0, big=True)
+        strike(F, 0, i - 13, True, 1.05, 1, big=True)
+        if 12 <= i <= 22:                                    # nổ mặt đất dưới chân rồng
+            u = (i - 12) / 10.0
+            kd = key("hu_no_dat")
+            dz = 360.0 / kd.im.width / SCALE
+            F.sprite("hu_no_dat", (0, 4), sx=dz * (0.5 + 0.6 * u), sy=dz * (0.3 + 0.7 * u), alpha=1 - u ** 1.6, pivot="anchor",
+                     layer="bg", flash=0.5 if i < 14 else 0)
+            F.placed.pop()
+        for t0, x, back, hk, flip in plan:                     # LÔI TRẬN
+            strike(F, x, i - t0, back, hk, flip)
+        for n, (x, back, hk, flip) in enumerate(final):          # VẠN LÔI TỀ GIÁNG
+            strike(F, x, i - FIN - (n % 2), back, hk, flip, big=True)
+        if act:
+            for t0 in list(range(12, 60, 6)) + [FIN]:
                 a_ = i - t0
                 if 0 <= a_ < 10:
-                    ring(F, add(c, (0, 20)), 40 + a_ * 18, 10 + a_ * 4, 1 - a_ / 10.0)
-            if i % 7 == 3:
-                F.fxsprite("fx_bolts", add(c, (r.uniform(-60, 60), -60)), scale=1.0, alpha=0.9)
-            body_arcs(F, info, r, 4, 1.0, ln=(14, 30))
-        if i in (10, 52):
-            flash_burst(F, c, 70, 1.0)
+                    big = t0 in (12, FIN)
+                    ring(F, add(c, (0, 20)), 40 + a_ * (30 if big else 18), 10 + a_ * (6 if big else 4), 1 - a_ / 10.0)
+            body_arcs(F, info, r, 5 if i >= FIN else 4, 1.0, ln=(14, 32))
+        if 66 <= i < 86:                                     # dư chấn: điện bò mặt đất, khói tan
+            k2 = 1 - (i - 66) / 20.0
+            for _ in range(3):
+                x0 = r.uniform(-420, 260)
+                bolt(F, (x0, -2), (x0 + r.uniform(-60, 60), -2 - r.uniform(0, 14)), r, 1.0, 0.8 * k2, branches=1, back=True)
+            for n in range(4):
+                dust(F, (-330 + n * 160 + math.sin(i + n) * 10, -6 - (i - 66) * 0.8), 14 + (i - 66), 0.45 * k2, True)
+        if i in (12, FIN):
+            flash_burst(F, c, 62, 1.0)
+        elif i in (13, FIN + 1):
+            flash_burst(F, c, 40, 0.55)
     return build(T, f)
 
 

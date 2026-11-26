@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.11"
+APP_VER = "3.12"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -97,6 +97,40 @@ def data_dir():
 DATA_DIR = data_dir()
 DATA_FILE = os.path.join(DATA_DIR, "chibi_data.json")
 ERR_FILE = os.path.join(DATA_DIR, "errors.log")
+
+
+FX_LOG = os.path.join(DATA_DIR, "hieu_ung_go.log")
+FX_EVENTS = []                                # 40 sự kiện gần nhất của hệ hiệu ứng gõ (hiện trong báo cáo)
+
+
+def fx_log(msg):
+    """Ghi nhật ký riêng của hiệu ứng gõ phím: tự khôi phục, lỗi, kết quả tự kiểm tra – để lần sau biết hướng vá."""
+    ts = dt.datetime.now().strftime("%d/%m %H:%M:%S")
+    FX_EVENTS.append((ts, msg))
+    del FX_EVENTS[:-40]
+    try:
+        if os.path.exists(FX_LOG) and os.path.getsize(FX_LOG) > 200000:
+            os.replace(FX_LOG, FX_LOG + ".1")
+        with open(FX_LOG, "a", encoding="utf-8") as f:
+            f.write("[%s] %s\n" % (ts, msg))
+    except Exception:
+        pass
+
+
+def last_input_tick():
+    """Thời điểm (GetTickCount) Windows nhận thao tác phím / chuột gần nhất – để biết hook còn sống không."""
+    if not IS_WIN:
+        return 0
+    try:
+        class LII(ctypes.Structure):
+            _fields_ = [("cbSize", wintypes.UINT), ("dwTime", wintypes.DWORD)]
+        li = LII()
+        li.cbSize = ctypes.sizeof(LII)
+        if ctypes.windll.user32.GetLastInputInfo(ctypes.byref(li)):
+            return int(li.dwTime)
+    except Exception:
+        pass
+    return 0
 
 
 def log_error_msg(msg):
@@ -283,6 +317,10 @@ def foreground_fullscreen():
         u32.GetClassNameW(hwnd, cls, 64)
         if cls.value in ("Progman", "WorkerW", "Shell_TrayWnd", "TkTopLevel", "Tk", "#32768"):
             return False
+        if u32.IsZoomed(hwnd):
+            return False                        # cửa sổ phóng to (kể cả khi thanh tác vụ tự ẩn / màn hình phụ)
+        if (u32.GetWindowLongW(hwnd, -16) & 0x00C00000) == 0x00C00000:
+            return False                        # còn thanh tiêu đề = cửa sổ thường, không phải trình chiếu / game
         r = wintypes.RECT()
         if not u32.GetWindowRect(hwnd, ctypes.byref(r)):
             return False
@@ -2084,11 +2122,35 @@ class GlobalMouse:
         self.count, self.timer = {}, {}
         self.last_wheel = 0
         self.ok = False
+        self.thread = None
+        self.cb_tick = 0                          # GetTickCount lúc hook chuột / bàn phím được gọi gần nhất
+        self.key_tick = 0
+        self.khook_ok = False
+        self.reinstalls = 0
+        self.last_fix = 0.0
 
     def start(self):
         if not IS_WIN:
             return
-        threading.Thread(target=self._run, daemon=True).start()
+        self.tid = None
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.thread.start()
+
+    def alive(self):
+        return self.thread is not None and self.thread.is_alive()
+
+    def reinstall(self):
+        """Gỡ và cài lại hook chuột + bàn phím (Windows âm thầm gỡ hook khi máy bận / sau khi khoá máy, ngủ...)."""
+        if not IS_WIN:
+            return
+        if not self.alive():
+            self.start()
+            return
+        if self.tid:
+            try:
+                ctypes.windll.user32.PostThreadMessageW(self.tid, 0x8003, 0, 0)
+            except Exception:
+                log_error()
 
     def set_keyboard(self, on):
         if self.tid:
@@ -2118,10 +2180,14 @@ class GlobalMouse:
             u32.CallNextHookEx.restype = ctypes.c_ssize_t
             u32.SetWindowsHookExW.argtypes = [ctypes.c_int, Proc, wintypes.HINSTANCE, wintypes.DWORD]
             u32.SetWindowsHookExW.restype = wintypes.HHOOK
+            u32.UnhookWindowsHookEx.argtypes = [wintypes.HHOOK]
             k32.GetModuleHandleW.restype = wintypes.HMODULE
             u32.GetAsyncKeyState.restype = ctypes.c_short
 
+            k32.GetTickCount.restype = wintypes.DWORD
+
             def proc(code, wp, lp):
+                self.cb_tick = k32.GetTickCount()
                 if code == 0:
                     try:
                         if self._handle(int(wp), ctypes.cast(lp, ctypes.POINTER(MSLL)).contents):
@@ -2141,6 +2207,7 @@ class GlobalMouse:
 
             def kproc(code, wp, lp):
                 # chỉ phân loại GÕ / XOÁ rồi bỏ vào hàng đợi – không lưu, không chặn phím nào
+                self.key_tick = self.cb_tick = k32.GetTickCount()
                 if code == 0 and wp in (0x100, 0x104):
                     try:
                         k = ctypes.cast(lp, ctypes.POINTER(KBLL)).contents
@@ -2158,6 +2225,7 @@ class GlobalMouse:
             khook = None
             if self.app.store.s.get("key_fx", True):
                 khook = u32.SetWindowsHookExW(13, self._kproc, k32.GetModuleHandleW(None), 0)
+            self.khook_ok = bool(khook)
             msg = wintypes.MSG()
             while u32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
                 if msg.message == 0x0312:
@@ -2167,6 +2235,19 @@ class GlobalMouse:
                 elif msg.message == 0x8002 and khook:                # tắt -> gỡ hẳn hook
                     u32.UnhookWindowsHookEx(khook)
                     khook = None
+                elif msg.message == 0x8003:                          # cài lại cả hai hook (tự khôi phục / nút Khắc phục)
+                    if hook:
+                        u32.UnhookWindowsHookEx(hook)
+                    hook = u32.SetWindowsHookExW(14, self._proc, k32.GetModuleHandleW(None), 0)
+                    self.ok = bool(hook)
+                    if khook:
+                        u32.UnhookWindowsHookEx(khook)
+                        khook = None
+                    if self.app.store.s.get("key_fx", True):
+                        khook = u32.SetWindowsHookExW(13, self._kproc, k32.GetModuleHandleW(None), 0)
+                    self.reinstalls += 1
+                    self.cb_tick = self.key_tick = k32.GetTickCount()
+                self.khook_ok = bool(khook)
             if khook:
                 u32.UnhookWindowsHookEx(khook)
             if hook:
@@ -2227,11 +2308,14 @@ class GlobalMouse:
                 ev = self.q.get_nowait()
             except Exception:
                 break
-            if self.app.hidden or self.app.fs_hidden:
-                continue
             k = ev[0]
-            if k == "K":
-                self.app.keyfx.on_key(ev[1], ev[2] if len(ev) > 2 else None)
+            if k == "K":                                   # hiệu ứng gõ chạy cả khi nhân vật đang ẩn (on_key tự xét)
+                try:
+                    self.app.keyfx.on_key(ev[1], ev[2] if len(ev) > 2 else None)
+                except Exception:
+                    log_error()
+                continue
+            if self.app.hidden or self.app.fs_hidden:
                 continue
             if k == "HK":
                 x, y = self.app.root.winfo_pointerxy()
@@ -2538,11 +2622,19 @@ class CaretFinder:
         self.results = queue.Queue()
         self.proc = None
         self.crashes = 0
+        self.crash_t = 0.0
         self.uia = None
         self.lock = threading.Lock()
 
     def available(self):
+        if self.crashes >= 3 and time_now() - self.crash_t > 60:
+            self.crashes = 0
+            fx_log("Bộ dò con trỏ nhập: đã nghỉ 1 phút sau 3 lần sập – thử mở lại")
         return IS_WIN and self.crashes < 3
+
+    def reset(self):
+        self.stop()
+        self.crashes = 0
 
     def _spawn(self):
         import subprocess
@@ -2571,8 +2663,10 @@ class CaretFinder:
             if self.proc is proc:
                 self.proc = None
                 self.crashes += 1           # tiến trình phụ chết bất thường
+                self.crash_t = time_now()
+                fx_log("Bộ dò con trỏ nhập bị sập (lần %d)" % self.crashes)
                 if self.crashes >= 3:
-                    log_error_msg("Tìm con trỏ nhập (UI Automation/MSAA) lỗi 3 lần – chuyển sang hiện hiệu ứng cạnh chuột.")
+                    log_error_msg("Tìm con trỏ nhập (UI Automation/MSAA) lỗi 3 lần – tạm hiện hiệu ứng cạnh chuột, 1 phút sau thử lại.")
 
     def request(self, rid):
         if not self.available():
@@ -6502,6 +6596,34 @@ class FxPlayer:
         self.played = 0
         self.lock = threading.Lock()
         self.lw = IS_WIN or None                 # tương thích kiểm tra cũ
+        self.pending = set()                     # cỡ đang dựng ở luồng phụ
+        self.fails = 0                           # số lần vẽ lên cửa sổ thất bại
+        self.last_ok = None                      # lần vẽ gần nhất có thành công không
+        self.last_step = 0.0
+
+    def reset_windows(self):
+        """Huỷ toàn bộ cửa sổ hiệu ứng + hàng đang phát, tạo lại từ đầu ở lần phát sau."""
+        if self.job is not None:
+            try:
+                self.app.root.after_cancel(self.job)
+            except Exception:
+                pass
+        self.job = None
+        self.live = []
+        for lw in self.slots:
+            try:
+                if lw is not None and getattr(lw, "tkwin", None) is not None:
+                    lw.tkwin.destroy()
+            except Exception:
+                pass
+        self.slots = []
+        self.fails = 0
+
+    def _top(self, lw):
+        try:
+            ctypes.windll.user32.SetWindowPos(wintypes.HWND(lw.hwnd), wintypes.HWND(-1), 0, 0, 0, 0, 0x0013)
+        except Exception:
+            pass
 
     def _slot(self):
         used = {e["slot"] for e in self.live}
@@ -6517,6 +6639,7 @@ class FxPlayer:
             w.attributes("-topmost", True)
             w.geometry("1x1+-50+-50")
             lw = LayeredWin(w, extra_ex=0x20 | 0x08000000)     # WS_EX_TRANSPARENT | WS_EX_NOACTIVATE
+            lw.tkwin = w
             lw.update(-50, -50, 1, 1, b"\0\0\0\0")
             self.slots.append(lw)
         except Exception:
@@ -6535,6 +6658,23 @@ class FxPlayer:
         with self.lock:
             vs = self.cache.get(k)
         if not vs:
+            with self.lock:                                       # đã có cỡ gần giống -> phát tạm, dựng cỡ đúng ở luồng phụ
+                near = [(abs(kk[1] - size), v) for kk, v in self.cache.items() if kk[0] == key and kk[2] == mode and v]
+            near = min(near, key=lambda c: c[0]) if near else None
+            if near and near[0] <= size * 0.5:
+                if k not in self.pending:
+                    self.pending.add(k)
+
+                    def first(k=k, key=key, size=size, mode=mode):
+                        try:
+                            seq = self._enc(FX_BY_KEY[key][2](size, 0, mode))
+                            with self.lock:
+                                if not self.cache.get(k):
+                                    self.cache[k] = [seq]
+                        finally:
+                            self.pending.discard(k)
+                    VFX_BAKER.ask(("first",) + k, first)
+                return near[1]
             maker = FX_BY_KEY[key][2]
             vs = [self._enc(maker(size, 0, mode))]
             with self.lock:
@@ -6564,7 +6704,11 @@ class FxPlayer:
             old["i"] = max(old["i"], len(old["seq"]) - 3)
             if len(self.live) >= self.MAX_LIVE + 1:
                 self._end(self.live.pop(0))
-        self.live.append(dict(seq=seq, i=0, pos=(int(x), int(y)), anchor=FX_BY_KEY[key][3], slot=self._slot()))
+        e = dict(seq=seq, i=0, pos=(int(x), int(y)), anchor=FX_BY_KEY[key][3], slot=self._slot())
+        self.live.append(e)
+        lw = self.slots[e["slot"]] if e["slot"] < len(self.slots) else None
+        if lw:
+            self._top(lw)                                      # luôn nổi trên các cửa sổ "luôn trên cùng" khác
         self.played += 1
         if self.job is None:
             self._step()
@@ -6588,12 +6732,17 @@ class FxPlayer:
             if lw:
                 try:
                     ax, ay = e["anchor"]
-                    lw.update(e["pos"][0] - int(w * ax), e["pos"][1] - int(h * ay), w, h, data, self._alpha())
+                    ok = lw.update(e["pos"][0] - int(w * ax), e["pos"][1] - int(h * ay), w, h, data, self._alpha())
                 except Exception:
                     log_error()
+                    ok = False
+                self.last_ok = bool(ok)
+                if not ok:
+                    self.fails += 1
             e["i"] += 1
             alive.append(e)
         self.live = alive
+        self.last_step = time_now()
         self.job = self.app.root.after(self._tick(), self._step) if self.live else None
 
     def _alpha(self):
@@ -6631,6 +6780,19 @@ class KeyFx:
         self.rid = 0
         self.stats = {}                           # tên chương trình -> cách tìm con trỏ nhập lần gần nhất
         self.last_info = ""
+        self.skip_run = {}                        # phần mềm -> số lần liền "nội dung không đổi"
+        self.trust = set()                        # phần mềm không báo vị trí con trỏ mới -> tin cú gõ
+        self.timeouts = 0
+        self.auto_fixes = 0
+        self.keys_seen = 0
+        self.last_key_t = 0.0
+        self.last_notice = 0.0
+        self.last_hook_log = 0.0
+        self.started = time_now()
+        try:
+            app.root.after(4000, self.watch)
+        except Exception:
+            pass
 
     def size(self, text_h=None):
         """Cỡ hiệu ứng: theo cỡ chữ phần mềm (chiều cao con trỏ nhập) nếu bật, nhân thêm hệ số trên thanh trượt."""
@@ -6640,7 +6802,7 @@ class KeyFx:
             base = text_h * 6.0
         else:
             base = 150 * self.app.dpi
-        return int(max(60, min(560, round(base * k / 20.0) * 20)))
+        return int(max(16, min(560, round(base * k / 8.0) * 8)))
 
     def _note(self, how):
         exe = get_foreground_exe() or "?"
@@ -6677,6 +6839,8 @@ class KeyFx:
         prev = self.prev_caret
         if prev is None or pos is None:
             return True
+        if self.trust and (get_foreground_exe() or "?") in self.trust:
+            return True
         (px, py), pt = prev
         return abs(pos[0] - px) > 1 or abs(pos[1] - py) > 1
 
@@ -6686,6 +6850,8 @@ class KeyFx:
 
     def on_key(self, kind, vk=None):
         s = self.app.store.s
+        self.keys_seen += 1
+        self.last_key_t = time_now()
         if not s.get("key_fx", True) or self.app.fs_hidden:
             return
         t = time_now()
@@ -6720,8 +6886,7 @@ class KeyFx:
                 self._remember(pos)
                 self._play(kind, pos, (r[2] if len(r) > 2 else None) or th)
             else:
-                self.skipped += 1
-                self._note("nội dung không đổi – bỏ qua")
+                self._skip(kind, pos, (r[2] if len(r) > 2 else None) or th)
         except Exception:
             log_error()
 
@@ -6757,6 +6922,7 @@ class KeyFx:
                 break
             rid, pos, pw, how = res[:4]
             th = res[4] if len(res) > 4 else None
+            self.timeouts = 0
             if self.wait and rid == self.wait[0]:
                 _, kind, _t, ptr, vk = self.wait
                 self.wait = None
@@ -6765,16 +6931,212 @@ class KeyFx:
                     continue
                 self._note(how or "cạnh chuột")
                 if pos is not None and vk != 0x2E and not self._changed(pos):
-                    self.skipped += 1
-                    self._note("nội dung không đổi – bỏ qua")
+                    self._skip(kind, pos, th)
                     continue
                 self._remember(pos)
                 self._play(kind, pos or ptr, th if pos else None)
         if self.wait and time_now() - self.wait[2] > 0.25:
             _, kind, _t, ptr, _vk = self.wait
             self.wait = None
+            self.timeouts += 1
+            if self.timeouts >= 6:                          # tiến trình dò con trỏ treo -> tắt để lần sau tự mở mới
+                self.timeouts = 0
+                self.finder.stop()
+                fx_log("Bộ dò con trỏ nhập không trả lời 6 lần liền – đã khởi động lại")
             self._note("cạnh chuột (phần mềm chậm trả lời)")
             self._play(kind, ptr)
+
+    def _skip(self, kind, pos=None, th=None):
+        """Cú gõ mà con trỏ nhập không dịch chuyển. Gõ ký tự 4 lần liền vẫn 'không đổi' = phần mềm không báo vị trí
+        con trỏ mới (không phải gõ vô ích) -> từ đó tin cú gõ cho phần mềm này, không bỏ qua nữa."""
+        exe = get_foreground_exe() or "?"
+        self.skipped += 1
+        n = self.skip_run.get(exe, 0) + 1 if kind == "T" else self.skip_run.get(exe, 0)
+        self.skip_run[exe] = n
+        if n >= 4 and exe not in self.trust:
+            self.trust.add(exe)
+            fx_log("%s không báo vị trí con trỏ mới khi gõ – chuyển sang hiện hiệu ứng theo từng cú gõ" % app_name(exe))
+            if pos or self.last_pos:
+                self._remember(pos)
+                self._play(kind, pos or self.last_pos, th)
+            return
+        self._note("nội dung không đổi – bỏ qua")
+
+    # ── tự canh gác + tình trạng + khắc phục ──
+    def watch(self):
+        try:
+            self._watch()
+        except Exception:
+            log_error()
+        try:
+            self.app.root.after(2000, self.watch)
+        except Exception:
+            pass
+
+    def _watch(self):
+        s = self.app.store.s
+        gm = getattr(self.app, "gmouse", None)
+        fixed = None
+        if IS_WIN and gm is not None and s.get("key_fx", True):
+            if gm.thread is not None and not gm.alive():
+                gm.start()
+                fixed = "luồng bắt phím/chuột bị dừng – đã chạy lại"
+            elif gm.tid and (gm.cb_tick or gm.key_tick) and time_now() - gm.last_fix > 8:
+                li = last_input_tick()
+                d = (li - max(gm.cb_tick, gm.key_tick)) & 0xFFFFFFFF
+                if li and d < 0x80000000 and d > 1500:      # Windows có thao tác mới mà hook không thấy -> hook đã bị gỡ
+                    gm.last_fix = time_now()
+                    gm.reinstall()
+                    fixed = "Windows đã gỡ hook bàn phím/chuột (máy bận, khoá máy, ngủ...) – đã cài lại"
+                elif not gm.khook_ok and time_now() - self.started > 5:
+                    gm.last_fix = time_now()
+                    gm.reinstall()
+                    fixed = "hook bàn phím chưa cài được – đã cài lại"
+        for pl in (self.bolt, self.slash):
+            if pl.live and pl.job is None:
+                pl._step()
+            elif pl.live and pl.last_step and time_now() - pl.last_step > 3:
+                pl.reset_windows()
+                fixed = "cửa sổ hiệu ứng bị kẹt – đã làm mới"
+            if pl.fails >= 3:
+                pl.reset_windows()
+                fixed = "cửa sổ hiệu ứng không vẽ được – đã tạo lại"
+        if fixed:
+            self.auto_fixes += 1
+            if time_now() - self.last_hook_log > 30 or "hook" not in fixed:
+                fx_log("Tự khôi phục: " + fixed)
+                self.last_hook_log = time_now()
+            if time_now() - self.last_notice > 600 and s.get("key_fx_notice", True):
+                self.last_notice = time_now()
+                try:
+                    self.app.say("Đã tự khôi phục hiệu ứng gõ phím ✓", fixed[:1].upper() + fixed[1:], timeout=5)
+                except Exception:
+                    pass
+
+    def health(self):
+        """(mức: 'ok' / 'warn' / 'off', tiêu đề, [dòng chi tiết], [lỗi đang mắc])"""
+        s = self.app.store.s
+        gm = getattr(self.app, "gmouse", None)
+        lines, probs = [], []
+        if not s.get("key_fx", True):
+            return "off", "⏸ Hiệu ứng gõ phím đang TẮT", ["Bật ở ô 'Bật hiệu ứng khi gõ ký tự và khi xoá'."], []
+        if IS_WIN and gm is not None:
+            if not gm.alive():
+                probs.append("Luồng bắt phím không chạy")
+            elif not gm.khook_ok:
+                probs.append("Chưa cài được hook bàn phím")
+            if self.last_key_t:
+                lines.append("Bắt phím: ổn – phím gần nhất %d giây trước (%d phím từ lúc mở)" %
+                             (time_now() - self.last_key_t, self.keys_seen))
+            else:
+                lines.append("Bắt phím: chưa nhận phím nào từ lúc mở – hãy gõ thử vài chữ")
+            if gm.reinstalls:
+                lines.append("Đã cài lại hook %d lần (Windows từng gỡ hook)" % gm.reinstalls)
+        elif not IS_WIN:
+            lines.append("Không phải Windows: chỉ có ô xem trước")
+        st = NUMPY_STATE.get("s")
+        if st == "đang cài":
+            probs.append("Đang tự cài thư viện numpy (hiệu ứng tạm dùng bản vẽ dự phòng)")
+        elif st in ("thiếu", "lỗi cài"):
+            probs.append("Thiếu thư viện numpy – hiệu ứng ảnh dùng bản dự phòng. Sửa: py -m pip install numpy")
+        if FX_BROKEN:
+            probs.append("Mẫu dựng lỗi (đang dùng bản dự phòng): " + ", ".join(sorted(FX_BROKEN)))
+        if IS_WIN and not self.finder.available():
+            probs.append("Bộ dò con trỏ nhập tạm nghỉ sau 3 lần sập (hiệu ứng hiện cạnh chuột, 1 phút sau tự thử lại)")
+        if self.app.fs_hidden:
+            lines.append("Đang tạm ẩn vì có cửa sổ toàn màn hình (trình chiếu / video / game)")
+        for pl, nm in ((self.bolt, "gõ"), (self.slash, "xoá")):
+            if pl.last_ok is False:
+                probs.append("Cửa sổ hiệu ứng %s vừa vẽ lỗi" % nm)
+        if self.trust:
+            lines.append("Phần mềm không báo vị trí con trỏ (hiện theo từng cú gõ): " +
+                         ", ".join(app_name(e) for e in sorted(self.trust)))
+        lines.append("Đã phát %d hiệu ứng gõ, %d xoá • bỏ qua %d lần (nội dung không đổi) • tự khôi phục %d lần" %
+                     (self.bolt.played, self.slash.played, self.skipped, self.auto_fixes))
+        if probs:
+            return "warn", "⚠ Đang gặp lỗi: " + probs[0], lines, probs
+        if IS_WIN and not self.last_key_t:
+            return "ok", "✅ Sẵn sàng – gõ thử để kiểm tra", lines, probs
+        return "ok", "✅ Hiệu ứng gõ phím đang hoạt động ổn định", lines, probs
+
+    def fix(self):
+        """Nút Khắc phục & làm mới: chạy lại toàn bộ hệ hiệu ứng gõ rồi tự kiểm tra. Trả về (thành công?, thông báo)."""
+        fx_log("Bấm 'Khắc phục & làm mới'")
+        s = self.app.store.s
+        gm = getattr(self.app, "gmouse", None)
+        if IS_WIN and gm is not None:
+            if s.get("key_fx", True):
+                gm.reinstall()
+            gm.last_fix = time_now()
+        self.finder.reset()
+        self.trust.clear()
+        self.skip_run.clear()
+        self.prev_caret = None
+        self.wait = None
+        self.timeouts = 0
+        for pl in (self.bolt, self.slash):
+            pl.reset_windows()
+            with pl.lock:
+                pl.cache.clear()
+            pl.pending.clear()
+            pl.last_ok = None
+        FX_BROKEN.clear()
+        _FX_LAY.clear()
+        if not numpy_ok():
+            ensure_numpy(self.app)
+        try:
+            self.app.fs_hidden = bool(s.get("hide_fullscreen", True)) and foreground_fullscreen()
+        except Exception:
+            pass
+        ok, msg = self.selftest()
+        fx_log("Kết quả tự kiểm tra: " + msg)
+        return ok, msg
+
+    def selftest(self, show=True):
+        """Dựng thử 2 mẫu đang chọn + (Windows) phát thử 1 hiệu ứng thật giữa màn hình."""
+        s = self.app.store.s
+        errs = []
+        sz = self.size()
+        for pl, key, nm in ((self.bolt, s.get("key_fx_type", "bolt"), "gõ"), (self.slash, s.get("key_fx_del", "slash"), "xoá")):
+            key = fx_resolve(key)
+            try:
+                vs = pl.variants(key, sz)
+                if not vs or not vs[0]:
+                    errs.append("mẫu %s không dựng được hình" % nm)
+            except Exception as e:
+                errs.append("mẫu %s lỗi: %s" % (nm, repr(e)[:80]))
+        if FX_BROKEN:
+            errs.append("dùng bản dự phòng cho: " + ", ".join(sorted(FX_BROKEN)))
+        if IS_WIN and show and not errs:
+            try:
+                x = self.app.root.winfo_screenwidth() // 2
+                y = self.app.root.winfo_screenheight() // 2
+                self.bolt.play(x, y, sz, s.get("key_fx_type", "bolt"))
+                if self.bolt.last_ok is False:
+                    errs.append("cửa sổ hiệu ứng không vẽ được lên màn hình")
+            except Exception as e:
+                errs.append("phát thử lỗi: %s" % repr(e)[:80])
+        gm = getattr(self.app, "gmouse", None)
+        if IS_WIN and gm is not None and s.get("key_fx", True) and not gm.alive():
+            errs.append("luồng bắt phím chưa chạy")
+        if errs:
+            return False, "Còn lỗi: " + "; ".join(errs)
+        return True, "Đã làm mới xong – hiệu ứng hoạt động bình thường" + (" (vừa phát thử giữa màn hình)" if IS_WIN else "")
+
+    def report(self):
+        lv, title, lines, probs = self.health()
+        out = ["BÁO CÁO HIỆU ỨNG GÕ PHÍM – Chibi Nhắc Việc %s" % APP_VER,
+               "Thời điểm: %s • Python %s • numpy: %s" % (dt.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                                                         sys.version.split()[0], "có" if numpy_ok() else "THIẾU"),
+               "Mẫu gõ: %s • mẫu xoá: %s • cỡ %d px" % (self.app.store.s.get("key_fx_type"), self.app.store.s.get("key_fx_del"),
+                                                        self.size()),
+               title] + ["- " + x for x in probs + lines]
+        if self.stats:
+            out.append("Cách tìm con trỏ theo phần mềm: " + " • ".join("%s: %s" % (app_name(e) if e != "?" else "?", h)
+                                                                       for e, h in self.stats.items()))
+        out.append("Nhật ký gần đây:")
+        out += ["  [%s] %s" % e for e in FX_EVENTS[-20:]] or ["  (trống)"]
+        return "\n".join(out)
 
     def _react(self, kind, t):
         s = self.app.store.s
@@ -8828,9 +9190,22 @@ class Manager:
                                lambda x: ("chậm " if x < 0.9 else ("nhanh " if x > 1.1 else "vừa ")) + "×%.1f" % x)
         ttk.Label(kf, text="Hệ số cỡ:").grid(row=3, column=0, sticky="w", pady=4)
         self.kfs_v = tk.DoubleVar(value=s.get("key_fx_size", 1.0))
-        ksc = ttk.Scale(kf, from_=0.4, to=2.5, variable=self.kfs_v, length=200)
-        ksc.grid(row=3, column=1, sticky="w", padx=6)
-        ksc.bind("<ButtonRelease-1>", lambda e: self.app.set_setting("key_fx_size", round(self.kfs_v.get(), 2)))
+        kszf = ttk.Frame(kf)
+        kszf.grid(row=3, column=1, sticky="w", padx=6)
+        kszl = ttk.Label(kszf, text="", width=14, style="Muted.TLabel")
+
+        def ksz_text(_x=None):
+            k = self.kfs_v.get()
+            kszl.config(text="×%.2f (%s)" % (k, "rất nhỏ" if k < 0.3 else "nhỏ" if k < 0.7 else "vừa" if k < 1.4 else "to"))
+        ksc = ttk.Scale(kszf, from_=0.05, to=2.5, variable=self.kfs_v, length=200, command=ksz_text)
+        ksc.pack(side="left")
+        kszl.pack(side="left", padx=6)
+        ksz_text()
+
+        def ksz_set(_e=None):
+            self.app.set_setting("key_fx_size", round(self.kfs_v.get(), 2))
+            self.app.keyfx.warm()
+        ksc.bind("<ButtonRelease-1>", ksz_set)
         fxl = [b for _, b in FX_CHOICES]
         lab2k = {b: k for k, b in FX_CHOICES}
         ttk.Label(kf, text="Khi gõ ký tự:").grid(row=4, column=0, sticky="w", pady=3)
@@ -8856,6 +9231,21 @@ class Manager:
                   justify="left").grid(row=7, column=0, columnspan=2, sticky="w")
         self.kdiag = ttk.Label(kf, text="", style="Muted.TLabel", wraplength=470, justify="left")
         self.kdiag.grid(row=8, column=0, columnspan=2, sticky="w", pady=(4, 0))
+        # bảng tình trạng + nút khắc phục
+        hf = ttk.Frame(kf)
+        hf.grid(row=12, column=0, columnspan=3, sticky="we", pady=(10, 0))
+        self.khealth = tk.Label(hf, text="", font=(FONT, 10, "bold"), anchor="w", justify="left", bg=C_BG, fg="#5ee07a",
+                                wraplength=700)
+        self.khealth.pack(fill="x")
+        self.khealth2 = ttk.Label(hf, text="", style="Muted.TLabel", wraplength=700, justify="left")
+        self.khealth2.pack(fill="x")
+        hb = ttk.Frame(hf)
+        hb.pack(fill="x", pady=(4, 0))
+        ttk.Button(hb, text="🛠 Khắc phục & làm mới", style="Accent.TButton", command=self._kfx_fix).pack(side="left")
+        ttk.Button(hb, text="📋 Sao chép báo cáo lỗi", command=self._kfx_copy).pack(side="left", padx=6)
+        ttk.Button(hb, text="📄 Mở nhật ký", command=self._kfx_log).pack(side="left")
+        self.kfix_msg = ttk.Label(hf, text="", style="Muted.TLabel", wraplength=700, justify="left")
+        self.kfix_msg.pack(fill="x", pady=(2, 0))
         self.kdiag_loop()
         self.fxprev = tk.Canvas(kf, width=260, height=220, bg="#120d1c", highlightthickness=1, highlightbackground=C_ACC2)
         self.fxprev.grid(row=1, column=2, rowspan=7, padx=(18, 0), sticky="n")
@@ -8885,6 +9275,37 @@ class Manager:
         self.ustat.grid(row=3, column=0, columnspan=4, sticky="w")
         self.app.updater.on_status = lambda t: self.alive() and self.ustat.config(text=t)
 
+    def _kfx_fix(self):
+        self.kfix_msg.config(text="Đang khắc phục: cài lại hook bàn phím, khởi động lại bộ dò con trỏ, tạo lại cửa sổ "
+                                  "hiệu ứng, dựng lại hình...")
+        self.win.update_idletasks()
+        try:
+            ok, msg = self.app.keyfx.fix()
+        except Exception as e:
+            log_error()
+            ok, msg = False, "Khắc phục lỗi: %r" % e
+        self.kfix_msg.config(text=("✅ " if ok else "⚠ ") + msg + " • " + dt.datetime.now().strftime("%H:%M:%S"))
+        self.fx_preview_set(self.app.store.s.get("key_fx_type", "bolt"), "T")
+
+    def _kfx_copy(self):
+        txt = self.app.keyfx.report()
+        try:
+            self.win.clipboard_clear()
+            self.win.clipboard_append(txt)
+            self.kfix_msg.config(text="📋 Đã chép báo cáo – dán (Ctrl+V) gửi cho người sửa lỗi.")
+        except Exception:
+            log_error()
+
+    def _kfx_log(self):
+        fx_log("Mở nhật ký")
+        try:
+            if IS_WIN:
+                os.startfile(FX_LOG)
+            else:
+                self.kfix_msg.config(text=FX_LOG)
+        except Exception:
+            log_error()
+
     def kdiag_loop(self):
         """Cho biết phần mềm vừa gõ tìm được con trỏ nhập bằng cách nào (để kiểm tra Chrome, Zalo...)."""
         if not self.alive():
@@ -8902,6 +9323,12 @@ class Manager:
         if kf.stats:
             txt += "\n" + " • ".join("%s: %s" % (app_name(e) if e != "?" else "?", h) for e, h in list(kf.stats.items())[-5:])
         self.kdiag.config(text=txt)
+        try:
+            lv, title, lines, probs = kf.health()
+            self.khealth.config(text=title, fg={"ok": "#5ee07a", "warn": "#ff6b6b", "off": C_MUTED}.get(lv, C_MUTED))
+            self.khealth2.config(text="\n".join(["• " + x for x in probs[1:] + lines]))
+        except Exception:
+            log_error()
         self.win.after(1000, self.kdiag_loop)
 
     def fx_preview_set(self, key, mode="T"):
