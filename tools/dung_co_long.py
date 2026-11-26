@@ -166,6 +166,11 @@ def cut(name):
     im = Image.fromarray(np.dstack([rgb, a * 255]).astype(np.uint8), "RGBA")
     bb = im.getchannel("A").getbbox()
     im = im.crop(bb)
+    if name in ERASE:
+        d = ImageDraw.Draw(im)
+        for fx0, fy0, fx1, fy1 in ERASE[name]:
+            d.rectangle((fx0 * im.width, fy0 * im.height, fx1 * im.width, fy1 * im.height), fill=(0, 0, 0, 0))
+        im = im.crop(im.getchannel("A").getbbox())
     if name in MIRROR:
         im = im.transpose(Image.FLIP_LEFT_RIGHT)
     return im
@@ -173,13 +178,56 @@ def cut(name):
 
 # Khung đi bộ 1–4 trong ảnh gốc bị khung kế bên che mất đuôi -> ghép đoạn đuôi của walk5 (đủ đuôi, có chùm lửa đầu đuôi)
 # tên -> (điểm cụt x, y tâm đuôi, hệ số độ dày)
-TAIL_GRAFT = {"walk1": (84, 67, 0.85), "walk2": (113, 76, 0.9), "walk3": (113, 66, 0.9), "walk4": (113, 81, 0.9)}
+TAIL_GRAFT = {"walk1": (84, 67, 0.85), "walk2": (113, 76, 0.9), "walk3": (113, 66, 0.9), "walk4": (113, 81, 0.9),
+              "walk0": "auto", "fly3": "auto", "emo1": "auto", "emo2": "auto", "emo5": "auto", "mini1": "auto"}
 TAIL_SRC = ("walk5", 148, 81)                 # khung có đuôi, cột bắt đầu cắt đoạn đuôi, tâm đuôi tại cột đó
+# xoá mảnh hình của khung bên cạnh lọt vào ô cắt: tên -> [(x0, y0, x1, y1) theo tỉ lệ khung]
+ERASE = {"fly3": [(0.0, 0.62, 0.34, 1.0)]}
 
 
-def graft_tail(im, stump_x, stump_y, k):
+def _body(im):
+    a = np.asarray(im).astype(np.float32)
+    return (a[..., 3] > 40) & (a[..., :3].mean(2) < 150)
+
+
+def auto_stump(im):
+    """Mỏm cụt ở mép phải: (x, y tâm, độ dày)."""
+    b = _body(im)
+    h, w = b.shape
+    best = None
+    for x in range(w - 1, max(0, w - 6), -1):
+        col = b[:, x]
+        y, run = 0, []
+        while y < h:
+            if col[y]:
+                y0 = y
+                while y < h and col[y]:
+                    y += 1
+                run.append((y - y0, y0, y))
+            y += 1
+        run = [r for r in run if r[0] >= 5]
+        if run:
+            r = max(run)
+            if best is None or r[0] > best[2]:
+                best = (x, (r[1] + r[2]) / 2.0, r[0])
+    return best
+
+
+def graft_tail(im, stump_x, stump_y, k, thick=None):
     src = cut(TAIL_SRC[0])
     sx0, sy0 = TAIL_SRC[1], TAIL_SRC[2]
+    if thick is not None:                                           # chọn đoạn đuôi có độ dày khớp mỏm cụt
+        b = _body(src)
+        best = None
+        for x in range(124, 176, 2):
+            ys = np.nonzero(b[:97, x])[0]
+            if len(ys) >= 4:
+                t = ys.max() - ys.min() + 1
+                if best is None or abs(t * 0.95 - thick) < best[0]:
+                    best = (abs(t * 0.95 - thick), x, (ys.max() + ys.min()) / 2.0, t)
+        if best:
+            _, sx0, sy0, t = best
+            k = max(0.6, min(1.15, thick / float(t)))
     piece = src.crop((sx0 - 6, 0, src.width, 97))                   # bỏ phần chân / bụi đất phía dưới
     if k != 1.0:
         piece = piece.resize((max(1, int(piece.width * k)), max(1, int(piece.height * k))), Image.LANCZOS)
@@ -303,8 +351,16 @@ class Key:
         self.tail_tip = None
         self._hot_src = (body, gx, gy)
         if name in TAIL_GRAFT:
-            sx_, sy_, k_ = TAIL_GRAFT[name]
-            self.im, dy, self.tail_tip = graft_tail(self.im, sx_, sy_, k_)
+            g = TAIL_GRAFT[name]
+            if g == "auto":
+                st = auto_stump(self.im)
+                if st:
+                    self.im, dy, self.tail_tip = graft_tail(self.im, st[0] - 1, st[1], 1.0, thick=st[2])
+                else:
+                    dy = 0
+            else:
+                sx_, sy_, k_ = g
+                self.im, dy, self.tail_tip = graft_tail(self.im, sx_, sy_, k_)
             if dy:
                 self.anchor = (self.anchor[0], self.anchor[1] + dy)
                 self.mouth = (self.mouth[0], self.mouth[1] + dy)
@@ -621,6 +677,9 @@ def body_arcs(F, info, rnd, n=2, al=1.0, g=None, m=None, ln=(8, 18)):
         return
     i = getattr(F, "frame_no", 0)
     em = Em(F)
+    off = hot.get("off", (0, 0))
+    fw = info["fwd"]
+    xf = (lambda p: fw((p[0] + off[0], p[1] + off[1]))) if off != (0, 0) else fw
     budget = max(1, int(n * 2))
     pts = hot["pts"]
     order = sorted(range(len(pts)), key=lambda j: ((i + j * 5) % 9))       # điểm nào đang tới nhịp thì sáng trước
@@ -632,12 +691,12 @@ def body_arcs(F, info, rnd, n=2, al=1.0, g=None, m=None, ln=(8, 18)):
         tail = (0.0, 0.0, 0.15, 0.45, 0.75)[ph]
         pw = (0.8, 1.0, 0.6, 0.85, 0.4)[ph] * al
         for tb in hot["bolts"][j]:
-            tb.draw(em, grow, tail, pw, 0.5, random.Random(i * 31 + j), xf=info["fwd"], wk=SCALE * 1.7)
+            tb.draw(em, grow, tail, pw, 0.5, random.Random(i * 31 + j), xf=xf, wk=SCALE * 1.7)
     if n >= 3:                                                   # tia quấn ngang thân nối 2 điểm điện (mảnh, không che dáng)
         for wb in hot["wrap"]:
             ph = (i + int(wb.L)) % 7
             if ph < 3:
-                wb.draw(em, (0.5, 1.0, 1.0)[ph], (0.0, 0.0, 0.4)[ph], 0.6 * al, 0.4, random.Random(i), xf=info["fwd"],
+                wb.draw(em, (0.5, 1.0, 1.0)[ph], (0.0, 0.0, 0.4)[ph], 0.6 * al, 0.4, random.Random(i), xf=xf,
                         wk=SCALE * 1.0)
 
 
@@ -765,6 +824,94 @@ def sparkle(F, c, r, al, col=(255, 240, 170)):
     F.ell(c, r * 0.9, r * 0.9, fill=col + (int(120 * al),), layer="fgg")
 
 
+# ───────────────────────── 3b. chân bước, thân trườn: biến dạng lưới khung gốc ─────────────────────────
+# Vị trí bàn chân trong khung (toạ độ khung đã cắt): (x, y chạm đất, chiều cao chân, bề ngang vùng chân)
+FEET = {"walk3": [(11, 101, 26, 10), (52, 108, 26, 11), (100, 110, 28, 12), (126, 107, 26, 10)],
+        "st6": [(30, 103, 18, 10), (70, 106, 18, 10), (112, 106, 18, 10)]}
+_WARP = {}
+
+
+def mesh_warp(im, disp, step=5):
+    """Biến dạng ảnh theo trường dịch chuyển disp(x, y) -> (dx, dy): điểm ra p hiển thị điểm vào p - d."""
+    w, h = im.size
+    pad = 14
+    W, H = w + 2 * pad, h + 2 * pad
+    src = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    src.paste(im, (pad, pad))
+    mesh = []
+    for y in range(0, H, step):
+        for x in range(0, W, step):
+            x1, y1 = min(x + step, W), min(y + step, H)
+            q = []
+            for (px, py) in ((x, y), (x, y1), (x1, y1), (x1, y)):
+                dx, dy = disp(px - pad, py - pad)
+                q += [px - dx, py - dy]
+            mesh.append(((x, y, x1, y1), q))
+    out = src.transform((W, H), Image.MESH, mesh, Image.BICUBIC)
+    return out, pad
+
+
+def gait_offset(u, stance, stride, lift):
+    """Một bàn chân theo pha u (0..1): đạp lùi khi chạm đất, nhấc – đưa tới – đặt xuống khi bước."""
+    u %= 1.0
+    if u < stance:
+        return (stride * (u / stance - 0.5), 0.0)                    # rồng hướng trái: chân chạm đất trôi về sau (+x)
+    s_ = (u - stance) / (1 - stance)
+    return (stride * (0.5 - ss(s_)), -lift * math.sin(math.pi * s_))
+
+
+def gait_key(base, i, T, stride=7.0, lift=4.5, stance=0.62, wave=1.8, wl=70.0, phases=(0.0, 0.5, 0.25, 0.75),
+             lean=0.0):
+    """Khung gốc base biến dạng ở nhịp i/T: từng chân bước theo pha riêng (nhịp chéo), thân & đuôi uốn sóng trườn,
+    đầu nhấp nhô ngược pha. Trả về Key ảo (giữ neo / miệng / điểm điện của khung gốc)."""
+    ck = (base, i, T, stride, lift, stance, wave, wl, lean)
+    if ck in _WARP:
+        return _WARP[ck]
+    k = key(base)
+    feet = FEET.get(base, [])
+    t = i / float(T)
+    offs = [gait_offset(t + phases[n % len(phases)], stance, stride, lift) for n in range(len(feet))]
+    w, h = k.im.size
+    ph = 2 * math.pi * t
+
+    def disp(x, y):
+        dx = dy = 0.0
+        legw = 0.0
+        for (fx, fy, lh, lw), (ox, oy) in zip(feet, offs):
+            wx = math.exp(-((x - fx) / float(lw)) ** 2)
+            wy = ss((y - (fy - lh)) / float(lh))
+            wgt = wx * wy
+            if wgt > 0.001:
+                dx += ox * wgt
+                dy += oy * wgt
+                legw = max(legw, wgt)
+        body = 1.0 - legw
+        u = max(0.0, min(1.0, x / float(w)))
+        dy += wave * math.sin(2 * math.pi * x / wl - ph * 2) * (0.25 + 0.75 * u) * body      # sóng trườn dọc thân, mạnh về đuôi
+        dx += lean * (1 - y / float(h)) * body
+        dy += -0.9 * math.sin(ph * 2 + 1.2) * (1 - u) * (1 - y / float(h)) * body            # đầu nhấp nhô
+        return dx, dy
+    out, pad = mesh_warp(k.im, disp)
+    v = Key.__new__(Key)
+    v.name = "%s~%d" % (base, i)
+    v.im = out
+    v.anchor = (k.anchor[0] + pad, k.anchor[1] + pad)
+    v.mouth = (k.mouth[0] + pad, k.mouth[1] + pad)
+    v.center = (k.center[0] + pad, k.center[1] + pad)
+    v.pts = [(x + pad, y + pad) for x, y in k.pts]
+    v.tail_tip = None
+    v._flash = {}
+    v._halo = None
+    v.hot = None
+    if k.hot:
+        v.hot = dict(k.hot)
+        v.hot["pts"] = [(x + pad, y + pad) for x, y in k.hot["pts"]]
+        v.hot["off"] = (pad, pad)
+    KEYS[v.name] = v                                             # để Frame.sprite / body_arcs dùng như khung thường
+    _WARP[ck] = v
+    return v
+
+
 # ───────────────────────── 4. hoạt cảnh ─────────────────────────
 TAU = 2 * math.pi
 SETS = {}
@@ -860,20 +1007,27 @@ def S_standb():
 
 
 WALK = [("walk2", 6), ("walk3", 6), ("walk4", 6), ("walk3", 6)]
+WALK_T = 24
+WALK_V = 1.2                                   # tốc độ đi (px / nhịp) – bước chân khớp tốc độ, không trượt
+
+
+def walk_key(i, T=WALK_T, run=False):
+    if run:
+        return gait_key("walk3", i % T, T, stride=WALK_V * 3.6 * 0.42 * T / SCALE, lift=7.0, stance=0.42, wave=2.6, wl=60.0,
+                        phases=(0.0, 0.1, 0.5, 0.6), lean=-2.0)
+    return gait_key("walk3", i % T, T, stride=WALK_V * 0.62 * T / SCALE, lift=6.5, stance=0.62, wave=2.2)
 
 
 @defset("walk")
 def S_walk():
-    T = 24
-    seq = tl(WALK, 2, loop=True)
+    T = WALK_T
 
     def f(F, i):
-        a, b, m = seq[i]
+        k = walk_key(i)
         ph = TAU * i / 12.0
-        info = pair(F, a, b, m, pos=(0, -1.6 * abs(math.sin(ph / 2))), sy=1 + 0.02 * math.cos(ph), rot=1.4 * math.sin(TAU * i / T),
-                    pivot="anchor", glow=0.15)
-        if i % 12 in (0, 1, 2):
-            dust(F, (24 + (i % 12) * 3, -2), 3 + (i % 12) * 1.5, 0.6 - (i % 12) * 0.18, back=True)
+        info = F.sprite(k.name, (0, -0.8 * abs(math.sin(ph / 2))), rot=0.8 * math.sin(TAU * i / T), pivot="anchor", glow=0.15)
+        if i % 12 == 2:
+            dust(F, (28, -2), 4, 0.45, back=True)
         if i in (5, 17):
             body_arcs(F, info, random.Random(i), 1, 0.8)
     return build(T, f)
@@ -882,19 +1036,34 @@ def S_walk():
 @defset("run")
 def S_run():
     T = 12
-    seq = tl([("walk2", 3), ("walk4", 3), ("walk3", 3), ("walk4", 3)], 1, loop=True)
 
     def f(F, i):
-        a, b, m = seq[i]
+        k = walk_key(i, T, run=True)
         ph = TAU * i / 6.0
-        info = pair(F, a, b, m, pos=(0, -4 * abs(math.sin(ph / 2))), sx=1.05, sy=0.97 + 0.03 * math.cos(ph), rot=-3 + 2 * math.sin(ph),
-                    pivot="anchor", glow=0.25)
+        info = F.sprite(k.name, (0, -3 * abs(math.sin(ph / 2))), sx=1.04, sy=0.98, rot=-3 + 1.5 * math.sin(ph), pivot="anchor",
+                        glow=0.25)
         r = random.Random(i)
-        for k in range(2):
-            a_ = (i + k * 3) % 6
+        for k2 in range(2):
+            a_ = (i + k2 * 3) % 6
             dust(F, (30 + a_ * 7, -2 - a_), 3 + a_ * 1.4, 0.75 - a_ * 0.12, back=True)
         if i % 3 == 0:
             body_arcs(F, info, r, 1, 0.9)
+    return build(T, f)
+
+
+@defset("crawl")
+def S_crawl():
+    """Bò trườn: thân hạ sát đất, sóng trườn lớn chạy từ đầu tới đuôi, chân bơi theo nhịp chéo."""
+    T = 32
+
+    def f(F, i):
+        k = gait_key("st6", i, T, stride=0.9 * 0.6 * T / SCALE, lift=3.0, stance=0.6, wave=3.2, wl=55.0,
+                     phases=(0.0, 0.5, 0.25))
+        info = F.sprite(k.name, (0, 0), rot=0.6 * math.sin(TAU * i / T), pivot="anchor", glow=0.15)
+        if i % 8 == 0:
+            dust(F, (40, -2), 4, 0.4, back=True)
+        if i in (7, 23):
+            body_arcs(F, info, random.Random(i), 1, 0.7)
     return build(T, f)
 
 
@@ -1024,11 +1193,9 @@ def S_wallg():
 @defset("wallc")
 def S_wallc():
     T = 24
-    seq = tl(WALK, 2, loop=True)
 
     def f(F, i):
-        a, b, m = seq[i]
-        pair(F, a, b, m, rot=90, pos=(1.4 * abs(math.sin(TAU * i / 24)), 0), pivot="anchor", glow=0.15)
+        F.sprite(walk_key(i).name, (0.8 * abs(math.sin(TAU * i / 24)), 0), rot=90, pivot="anchor", glow=0.15)
     return build(T, f)
 
 
@@ -1048,8 +1215,7 @@ def S_ceilc():
     seq = tl(WALK, 2, loop=True)
 
     def f(F, i):
-        a, b, m = seq[i]
-        pair(F, a, b, m, sy=-1, pos=(0, HANG + 1.4 * abs(math.sin(TAU * i / 24))), pivot="anchor", glow=0.15)
+        F.sprite(walk_key(i).name, (0, HANG + 0.8 * abs(math.sin(TAU * i / 24))), sy=-1, pivot="anchor", glow=0.15)
     return build(T, f)
 
 
@@ -1656,15 +1822,16 @@ def _seq(name, *refs):
 
 ACTIONS = [
     _anim("Stand", "stand", typ="Stay"), _anim("StandAlt", "standb", typ="Stay"),
-    _anim("Walk", "walk", typ="Move", vel=(-1.6, 0)), _anim("Run", "run", typ="Move", vel=(-5, 0)),
+    _anim("Walk", "walk", typ="Move", vel=(-WALK_V, 0)), _anim("Run", "run", typ="Move", vel=(-WALK_V * 3.6, 0)),
+    _anim("BoTruon", "crawl", typ="Move", vel=(-0.9, 0)), _seq("LongDi_BoTruon", ("BoTruon", {"Duration": "200"})),
     _anim("Dash", "dash", typ="Move", vel=(-10, 0)),
     dict(name="Fall", type="Embedded", cls=FALL, attrs=dict(RegistanceX="0.05", RegistanceY="0.1", Gravity="2"), poses=[P_("fall")]),
     dict(name="Thrown", type="Embedded", cls=FALL, attrs=dict(RegistanceX="0.02", RegistanceY="0.05", Gravity="2"), poses=[P_("spin")]),
     dict(name="Dragged", type="Embedded", cls=DRAG, poses=[P_("drag")]),
     _anim("Land", "land"),
-    _anim("GrabWall", "wallg", border="Wall", typ="Stay"), _anim("ClimbWall", "wallc", border="Wall", typ="Move", vel=(0, -1.6)),
+    _anim("GrabWall", "wallg", border="Wall", typ="Stay"), _anim("ClimbWall", "wallc", border="Wall", typ="Move", vel=(0, -WALK_V)),
     _anim("GrabCeiling", "ceilg", border="Ceiling", typ="Stay"),
-    _anim("ClimbCeiling", "ceilc", border="Ceiling", typ="Move", vel=(-1.6, 0)),
+    _anim("ClimbCeiling", "ceilc", border="Ceiling", typ="Move", vel=(-WALK_V, 0)),
     dict(name="NhayLen", type="Embedded", cls=JUMP, attrs=dict(VelocityParam="22",
          TargetX="${mascot.anchor.x + (mascot.lookRight ? 240 : -240)}", TargetY="${mascot.anchor.y - 190}"), poses=[P_("fly")]),
     _anim("ChayToiVach", "run", vel=(-6, 0)),
@@ -1709,7 +1876,7 @@ ACTIONS = [
     _seq("LongTruy_DuoiChuot", "ChaseMouse", "GamRu"),
 ]
 
-FREQ = [("Stand", 80), ("StandAlt", 35), ("Walk", 100), ("Run", 30), ("Dash", 15),
+FREQ = [("Stand", 80), ("StandAlt", 35), ("Walk", 100), ("Run", 30), ("Dash", 15), ("LongDi_BoTruon", 30),
         ("LongNghi_CuonMinh", 24), ("LongNghi_Ngu", 8),
         ("LongKy_GamRu", 9), ("LongKy_PhunLua", 8), ("LongKy_PhunSamSet", 8), ("LongKy_CuonThan", 9), ("LongKy_LoiDien", 8),
         ("LongKy_TreoLoLung", 8), ("LongBa_LongUy", 3), ("LongBa_HacHoa", 4), ("LongBa_FullCombo", 2), ("LongBien_HoaMini", 5),
@@ -1736,7 +1903,7 @@ META = {
         "LongBa_LongUy": "Tuyệt kỹ Long tộc (Long uy)", "LongBa_HacHoa": "Hắc hoá (trạng thái tím)",
         "LongBa_FullCombo": "FULL COMBO Long tộc", "LongBien_HoaMini": "Hoá rồng mini",
         "LongPhi_BayVut": "Bay vút lên trời", "LongPhi_BayTheoChuot": "Bay theo chuột",
-        "LongPhi_LaoXuongDapDat": "Lao xuống & đập đất", "LongDi_BamVachTrai": "Leo vách trái", "LongDi_BamVachPhai": "Leo vách phải",
+        "LongPhi_LaoXuongDapDat": "Lao xuống & đập đất", "LongDi_BamVachTrai": "Leo vách trái", "LongDi_BoTruon": "Bò trườn sát đất", "LongDi_BamVachPhai": "Leo vách phải",
         "LongTinh_HoaiNghi": "Hoài nghi (???)", "LongTinh_YeuThich": "Yêu thích (tim bay)", "LongTinh_AnVa": "Ăn vạ",
         "LongTinh_Khoc": "Khóc", "LongTinh_TucGian": "Tức giận (gân đỏ, thét)", "LongTinh_NanNi": "Nằn nì", "LongTruy_DuoiChuot": "Đuổi theo chuột",
     },

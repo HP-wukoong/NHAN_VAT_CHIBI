@@ -1,10 +1,9 @@
 {
-  "version": "3.6",
+  "version": "3.7",
   "date": "2026-11-26",
   "notes": [
-    "Cổ Long: vá đuôi bị cụt ở các tư thế đứng / đi / leo",
-    "Hệ Lôi Thái Cổ Hắc Long: sấm sét răng cưa, nhánh nhọn, bảng màu tím cố định, điện tụ ở sừng, mắt, vuốt, đuôi theo nhịp",
-    "Hiệu ứng gõ phím làm lại thành 16 VFX động (5 giai đoạn, nhiều lớp, có hạt); gõ và xoá diễn biến khác nhau",
-    "Chỉ hiện hiệu ứng khi nội dung thật sự đổi; gõ dồn thì chồng lớp có giới hạn; dựng hình ở luồng phụ, không khựng máy"
+    "Hiệu ứng gõ phím dựng lại từ ảnh hiệu ứng của bạn: bóc tách lõi sét / sợi điện / khói / đá vụn thành lớp, sét lan – chớp từng nhánh – đan xen vàng tím – khói tan – đá văng (20 mẫu)",
+    "Cổ Long: ghép đuôi cho mọi khung bị cụt, xoá mảnh hình lạc",
+    "Cổ Long: chân bước thật theo nhịp chéo, thân đuôi uốn sóng; thêm động tác Bò trườn sát đất"
   ]
 }

@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "hieu_ung_nguon")
 OUT = os.path.join(os.path.dirname(HERE), "HieuUng")
-MAXD = 300                                   # cạnh dài nhất của ảnh hiệu ứng lưu ra
+MAXD = 360                                   # cạnh dài nhất của ảnh hiệu ứng lưu ra
 
 S7 = "7_bang_tim_vang.png"
 S2 = "2_bang_vang.png"
@@ -105,7 +105,7 @@ def main():
         z = min(1.0, MAXD / float(max(im.size)))
         if z < 1:
             im = im.resize((max(1, int(im.width * z)), max(1, int(im.height * z))), Image.LANCZOS)
-        im.quantize(256, method=Image.Quantize.FASTOCTREE).save(os.path.join(OUT, name + ".png"), optimize=True)
+        im.save(os.path.join(OUT, name + ".png"), optimize=True)          # giữ đủ màu + độ trong (để tách lớp)
     print(len(CUTS), "hiệu ứng ->", OUT)
 
 

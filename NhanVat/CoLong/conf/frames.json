@@ -119,13 +119,13 @@
 "walk23.png"
 ],
 "anchor": [
-80,
-173
+78,
+175
 ],
 "d": 1,
 "size": [
-242,
-202
+239,
+206
 ]
 },
 "run": {
@@ -144,13 +144,58 @@
 "run11.png"
 ],
 "anchor": [
-93,
-152
+89,
+155
 ],
 "d": 1,
 "size": [
-276,
-172
+254,
+185
+]
+},
+"crawl": {
+"files": [
+"crawl00.png",
+"crawl01.png",
+"crawl02.png",
+"crawl03.png",
+"crawl04.png",
+"crawl05.png",
+"crawl06.png",
+"crawl07.png",
+"crawl08.png",
+"crawl09.png",
+"crawl10.png",
+"crawl11.png",
+"crawl12.png",
+"crawl13.png",
+"crawl14.png",
+"crawl15.png",
+"crawl16.png",
+"crawl17.png",
+"crawl18.png",
+"crawl19.png",
+"crawl20.png",
+"crawl21.png",
+"crawl22.png",
+"crawl23.png",
+"crawl24.png",
+"crawl25.png",
+"crawl26.png",
+"crawl27.png",
+"crawl28.png",
+"crawl29.png",
+"crawl30.png",
+"crawl31.png"
+],
+"anchor": [
+118,
+161
+],
+"d": 1,
+"size": [
+237,
+177
 ]
 },
 "dash": {
@@ -236,13 +281,13 @@
 "fall07.png"
 ],
 "anchor": [
-102,
-166
+103,
+165
 ],
 "d": 1,
 "size": [
-221,
-188
+247,
+180
 ]
 },
 "spin": {
@@ -385,13 +430,13 @@
 "wallc23.png"
 ],
 "anchor": [
-16,
-79
+17,
+78
 ],
 "d": 1,
 "size": [
-163,
-149
+165,
+148
 ]
 },
 "ceilg": {
@@ -451,13 +496,13 @@
 "ceilc23.png"
 ],
 "anchor": [
-79,
-16
+78,
+17
 ],
 "d": 1,
 "size": [
 238,
-163
+165
 ]
 },
 "lie": {
@@ -845,7 +890,7 @@
 ],
 "d": 1,
 "size": [
-446,
+445,
 424
 ]
 },
@@ -1290,7 +1335,7 @@
 ],
 "d": 2,
 "size": [
-201,
+269,
 195
 ]
 },
@@ -1327,7 +1372,7 @@
 ],
 "d": 2,
 "size": [
-256,
+302,
 210
 ]
 },
@@ -1453,7 +1498,7 @@
 ],
 "d": 1,
 "size": [
-250,
+296,
 201
 ]
 },

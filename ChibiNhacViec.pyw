@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.6"
+APP_VER = "3.7"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -4076,13 +4076,14 @@ class VCanvas:
 
 class Part:
     """Hạt: tia lửa điện, bụi năng lượng, khói, đá vụn, cánh hoa, mảnh vỡ..."""
-    __slots__ = ("x", "y", "vx", "vy", "life", "age", "size", "kind", "drag", "grav", "rot", "vr", "col", "ax", "ay")
+    __slots__ = ("x", "y", "vx", "vy", "life", "age", "size", "kind", "drag", "grav", "rot", "vr", "col", "ax", "ay", "img")
 
     def __init__(self, x, y, vx, vy, life, size, kind="spark", drag=0.92, grav=0.0, col=None, rot=0.0, vr=0.0):
         self.x, self.y, self.vx, self.vy = x, y, vx, vy
         self.life, self.age, self.size, self.kind = life, 0, size, kind
         self.drag, self.grav, self.col, self.rot, self.vr = drag, grav, col, rot, vr
         self.ax = self.ay = 0.0
+        self.img = None
 
     def step(self):
         self.age += 1
@@ -4098,6 +4099,9 @@ class Part:
     def draw(self, cv):
         k = 1 - self.age / float(self.life)
         x, y, s = self.x, self.y, self.size
+        if self.kind == "sprite":                             # mảnh bóc từ ảnh (đá vụn...) bay theo quán tính
+            cv.stamp(self.img, (x, y), 1.0, self.rot, min(1.0, k * 1.6))
+            return
         if self.kind == "spark":                              # vệt tia lửa điện: lõi trắng, viền tím
             s = max(s, 1.2)
             tail = (x - self.vx * 1.6, y - self.vy * 1.6)
@@ -4223,7 +4227,7 @@ class Vfx:
         return pattern[f % len(pattern)]
 
     def bake(self):
-        ss = 2 if self.S <= 320 else 1
+        ss = getattr(self, "ss", None) or (2 if self.S <= 320 else 1)
         out = []
         jr = random.Random(self.seed * 131 + 7)
         for f in range(self.n):
@@ -5379,31 +5383,470 @@ class SongPhiKiem(Vfx):
             loi_ring(cv, self.c, S * (0.05 + 0.4 * k), S * (0.04 + 0.25 * k), 1 - k, S * 0.01)
 
 
+# ══════════════ VFX TỪ ẢNH CỦA NGƯỜI DÙNG: bóc tách lớp rồi dựng chuyển động ══════════════
+# Ảnh trong HieuUng/ (cắt bằng tools/cat_hieu_ung.py) KHÔNG được dán nguyên: mỗi ảnh được tách thành
+#   lõi sét (điểm trắng sáng) – thân sợi điện (có màu) – khói đen – đá vụn (mảnh tối tách rời, nhấc khỏi ảnh)
+# cùng trường "khoảng cách tới tâm năng lượng" và các rẻ quạt sợi sét. Mỗi frame: sét lan theo trường khoảng cách
+# với mép răng cưa, từng rẻ quạt chớp – tắt – loé theo nhịp riêng, lõi bùng sáng thành quầng, khói nở rồi tan theo
+# nhiễu, đá văng theo quán tính; sợi sét rời (bóc từ bảng sét) đan xen vàng / tím quanh tâm.
+FX_DIR = os.path.join(BASE_DIR, "HieuUng")
+_FX_SRC = {}
+_FX_LAY = {}
+
+
+def fx_src(name):
+    im = _FX_SRC.get(name)
+    if im is None:
+        try:
+            im = Image.open(os.path.join(FX_DIR, name + ".png")).convert("RGBA")
+            _FX_SRC[name] = im
+        except Exception:
+            im = None                                   # không nhớ lỗi: có ảnh lại là dùng được ngay
+    return im
+
+
+def _components_np(mask, max_px=60000):
+    """Gán nhãn thành phần liên thông 4 hướng (thuần python, chỉ duyệt điểm thuộc mặt nạ)."""
+    import numpy as np
+    from collections import deque
+    h, w = mask.shape
+    lab = np.zeros((h, w), np.int32)
+    out = []
+    ys, xs = np.nonzero(mask)
+    if len(ys) > max_px:
+        return lab, out
+    n = 0
+    for y, x in zip(ys.tolist(), xs.tolist()):
+        if lab[y, x]:
+            continue
+        n += 1
+        q = deque([(y, x)])
+        lab[y, x] = n
+        pts = []
+        while q:
+            cy, cx = q.popleft()
+            pts.append((cy, cx))
+            for yy, xx in ((cy + 1, cx), (cy - 1, cx), (cy, cx + 1), (cy, cx - 1)):
+                if 0 <= yy < h and 0 <= xx < w and mask[yy, xx] and not lab[yy, xx]:
+                    lab[yy, xx] = n
+                    q.append((yy, xx))
+        out.append((n, pts))
+    return lab, out
+
+
+class FxLayers:
+    """Một ảnh hiệu ứng đã bóc tách ở đúng cỡ hiển thị (px = cạnh dài)."""
+
+    def __init__(self, name, px, origin=(0.5, 0.5), reveal="radial", nsec=9, wipe=0.0, rocks=False, vig=False):
+        import numpy as np
+        src = fx_src(name)
+        self.ok = src is not None
+        if not self.ok:
+            return
+        k = px / float(max(src.size))
+        im = src.resize((max(2, int(src.width * k)), max(2, int(src.height * k))), Image.LANCZOS)
+        a = np.asarray(im).astype(np.float32) / 255.0
+        h, w = a.shape[:2]
+        self.w, self.h = w, h
+        rgb, al = a[..., :3].copy(), a[..., 3].copy()
+        if vig:                                                                      # bo mép elip: xoá dấu ô cắt hình chữ nhật
+            yy0, xx0 = np.mgrid[0:h, 0:w].astype(np.float32)
+            d = ((xx0 - w / 2.0) / (w / 2.0)) ** 2 + ((yy0 - h / 2.0) / (h / 2.0)) ** 2
+            al *= np.clip((1.0 - d) / 0.45, 0, 1)
+        lum = rgb.mean(2)
+        sat = rgb.max(2) - rgb.min(2)
+        self.core = np.clip((lum - 0.7) / 0.2, 0, 1) * al                          # lõi sét trắng
+        self.dark = np.clip((0.34 - lum) / 0.22, 0, 1) * (1 - np.clip((sat - 0.22) / 0.2, 0, 1))   # khói / đá: tối, ít màu
+        m = al > 0.25
+        self.tint = tuple(int(v) for v in (rgb[m & (lum > 0.45)].mean(0) * 255)) if (m & (lum > 0.45)).any() else (200, 160, 255)
+        self.rocks = []
+        if rocks:                                                                    # bóc đá vụn: mảnh tối, đặc, nhỏ, tách rời
+            rm = (lum < 0.2) & (al > 0.8)
+            lab, comps = _components_np(rm)
+            ox, oy = origin[0] * w, origin[1] * h
+            for nlab, pts in comps:
+                if not (8 <= len(pts) <= max(40, w * h // 120)):
+                    continue
+                yy = [p[0] for p in pts]
+                xx = [p[1] for p in pts]
+                y0, y1, x0, x1 = min(yy), max(yy) + 1, min(xx), max(xx) + 1
+                if len(pts) < 0.35 * (y1 - y0) * (x1 - x0):
+                    continue                                                         # không đặc = vệt khói, bỏ
+                piece = np.zeros((y1 - y0 + 2, x1 - x0 + 2, 4), np.float32)
+                for py, px_ in pts:
+                    piece[py - y0 + 1, px_ - x0 + 1, :3] = rgb[py, px_]
+                    piece[py - y0 + 1, px_ - x0 + 1, 3] = 1.0
+                    al[py, px_] *= 0.35                                             # nhấc khỏi ảnh gốc, chỗ cũ còn vệt khói mờ
+                cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
+                self.rocks.append((Image.fromarray((piece * 255).astype(np.uint8), "RGBA"), cx, cy,
+                                   math.atan2(cy - oy, cx - ox)))
+            self.rocks = sorted(self.rocks, key=lambda r: -r[0].width * r[0].height)[:14]
+        self.rgb, self.al = rgb, al
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        ox, oy = origin[0] * w, origin[1] * h
+        if reveal == "radial":
+            f = np.hypot(xx - ox, yy - oy)
+        elif reveal == "down":
+            f = yy - oy
+        elif reveal == "up":
+            f = oy - yy
+        elif reveal == "spin":
+            f = (np.arctan2(yy - oy, xx - ox) + math.pi) % (2 * math.pi)
+        else:                                                                        # wipe theo hướng (độ)
+            dx, dy = math.cos(math.radians(wipe)), math.sin(math.radians(wipe))
+            f = (xx - ox) * dx + (yy - oy) * dy
+        mm = al > 0.05
+        if mm.any():
+            lo, hi = float(f[mm].min()), float(f[mm].max())
+            f = (f - lo) / max(1e-6, hi - lo)
+        self.field = np.clip(f, 0, 1)
+        self.noise = make_noise(w, h, len(name) * 7 + w)[:h, :w]
+        ang = np.arctan2(yy - oy, xx - ox)
+        if reveal in ("down", "up"):
+            sec = (xx / w * nsec + (self.noise - 0.5) * 1.2).astype(np.int32)
+        else:
+            sec = ((ang + math.pi) / (2 * math.pi) * nsec + (self.noise - 0.5) * 0.9).astype(np.int32)
+        self.sec = np.clip(sec, 0, nsec - 1) % nsec
+        self.nsec = nsec
+        self.pin_px = (ox, oy)
+
+    def frame(self, lo, hi, gains, core_k=1.0, smoke_k=1.0, smoke_thr=0.0, inv=False, soft=0.05, jitter=0, noise_fade=False):
+        """Ảnh RGBA của trạng thái hiện tại + ảnh lõi (để làm quầng sáng)."""
+        import numpy as np
+        f = self.field + (self.noise - 0.5) * 0.12                                    # mép lan răng cưa
+        if inv:
+            f = 1.0 - f
+        if noise_fade:                                                               # tan theo nhiễu (kiểu xoay: không có mép thẳng)
+            vis = np.clip((hi - f) / soft, 0, 1) * np.clip((self.noise - lo * 0.95) / 0.06, 0, 1)
+        else:
+            vis = np.clip((hi - f) / soft, 0, 1) * np.clip((f - lo) / soft, 0, 1)
+        g = np.asarray(gains, np.float32)[self.sec]
+        light = self.al * (1 - self.dark)
+        smoke = self.al * self.dark
+        svis = np.clip((hi + 0.08 - f) / soft, 0, 1)                                 # khói đi sau, đọng lại lâu hơn
+        sd = np.clip((self.noise - smoke_thr) / 0.08, 0, 1)                          # khói tan theo nhiễu
+        a_l = light * vis * np.clip(0.08 + 0.92 * g, 0, 1) ** 1.3                 # nhánh tắt: mờ đi, không xỉn màu
+        a_s = smoke * svis * smoke_k * sd * np.clip(0.45 + 0.4 * g, 0, 1)
+        bright = np.clip(0.88 + 0.22 * g, 0, 1.5)[..., None]
+        rgb = np.clip(self.rgb * bright + (self.core * np.clip(g * core_k - 0.9, 0, 2) * 0.55)[..., None], 0, 1)
+        A = np.clip(a_l + a_s, 0, 1)
+        out = np.dstack([rgb, A])
+        if jitter:                                                                   # giật điện: lệch 1px theo hàng nhiễu
+            out = np.roll(out, jitter, axis=1 if jitter % 2 else 0)
+        core = np.clip(self.core * vis * np.clip(g * core_k, 0, 2) * 0.8, 0, 1)
+        im = Image.fromarray((out * 255).astype(np.uint8), "RGBA")
+        cm = Image.fromarray((core * 255).astype(np.uint8), "L")
+        return im, cm
+
+
+def fx_layers(name, px, **kw):
+    key = (name, int(px)) + tuple(sorted(kw.items()))
+    L = _FX_LAY.get(key)
+    if L is None:
+        L = FxLayers(name, px, **kw)
+        _FX_LAY[key] = L
+        if len(_FX_LAY) > 120:
+            _FX_LAY.pop(next(iter(_FX_LAY)))
+    return L
+
+
+def _place(cv, im, pin, c, scale=1.0, rot=0.0, alpha=1.0, layer="base"):
+    """Đặt ảnh sao cho điểm pin (toạ độ trong ảnh) rơi đúng vị trí c, sau khi phóng / xoay quanh pin."""
+    if im is None or alpha <= 0.01:
+        return
+    w, h = im.size
+    dx, dy = (w / 2.0 - pin[0]) * scale, (h / 2.0 - pin[1]) * scale
+    r = math.radians(-rot)
+    cx = c[0] + dx * math.cos(r) - dy * math.sin(r)
+    cy = c[1] + dx * math.sin(r) + dy * math.cos(r)
+    cv.stamp(im, (cx, cy), scale, rot, alpha, layer)
+
+
+def _tinted(mask, tint, k=1.0):
+    t = Image.new("RGBA", mask.size, tint + (255,))
+    t.putalpha(mask.point(lambda v: min(255, int(v * k))))
+    return t
+
+
+class ImgVfx(Vfx):
+    """Hiệu ứng dựng từ lớp đã bóc tách. SPEC (ghi đè ở lớp con):
+      layers: [dict(src, size, origin, pin, reveal, wipe, t0, t1, rot, rotv, rise, nsec, role)]
+              size = cạnh dài theo đơn vị S; t0..t1 = khoảng thời gian lớp tồn tại; rotv = độ xoay / cả hiệu ứng;
+              rise = dịch lên (đơn vị S) suốt hiệu ứng; role 'main' / 'weave' (lớp đan xen, nháy ngược pha)
+      strands: (danh sách sợi sét rời, số sợi, độ dài theo S) – bóc từ bảng sét, đan xen quanh tâm
+      parts: 'petal' | 'toxic' | 'soul' | None – hạt riêng của hiệu ứng"""
+    ss = 1
+    layers = []
+    strands = None
+    parts = None
+    grow_end = 0.28                     # lúc sét lan hết
+    fade_start = 0.55                   # lúc bắt đầu rút / tan
+
+    def init(self):
+        r = self.rnd
+        self.L = []
+        for spec in self.layers:
+            px = spec.get("size", 1.0) * self.S
+            L = fx_layers(spec["src"], px, origin=spec.get("origin", (0.5, 0.5)), reveal=spec.get("reveal", "radial"),
+                          nsec=spec.get("nsec", 9), wipe=spec.get("wipe", 0.0), rocks=spec.get("rocks", False),
+                          vig=spec.get("vig", False))
+            if not L.ok:
+                continue
+            pin = spec.get("pin", spec.get("origin", (0.5, 0.5)))
+            self.L.append((spec, L, (pin[0] * L.w, pin[1] * L.h)))
+        self.ok = bool(self.L)
+        if not self.ok:
+            return
+        n = self.n
+        self.gains = []                                                     # nhịp chớp riêng từng rẻ quạt
+        strikes = {1, 2} | ({int(n * 0.42)} if n > 10 else set())
+        for spec, L, pin in self.L:
+            tab = []
+            for f in range(n):
+                row = []
+                for s in range(L.nsec):
+                    v = r.random()
+                    g = 0.25 if v < 0.22 else (0.6 if v < 0.4 else (1.45 if v > 0.85 else 1.0))
+                    if f in strikes:
+                        g = 1.6
+                    row.append(g)
+                if spec.get("steady"):                                      # ma pháp: sáng ổn định, nhấp nháy nhẹ
+                    row = [1.0 + 0.12 * math.sin(f * 1.7 + s_) + (0.45 if f in (1, 2) else 0) for s_ in range(L.nsec)]
+                if spec.get("role") == "weave":                             # lớp đan xen: sáng khi lớp chính tối
+                    row = [1.7 - g if f not in strikes else 1.4 for g in row]
+                tab.append(row)
+            self.gains.append(tab)
+        self.rock_parts = False
+        self.strand_set = []
+        if self.strands:
+            names, cnt, ln = self.strands
+            for k in range(cnt):
+                nm = names[k % len(names)]
+                Ls = fx_layers(nm, ln * self.S * r.uniform(0.75, 1.1), origin=(0.5, 0.0), reveal="down", nsec=1, rocks=False)
+                if not self.strand_ring:                                   # kiểu cột: sợi giáng dọc hai bên cột xuống chữ
+                    Ls = fx_layers(nm, self.S * r.uniform(0.9, 1.25), origin=(0.5, 0.0), reveal="down", nsec=1, rocks=False)
+                if Ls.ok:
+                    ang = r.uniform(0, 360) if self.strand_ring else r.choice((-1, 1)) * r.uniform(10, 35)
+                    t0 = r.randint(0, max(1, int(n * 0.55)))
+                    self.strand_set.append((Ls, ang, t0, r.randint(3, 5)))
+
+    strand_ring = True                  # sợi đan xen toả tròn quanh tâm (False: rủ xuống quanh cột)
+
+    def _main_state(self, t, spec):
+        """lo / hi của dải hiển thị trên trường khoảng cách, theo giai đoạn của lớp."""
+        t0, t1 = spec.get("t0", 0.0), spec.get("t1", 1.0)
+        if t < t0 or t > t1:
+            return None
+        u = (t - t0) / max(1e-6, t1 - t0)
+        ge = self.grow_end / max(0.2, t1 - t0) if t1 - t0 < 1 else self.grow_end
+        hi = _eo(_ph(u, 0, min(0.9, ge))) * 1.15
+        lo = _ph(u, self.fade_start, 0.97) * 1.15
+        return lo, hi, u
+
+    def update(self, f, t):
+        if not self.ok:
+            return
+        r = self.rnd
+        spec, L, pin = self.L[0]
+        k = spec.get("size", 1.0)
+        if f == 1 and not self.rock_parts:                                  # đá vụn đã bóc: văng ra / bị hút vào
+            self.rock_parts = True
+            for img, cx, cy, ang in L.rocks:
+                px, py = self.c[0] + (cx - pin[0]), self.c[1] + (cy - pin[1])
+                sp = self.S * r.uniform(0.012, 0.03)
+                if not self.D:
+                    p = Part(px, py, math.cos(ang) * sp, math.sin(ang) * sp - self.S * 0.01, self.n, 1.0, "sprite", 0.97,
+                             self.S * 0.0025, rot=0, vr=r.uniform(-18, 18))
+                else:
+                    far = self.S * 0.35
+                    p = Part(px + math.cos(ang) * far, py + math.sin(ang) * far, -math.cos(ang) * far / 9.0,
+                             -math.sin(ang) * far / 9.0, 9, 1.0, "sprite", 1.0, 0, rot=0, vr=r.uniform(-25, 25))
+                p.img = img
+                self.parts.append(p)
+        if self.parts_kind == "petal" and f % 2 == 0 and t > 0.35:
+            p = _ad(self.c, (r.uniform(-0.25, 0.25) * self.S, -self.S * r.uniform(0.4, 0.8)))
+            self.parts.append(Part(p[0], p[1], r.uniform(-0.6, 0.6), 0.5, 18, self.S * 0.02, "petal", 0.97, self.S * 0.002,
+                                   rot=r.uniform(0, 360), vr=r.uniform(-20, 20)))
+        if self.parts_kind == "toxic" and f % 2 == 0:
+            p = _ad(self.c, (r.uniform(-0.4, 0.4) * self.S, -self.S * r.uniform(0.0, 0.5)))
+            self.parts.append(Part(p[0], p[1], r.uniform(-0.6, 0.6), -0.3, 14, self.S * 0.05, "gas", 0.96, col=(110, 235, 80)))
+        if self.parts_kind == "soul" and f % 2 == 1:
+            p = _ad(self.c, (r.uniform(-0.2, 0.2) * self.S, -self.S * r.uniform(0.1, 0.6)))
+            self.parts.append(Part(p[0], p[1], r.uniform(-0.4, 0.4), -self.S * 0.012, 12, self.S * 0.012, "soul", 0.95))
+        if self.parts_kind == "spark" and not self.D and f in (1, 2, 5):
+            self.emit(10, self.c, self.S * 0.05, 9, self.S * 0.01, "spark")
+
+    parts_kind = None
+
+    def draw(self, cv, f, t):
+        if not self.ok:
+            return
+        for li, (spec, L, pin) in enumerate(self.L):
+            st = self._main_state(t, spec)
+            if st is None:
+                continue
+            lo, hi, u = st
+            inv = self.D
+            if self.D:                                                      # xoá: sét từ ngoài dồn vào tâm rồi tắt
+                hi = _ei(_ph(u, 0, 0.35)) * 1.15
+                lo = _ph(u, 0.45, 0.92) * 1.15
+            smoke_thr = _ph(u, 0.35, 0.8) * 1.1
+            g = self.gains[li][min(f, self.n - 1)]
+            core_k = 1.6 if f in (1, 2) else 1.0
+            jit = (f % 3) - 1 if spec.get("role") != "still" else 0
+            im, cm = L.frame(lo, hi, g, core_k, 1.0, smoke_thr, inv=inv, jitter=jit,
+                             noise_fade=spec.get("reveal") == "spin" or spec.get("nf", False))
+            if self.D:
+                scale = 1.05 - 0.25 * _ei(_ph(u, 0.3, 1.0))
+            else:
+                scale = 0.86 + 0.18 * _eo(_ph(u, 0, 0.5))
+            rot = spec.get("rot", 0.0) + spec.get("rotv", 0.0) * (u if not self.D else -u)
+            rot += spec.get("sway", 0.0) * math.sin(u * math.pi * 3)                 # lắc lư
+            c = _ad(self.c, (0, -spec.get("rise", 0.0) * self.S * _eo(u)))
+            mv = spec.get("move")
+            if mv:                                                                     # quỹ đạo: (từ x, y) -> (tới x, y), đơn vị S
+                (x0, y0), (x1, y1) = mv if not self.D else (mv[1], mv[0])
+                k = spec.get("ease", _eo)(u)
+                c = _ad(c, (self.S * (x0 + (x1 - x0) * k), self.S * (y0 + (y1 - y0) * k)))
+            if spec.get("lunge"):                                                      # vồ tới: co lại lấy đà rồi bung ra
+                scale *= 0.7 + 0.45 * _eo(_ph(u, 0.12, 0.35)) - 0.15 * _ph(u, 0.6, 1.0)
+            _place(cv, im, pin, c, scale, rot, 1.0, "base")
+            _place(cv, _tinted(cm, L.tint, 1.4), pin, c, scale, rot, 1.0, "glow")      # quầng loé của lõi sét
+        for Ls, ang, t0, life in self.strand_set:                           # sợi sét rời đan xen, chớp theo nhịp riêng
+            a = f - t0
+            if a < 0 or a >= life:
+                continue
+            hi = (0.55, 1.15, 1.15, 1.15, 1.15)[a]
+            lo = (0.0, 0.0, 0.25, 0.6, 0.9)[a] if a < 5 else 1.2
+            gpow = (1.2, 1.6, 0.6, 1.2, 0.4)[a]
+            im, cm = Ls.frame(lo, hi, [gpow], 1.3, 0.6, 0.3, inv=self.D)
+            pin = (Ls.w * 0.5, 0.0)
+            spec0, L0, pin0 = self.L[0]
+            if self.strand_ring:
+                base = _ad(self.c, _dv(ang - 90), self.S * 0.06)
+                _place(cv, im, pin, base, 1.0, -(ang + 180), 0.95)
+                _place(cv, _tinted(cm, Ls.tint, 1.2), pin, base, 1.0, -(ang + 180), 0.9, "glow")
+            else:
+                top = (self.c[0] + ang / 35.0 * self.S * 0.3, self.c[1] - Ls.h * 0.98)
+                _place(cv, im, pin, top, 1.0, 0, 0.95)
+                _place(cv, _tinted(cm, Ls.tint, 1.2), pin, top, 1.0, 0, 0.9, "glow")
+        spec0, L0, pin0 = self.L[0]
+        if not self.D and f in (0, 1, 2):                                   # chớp khởi phát theo màu ảnh
+            img_flash(cv, self.c, self.S * (0.1 + 0.03 * f), (1.0, 0.85, 0.5)[f], L0.tint)
+        if self.D and abs(t - 0.86) < 0.08:                                 # sập về tâm
+            img_flash(cv, self.c, self.S * 0.08, 1 - abs(t - 0.86) / 0.08, L0.tint)
+
+
+def img_flash(cv, c, r, k, tint):
+    cv.ell("aura", c, r * 2.0, r * 2.0, (20, 8, 30, int(90 * k)))
+    cv.ell("glow", c, r * 1.4, r * 1.4, tint + (int(230 * k),))
+    cv.ell("base", c, r * 0.45, r * 0.45, (255, 252, 240, int(255 * k)))
+    for i in range(8):
+        a = i * 45 + 22.5
+        ln = r * (2.0 if i % 2 else 1.3)
+        cv.poly("base", [_ad(c, _dv(a - 6), r * 0.28), _ad(c, _dv(a), ln), _ad(c, _dv(a + 6), r * 0.28)], (255, 250, 230, int(220 * k)))
+
+
+# ── các hiệu ứng (bảng thông số: ảnh nào, tâm năng lượng ở đâu, lan theo kiểu nào, đan xen sợi nào) ──
+_SV = ["setvang%d" % i for i in range(1, 10)]
+_ST = ["settim%d" % i for i in range(1, 6)]
+
+
+def _fx(key, frames, box, anchor, layers, strands=None, parts=None, ring=True, grow=0.28, fade=0.55, base=None):
+    cls = type("Fx_" + key, (ImgVfx,), dict(name=key, frames=frames, box=box, anchor=anchor, layers=layers,
+                                             strands=strands, parts_kind=parts, strand_ring=ring, grow_end=grow,
+                                             fade_start=fade))
+    cls.fallback = base
+    return cls
+
+
+IMG_FX = [
+    _fx("bolt", 15, (1.5, 1.5), (0.5, 0.5), [dict(src="tia_chop", size=1.35)], (_ST + _SV, 5, 0.5), "spark",
+        base=LoiTinhBaoPhat),
+    _fx("novang", 15, (1.5, 1.5), (0.5, 0.5), [dict(src="no_vang", size=1.35, rocks=True), dict(src="tim_no", size=0.9, origin=(0.5, 0.86),
+        pin=(0.5, 0.5), role="weave", rocks=False)], (_ST, 4, 0.45), "spark", base=TuLoiBungNo),
+    _fx("kimtinh", 16, (1.4, 1.4), (0.5, 0.5), [dict(src="kimtinh1", size=1.2, t1=0.62), dict(src="kimtinh2", size=1.25, t0=0.3,
+        role="weave")], (_SV, 4, 0.45), "spark", base=LoiTinhBaoPhat),
+    _fx("song", 16, (1.6, 1.15), (0.5, 0.86), [dict(src="no_vang_tim", size=1.5, origin=(0.5, 0.82), rocks=True)], (_ST + _SV, 4, 0.5),
+        None, base=TuLoiBungNo),
+    _fx("tuno", 16, (1.6, 1.15), (0.5, 0.86), [dict(src="tim_no", size=1.5, origin=(0.5, 0.86))], (_SV, 4, 0.5), None,
+        base=TuLoiBungNo),
+    _fx("datno", 16, (1.6, 1.15), (0.5, 0.86), [dict(src="no_dat", size=1.5, origin=(0.52, 0.82), rocks=True)], (_ST, 4, 0.5), None,
+        base=DiaChanLoi),
+    _fx("diachan", 16, (1.8, 0.8), (0.5, 0.82), [dict(src="datvang1", size=0.9, origin=(0.5, 0.9), t1=0.5),
+        dict(src="datvang3", size=1.7, origin=(0.5, 0.85), t0=0.15, rocks=True), dict(src="datvang2", size=1.2, origin=(0.5, 0.85),
+        t0=0.35, role="weave")], None, "spark", base=DiaChanLoi),
+    _fx("hoan", 16, (1.4, 1.4), (0.5, 0.5), [dict(src="vongvang", size=1.05, reveal="spin", rotv=-40),
+        dict(src="hoanvang1", size=1.2, role="weave", t0=0.25, rotv=30)], (_SV, 3, 0.35), "spark", base=LoiHoan),
+    _fx("xoan", 16, (1.4, 1.4), (0.5, 0.5), [dict(src="xoanvang1", size=1.2, reveal="spin", rotv=-120),
+        dict(src="xoanvang2", size=1.1, reveal="spin", rotv=-90, role="weave", t0=0.2)], (_ST, 3, 0.35), None, base=LoiXoay),
+    _fx("thunder", 15, (0.9, 1.7), (0.5, 0.94), [dict(src="loidien2", size=1.6, origin=(0.5, 0.0), pin=(0.5, 0.97),
+        reveal="down", nsec=5), dict(src="loidien3", size=1.5, origin=(0.5, 0.0), pin=(0.5, 0.97), reveal="down", nsec=5,
+        role="weave")], (_ST, 3, 0.5), "spark", ring=False, grow=0.18, fade=0.6, base=ThienLoiGiang),
+    _fx("loiphat", 16, (0.9, 1.7), (0.5, 0.94), [dict(src="loiphat2", size=1.6, origin=(0.5, 0.0), pin=(0.5, 0.97),
+        reveal="down", nsec=5), dict(src="loiphat3", size=1.5, origin=(0.5, 0.0), pin=(0.5, 0.97), reveal="down", nsec=5,
+        role="weave")], (_ST, 3, 0.5), None, ring=False, grow=0.18, fade=0.62, base=LoiPhatTru),
+    _fx("cotvang", 16, (1.1, 1.7), (0.5, 0.94), [dict(src="cotvang1", size=1.6, origin=(0.5, 0.0), pin=(0.5, 0.97),
+        reveal="down", nsec=5), dict(src="truvong", size=1.4, origin=(0.5, 0.0), pin=(0.5, 0.97), reveal="down", nsec=5,
+        role="weave", t0=0.2)], (_SV, 3, 0.5), "spark", ring=False, grow=0.18, fade=0.62, base=LoiPhatTru),
+    _fx("loikiep", 16, (1.2, 1.7), (0.5, 0.94), [dict(src="loikiep", size=1.6, origin=(0.5, 0.0), pin=(0.5, 0.97),
+        reveal="down", nsec=6), dict(src="loiquang", size=1.5, origin=(0.5, 0.0), pin=(0.5, 0.97), reveal="down", nsec=6,
+        role="weave")], (_SV + _ST, 4, 0.5), None, ring=False, grow=0.2, fade=0.62, base=LoiPhatTru),
+    _fx("settia", 20, (1.6, 1.6), (0.5, 0.94), [dict(src="setvang5", size=1.3, origin=(0.5, 0.0), pin=(0.5, 0.98),
+        reveal="down", nsec=3, t1=0.45), dict(src="settim2", size=1.3, origin=(0.5, 0.0), pin=(0.5, 0.98), reveal="down",
+        nsec=3, t0=0.3, t1=0.8, role="weave"), dict(src="setvang7", size=1.25, origin=(0.5, 0.0), pin=(0.5, 0.98),
+        reveal="down", nsec=3, t0=0.55)], (_SV + _ST, 7, 0.9), "spark", ring=False, grow=0.15, fade=0.5, base=LoiLienHoi),
+    _fx("dragon", 20, (1.5, 1.5), (0.5, 0.5), [dict(src="loilong", size=1.3, origin=(0.18, 0.28), pin=(0.5, 0.5), nsec=8,
+        rotv=8)],
+        (_ST, 3, 0.4), "spark", grow=0.4, fade=0.62, base=LoiLong),
+    _fx("slash", 16, (1.6, 1.45), (0.5, 0.55), [dict(src="matrao1", size=1.15, reveal="wipe", wipe=135, origin=(0.9, 0.1),
+        pin=(0.5, 0.5), t1=0.6, vig=True, steady=True, lunge=True, move=((0.25, -0.25), (-0.1, 0.1)), ease=_ei),
+        dict(src="matrao3", size=1.1, reveal="wipe", wipe=200, origin=(0.95, 0.4), pin=(0.5, 0.5), t0=0.32, vig=True,
+        steady=True, move=((0.2, 0.0), (-0.22, 0.05)), ease=_ei)], None, None, grow=0.25, fade=0.45, base=MaTrao),
+    _fx("madoc", 20, (1.8, 1.6), (0.35, 0.78), [dict(src="madoc1", size=0.9, origin=(0.5, 1.0), reveal="up", t1=0.42,
+        vig=True, steady=True, sway=6), dict(src="madoc3", size=1.15, origin=(0.3, 0.35), t0=0.3, vig=True, steady=True,
+        move=((0.05, -0.15), (0.6, -0.55)), ease=_ei, sway=5)], None, "toxic", grow=0.3, fade=0.55, base=MaDocLong),
+    _fx("bingan", 22, (1.2, 1.55), (0.5, 0.95), [dict(src="bingan2", size=1.2, origin=(0.5, 1.0), pin=(0.5, 0.98),
+        reveal="up", t1=0.4, nsec=4, vig=True, steady=True), dict(src="bingan3", size=1.45, origin=(0.5, 1.0),
+        pin=(0.5, 0.98), reveal="up", t0=0.25, nsec=4, vig=True, steady=True, sway=4)], None, "petal", grow=0.35, fade=0.68,
+        base=BiNganHoa),
+    _fx("skull", 20, (1.3, 2.0), (0.5, 0.95), [dict(src="daulau3", size=1.4, origin=(0.5, 1.0), pin=(0.5, 0.98),
+        reveal="up", rise=0.45, nsec=5, vig=True, steady=True, sway=7)], None, "soul", grow=0.35, fade=0.6, base=DauLauQuy),
+    _fx("sword", 18, (2.0, 2.2), (0.5, 0.9), [dict(src="phikiem3", size=1.1, reveal="wipe", wipe=60, origin=(0.1, 0.0),
+        pin=(0.5, 0.75), t1=0.42, vig=True, steady=True, move=((-0.45, -0.35), (0.25, 0.05)), ease=_ei),
+        dict(src="phikiem5", size=1.4, origin=(0.5, 0.92), pin=(0.5, 0.92), t0=0.3, nsec=6, vig=True, steady=True,
+        move=((0.0, -0.4), (0.0, 0.0)), ease=_ei)], None, "spark", grow=0.2, fade=0.6, base=SongPhiKiem),
+]
+
+
 # ══ danh sách hiệu ứng (giữ dạng (mã, tên, hàm dựng, điểm neo) để giao diện / cài đặt cũ dùng tiếp) ══
-VFX_CLASSES = [LoiTinhBaoPhat, ThienLoiGiang, LoiLienHoi, LoiHoan, LoiXoay, LoiPhatTru, DiaChanLoi, LoiXich, LoiLong,
-               LoiThuong, TuLoiBungNo, MaTrao, MaDocLong, BiNganHoa, DauLauQuy, SongPhiKiem]
 VFX_LABELS = {
-    "bolt": "⚡ Lôi tinh bạo phát", "thunder": "⚡ Thiên lôi giáng", "settia": "⚡ Sấm sét liên hồi", "hoan": "⚡ Lôi hoàn",
-    "xoan": "⚡ Lôi xoáy", "loiphat": "⚡ Lôi phạt trụ", "diachan": "⚡ Địa chấn lôi", "chain": "⚡ Lôi xích liên hoàn",
-    "dragon": "⚡ Lôi long", "gai": "⚡ Lôi thương", "tuno": "⚡ Tử lôi bùng nổ", "slash": "Ma trảo", "madoc": "Ma độc long",
-    "bingan": "Bỉ ngạn hoa nở", "skull": "Đầu lâu quỷ bay lên", "sword": "Song phi kiếm bay vút",
+    "bolt": "⚡ Lôi tinh bạo phát", "novang": "⚡ Kim lôi bạo (vàng + tím)", "kimtinh": "⚡ Kim lôi tinh",
+    "song": "⚡ Song lôi bùng nổ (vàng tím)", "tuno": "⚡ Tử lôi bùng nổ (tím)", "datno": "⚡ Địa lôi nổ (vàng)",
+    "diachan": "⚡ Địa chấn lôi", "hoan": "⚡ Lôi hoàn", "xoan": "⚡ Lốc xoáy lôi", "thunder": "⚡ Lôi điện giáng (tím)",
+    "loiphat": "⚡ Lôi phạt", "cotvang": "⚡ Thiên lôi trụ (vàng)", "loikiep": "⚡ Lôi kiếp (tím + vàng)",
+    "settia": "⚡ Sấm sét liên hồi", "dragon": "⚡ Lôi long", "slash": "Ma trảo", "madoc": "Ma độc long",
+    "bingan": "Bỉ ngạn hoa nở", "skull": "Đầu lâu ma quỷ bay lên", "sword": "Phi kiếm giáng thế",
 }
-# mã cũ (bản 3.4) -> mẫu mới gần nhất
-FX_ALIAS = {"kimtinh": "bolt", "novang": "tuno", "chau": "xoan", "xoanvang": "xoan", "datno": "diachan", "song": "tuno",
-            "loikiep": "loiphat", "loiquang": "loiphat", "loian": "loiphat", "cotvang": "loiphat", "longvang": "dragon",
-            "xatim": "xoan", "hammer": "thunder", "darkflame": "tuno", "holy": "bolt", "hellfire": "tuno", "ice": "hoan",
-            "star": "bolt", "shock": "hoan", "shatter": "tuno", "blackhole": "xoan", "explode": "tuno", "plasma": "xoan",
-            "storm": "settia", "spear": "gai", "claw": "slash", "bloodbolt": "bolt", "pillar": "loiphat", "net": "hoan"}
+# mã cũ -> mẫu mới gần nhất
+FX_ALIAS = {"chain": "settia", "gai": "sword", "chau": "xoan", "xoanvang": "xoan", "loiquang": "loikiep", "loian": "loikiep",
+            "longvang": "dragon", "xatim": "xoan", "hammer": "thunder", "darkflame": "tuno", "holy": "kimtinh",
+            "hellfire": "tuno", "ice": "hoan", "star": "kimtinh", "shock": "hoan", "shatter": "novang", "blackhole": "xoan",
+            "explode": "novang", "plasma": "xoan", "storm": "settia", "spear": "sword", "claw": "slash", "bloodbolt": "bolt",
+            "pillar": "cotvang", "net": "hoan"}
 
 
 def _vfx_maker(cls):
     def maker(size, seed=0, mode="T", power=1.0, speed=1.0):
-        return cls(size, seed, mode, power, speed).bake()
+        fx = cls(size, seed, mode, power, speed)
+        if not getattr(fx, "ok", True) and getattr(cls, "fallback", None):
+            return cls.fallback(size, seed, mode, power, speed).bake()     # thiếu ảnh: dùng bản vẽ bằng code
+        return fx.bake()
     maker.cls = cls
     return maker
 
 
-FX_EFFECTS = [(c.name, VFX_LABELS[c.name], _vfx_maker(c), c.anchor) for c in VFX_CLASSES]
+FX_EFFECTS = [(c.name, VFX_LABELS[c.name], _vfx_maker(c), c.anchor) for c in IMG_FX]
 FX_BY_KEY = {e[0]: e for e in FX_EFFECTS}
 FX_THUNDER = tuple(e[0] for e in FX_EFFECTS if e[1].startswith("⚡"))
 

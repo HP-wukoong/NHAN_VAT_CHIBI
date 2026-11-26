@@ -77,47 +77,86 @@
   </Action>
   <Action Name="Walk" Type="Move" BorderType="Floor">
    <Animation>
-    <Pose Image="/walk00.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk01.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk02.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk03.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk04.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk05.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk06.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk07.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk08.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk09.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk10.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk11.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk12.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk13.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk14.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk15.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk16.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk17.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk18.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk19.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk20.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk21.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk22.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/walk23.png" ImageAnchor="80,173" Velocity="-1.6,0" Duration="1"/>
+    <Pose Image="/walk00.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk01.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk02.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk03.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk04.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk05.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk06.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk07.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk08.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk09.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk10.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk11.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk12.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk13.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk14.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk15.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk16.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk17.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk18.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk19.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk20.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk21.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk22.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/walk23.png" ImageAnchor="78,175" Velocity="-1.2,0" Duration="1"/>
    </Animation>
   </Action>
   <Action Name="Run" Type="Move" BorderType="Floor">
    <Animation>
-    <Pose Image="/run00.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run01.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run02.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run03.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run04.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run05.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run06.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run07.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run08.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run09.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run10.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
-    <Pose Image="/run11.png" ImageAnchor="93,152" Velocity="-5,0" Duration="1"/>
+    <Pose Image="/run00.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run01.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run02.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run03.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run04.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run05.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run06.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run07.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run08.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run09.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run10.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
+    <Pose Image="/run11.png" ImageAnchor="89,155" Velocity="-4.32,0" Duration="1"/>
    </Animation>
+  </Action>
+  <Action Name="BoTruon" Type="Move" BorderType="Floor">
+   <Animation>
+    <Pose Image="/crawl00.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl01.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl02.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl03.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl04.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl05.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl06.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl07.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl08.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl09.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl10.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl11.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl12.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl13.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl14.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl15.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl16.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl17.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl18.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl19.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl20.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl21.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl22.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl23.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl24.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl25.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl26.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl27.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl28.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl29.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl30.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+    <Pose Image="/crawl31.png" ImageAnchor="118,161" Velocity="-0.9,0" Duration="1"/>
+   </Animation>
+  </Action>
+  <Action Name="LongDi_BoTruon" Type="Sequence" Loop="false">
+   <ActionReference Name="BoTruon" Duration="200"/>
   </Action>
   <Action Name="Dash" Type="Move" BorderType="Floor">
    <Animation>
@@ -133,14 +172,14 @@
   </Action>
   <Action Name="Fall" Type="Embedded" Class="com.group_finity.mascot.action.Fall" RegistanceX="0.05" RegistanceY="0.1" Gravity="2">
    <Animation>
-    <Pose Image="/fall00.png" ImageAnchor="102,166" Velocity="0,0" Duration="1"/>
-    <Pose Image="/fall01.png" ImageAnchor="102,166" Velocity="0,0" Duration="1"/>
-    <Pose Image="/fall02.png" ImageAnchor="102,166" Velocity="0,0" Duration="1"/>
-    <Pose Image="/fall03.png" ImageAnchor="102,166" Velocity="0,0" Duration="1"/>
-    <Pose Image="/fall04.png" ImageAnchor="102,166" Velocity="0,0" Duration="1"/>
-    <Pose Image="/fall05.png" ImageAnchor="102,166" Velocity="0,0" Duration="1"/>
-    <Pose Image="/fall06.png" ImageAnchor="102,166" Velocity="0,0" Duration="1"/>
-    <Pose Image="/fall07.png" ImageAnchor="102,166" Velocity="0,0" Duration="1"/>
+    <Pose Image="/fall00.png" ImageAnchor="103,165" Velocity="0,0" Duration="1"/>
+    <Pose Image="/fall01.png" ImageAnchor="103,165" Velocity="0,0" Duration="1"/>
+    <Pose Image="/fall02.png" ImageAnchor="103,165" Velocity="0,0" Duration="1"/>
+    <Pose Image="/fall03.png" ImageAnchor="103,165" Velocity="0,0" Duration="1"/>
+    <Pose Image="/fall04.png" ImageAnchor="103,165" Velocity="0,0" Duration="1"/>
+    <Pose Image="/fall05.png" ImageAnchor="103,165" Velocity="0,0" Duration="1"/>
+    <Pose Image="/fall06.png" ImageAnchor="103,165" Velocity="0,0" Duration="1"/>
+    <Pose Image="/fall07.png" ImageAnchor="103,165" Velocity="0,0" Duration="1"/>
    </Animation>
   </Action>
   <Action Name="Thrown" Type="Embedded" Class="com.group_finity.mascot.action.Fall" RegistanceX="0.02" RegistanceY="0.05" Gravity="2">
@@ -221,30 +260,30 @@
   </Action>
   <Action Name="ClimbWall" Type="Move" BorderType="Wall">
    <Animation>
-    <Pose Image="/wallc00.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc01.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc02.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc03.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc04.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc05.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc06.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc07.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc08.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc09.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc10.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc11.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc12.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc13.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc14.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc15.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc16.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc17.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc18.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc19.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc20.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc21.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc22.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
-    <Pose Image="/wallc23.png" ImageAnchor="16,79" Velocity="0,-1.6" Duration="1"/>
+    <Pose Image="/wallc00.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc01.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc02.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc03.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc04.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc05.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc06.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc07.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc08.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc09.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc10.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc11.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc12.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc13.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc14.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc15.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc16.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc17.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc18.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc19.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc20.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc21.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc22.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
+    <Pose Image="/wallc23.png" ImageAnchor="17,78" Velocity="0,-1.2" Duration="1"/>
    </Animation>
   </Action>
   <Action Name="GrabCeiling" Type="Stay" BorderType="Ceiling">
@@ -269,30 +308,30 @@
   </Action>
   <Action Name="ClimbCeiling" Type="Move" BorderType="Ceiling">
    <Animation>
-    <Pose Image="/ceilc00.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc01.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc02.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc03.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc04.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc05.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc06.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc07.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc08.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc09.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc10.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc11.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc12.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc13.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc14.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc15.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc16.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc17.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc18.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc19.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc20.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc21.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc22.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
-    <Pose Image="/ceilc23.png" ImageAnchor="79,16" Velocity="-1.6,0" Duration="1"/>
+    <Pose Image="/ceilc00.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc01.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc02.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc03.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc04.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc05.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc06.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc07.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc08.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc09.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc10.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc11.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc12.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc13.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc14.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc15.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc16.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc17.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc18.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc19.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc20.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc21.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc22.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
+    <Pose Image="/ceilc23.png" ImageAnchor="78,17" Velocity="-1.2,0" Duration="1"/>
    </Animation>
   </Action>
   <Action Name="NhayLen" Type="Embedded" Class="com.group_finity.mascot.action.Jump" VelocityParam="22" TargetX="${mascot.anchor.x + (mascot.lookRight ? 240 : -240)}" TargetY="${mascot.anchor.y - 190}">
@@ -319,18 +358,18 @@
   </Action>
   <Action Name="ChayToiVach" Type="Animate" BorderType="Floor">
    <Animation>
-    <Pose Image="/run00.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run01.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run02.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run03.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run04.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run05.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run06.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run07.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run08.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run09.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run10.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
-    <Pose Image="/run11.png" ImageAnchor="93,152" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run00.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run01.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run02.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run03.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run04.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run05.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run06.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run07.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run08.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run09.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run10.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
+    <Pose Image="/run11.png" ImageAnchor="89,155" Velocity="-6,0" Duration="1"/>
    </Animation>
   </Action>
   <Action Name="JumpToLeftWall" Type="Embedded" Class="com.group_finity.mascot.action.Jump" VelocityParam="22" TargetX="${mascot.environment.workArea.left}" TargetY="${mascot.environment.workArea.bottom - 260}">
@@ -1437,18 +1476,18 @@
   </Action>
   <Action Name="ChaseMouse" Type="Move" BorderType="Floor" TargetX="${mascot.environment.cursor.x}" TargetY="${mascot.environment.floor.y}">
    <Animation>
-    <Pose Image="/run00.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run01.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run02.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run03.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run04.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run05.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run06.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run07.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run08.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run09.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run10.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
-    <Pose Image="/run11.png" ImageAnchor="93,152" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run00.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run01.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run02.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run03.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run04.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run05.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run06.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run07.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run08.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run09.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run10.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
+    <Pose Image="/run11.png" ImageAnchor="89,155" Velocity="-8,0" Duration="1"/>
    </Animation>
   </Action>
   <Action Name="LongTruy_DuoiChuot" Type="Sequence" Loop="false">

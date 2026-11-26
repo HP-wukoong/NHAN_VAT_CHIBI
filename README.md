@@ -57,38 +57,47 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 
 ## Hệ VFX bàn phím
 
-Mỗi hiệu ứng là một lớp `Vfx` trong `ChibiNhacViec.pyw`. Vòng đời của nó:
-1. `__init__` nhận thông số: cỡ, chế độ, cường độ, tốc độ, hạt giống.
-2. `init()` dựng thiết kế gốc cố định.
-3. Lặp `update()` và `draw()` theo từng frame.
-4. `finish()` giải phóng.
+20 hiệu ứng dựng từ **ảnh hiệu ứng của bạn** (`HieuUng/`, cắt bằng `tools/cat_hieu_ung.py`). Ảnh không được dán nguyên mà được **bóc tách thành lớp** rồi dựng chuyển động.
 
-`bake()` chạy vòng đời đó thành dãy frame 25 hình/giây. Có thêm pha phân rã chung để hiệu ứng luôn kết thúc sạch.
+**Các lớp được tách:**
+- lõi sét trắng
+- thân sợi điện có màu
+- khói đen
+- đá vụn (mảnh tối được nhấc riêng khỏi ảnh)
 
-Mỗi hiệu ứng đi qua 5 giai đoạn: khởi phát, tăng năng lượng, cao trào, phản ứng, phân rã. Các lớp hình phối hợp gồm: hình chính, tia phụ, hạt, quầng sáng, tan biến.
+Kèm theo là trường "khoảng cách tới tâm năng lượng" và các rẻ quạt sợi sét.
 
-- **Gõ và xoá khác nhau:** gõ thì bùng ra, giáng xuống, phóng đi. Xoá thì diễn biến ngược: hút vào, rút về, tan rã, lôi đi.
-- **Chỉ kích hoạt khi nội dung thật sự đổi.** App ghi lại vị trí con trỏ nhập lúc yên, vì hook nhận phím trước phần mềm đích. Nếu con trỏ không dịch chuyển thì bỏ qua (ví dụ Backspace ở đầu ô). Riêng phím Delete được tính dù con trỏ đứng yên.
-- **Gõ dồn:** mỗi lần gõ một hiệu ứng riêng, mỗi hiệu ứng một cửa sổ trong suốt riêng. Tối đa 3 hiệu ứng mỗi kênh; cái cũ nhất được đẩy nhanh sang pha tan biến.
-- **Không làm chậm máy:** frame được dựng sẵn ở luồng phụ (4 biến thể mỗi mẫu).
+**Mỗi frame diễn ra:**
+- Sét lan dần từ tâm theo mép răng cưa.
+- Từng rẻ quạt chớp, tắt, loé theo nhịp riêng.
+- Lõi bùng thành quầng sáng.
+- Khói nở rồi tan theo nhiễu.
+- Đá văng theo quán tính.
+- Một lớp ảnh khác nháy ngược pha tạo hiệu ứng đan xen vàng và tím.
+- Sợi sét rời (bóc từ bảng sét) chớp quanh tâm hoặc giáng dọc cột sét.
 
-| Nhóm | Hiệu ứng |
-|---|---|
-| ⚡ Hệ Lôi | Lôi tinh bạo phát, Thiên lôi giáng, Sấm sét liên hồi, Lôi hoàn, Lôi xoáy, Lôi phạt trụ, Địa chấn lôi, Lôi xích liên hoàn, Lôi long, Lôi thương, Tử lôi bùng nổ |
-| Ma pháp | Ma trảo, Ma độc long, Bỉ ngạn hoa nở, Đầu lâu quỷ bay lên, Song phi kiếm bay vút |
+**Nhóm ma pháp:** có quỹ đạo riêng.
+- Ma trảo vồ chéo qua chữ.
+- Ma độc long trồi lên rồi lao đi, nhả độc khí.
+- Bỉ ngạn hoa mọc lên, lay động, rơi cánh.
+- Đầu lâu bay lên lắc lư, có hồn bay.
+- Phi kiếm phóng ngang rồi kiếm lớn giáng xuống.
 
-**Hệ Lôi Thái Cổ Hắc Long**
+**Gõ và xoá khác nhau.** Khi xoá:
+- Sét từ ngoài dồn sập vào chữ.
+- Đá bị hút ngược về.
+- Quỹ đạo chạy ngược.
 
-Đây là ngôn ngữ thiết kế sấm sét dùng chung cho cả bàn phím và chiêu của Cổ Long.
-- **Hình dạng:** tia chính gấp khúc răng cưa có chủ đích. Nhánh phụ đầu nhọn, phân nhánh tự nhiên, không rối thành lưới.
-- **Bảng màu cố định:** lõi trắng tím, trắng xanh; trung gian tím điện, xanh tím; viền tím đậm; quầng đen tím.
-- **Thiết kế gốc cố định:** mỗi tia được dựng một lần từ hạt giống. Các frame chỉ đổi trạng thái: vươn, giật, nhịp sáng, co rút.
+**Quy tắc kích hoạt và hiển thị:**
+- Chỉ kích hoạt khi nội dung thật sự đổi (con trỏ nhập dịch chuyển). Phím Delete vẫn được tính.
+- Mỗi lần gõ có hiệu ứng riêng, chồng lớp tối đa 3 cái.
+- Frame được dựng ở luồng phụ. Thiếu ảnh thì tự dùng bản vẽ bằng code.
 
-Thử thật: `python tests/chay_thu_go_phim.py bolt slash /tmp/thu.gif` sẽ mở ô soạn thảo, gõ và xoá thật, rồi ghi lại hình hiệu ứng.
+**Thử thật:** `python tests/chay_thu_go_phim.py bolt slash /tmp/thu.gif`
 
 ## Nhân vật Cổ Long (rồng đen vảy vàng)
 
-Dựng từ bảng sprite của bạn (`tools/co_long_nguon.png`, 14 nhóm động tác). 4 khung đi bộ vốn bị khung kế bên che mất đuôi được ghép đuôi từ khung có đủ đuôi. Toàn bộ sấm sét dùng **Hệ Lôi** (tím): điện tập trung ở sừng, mắt, móng vuốt, khớp vảy, đầu đuôi, mỗi điểm sáng theo nhịp riêng. Công cụ `tools/dung_co_long.py`:
+Dựng từ bảng sprite của bạn (`tools/co_long_nguon.png`, 14 nhóm động tác). Các khung bị khung kế bên che mất đuôi (đi bộ, đứng ngó, bay, biểu cảm, rồng mini) được ghép đuôi tự động theo độ dày mỏm cụt; mảnh rồng lạc ở khung bay được xoá. Đi / chạy / leo / bò trườn: 4 chân bước theo nhịp chéo (nhấc – đưa – đặt – đạp, khớp tốc độ nên không trượt), thân và đuôi uốn sóng trườn. Toàn bộ sấm sét dùng **Hệ Lôi** (tím): điện tập trung ở sừng, mắt, móng vuốt, khớp vảy, đầu đuôi, mỗi điểm sáng theo nhịp riêng. Công cụ `tools/dung_co_long.py`:
 
 1. **Cắt khung:** tách nền caro giả, bỏ nhãn chữ và vạch kẻ, cắt 70 khung gốc. Những khung quay mặt sang phải thì lật lại cho cùng hướng.
 2. **Dựng hoạt cảnh 25 hình/giây:**
@@ -101,7 +110,7 @@ Dựng từ bảng sprite của bạn (`tools/co_long_nguon.png`, 14 nhóm độ
 
 | Nhóm | Động tác |
 |---|---|
-| Di chuyển | Đứng thở, ngó nghiêng, đi bộ, chạy, lướt sát đất, leo vách, bò trên trần |
+| Di chuyển | Đứng thở, ngó nghiêng, đi bộ (chân bước thật), chạy, **bò trườn sát đất**, lướt sát đất, leo vách, bò trên trần |
 | Long kỹ | Gầm rú & thét lớn, Phun lửa, Phun sấm sét (vàng → tím), Cuộn thân, Lôi điện quanh thân, Treo lơ lửng (xoáy tím dưới chân) |
 | Tuyệt kỹ | Long uy (lốc vàng + sét trời), Hắc hoá (quả cầu tím → cột hắc khí), FULL COMBO (gầm → cuộn thân → sấm sét → lửa → lôi điện → Long uy) |
 | Bay | Bay vút, bay theo chuột, Lao xuống & đập đất (nổ tung, hố, đá văng) |
