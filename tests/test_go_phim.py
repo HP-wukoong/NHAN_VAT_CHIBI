@@ -79,7 +79,7 @@ def run():
     check(fx.bolt.last_key == "thunder" and fx.slash.last_key == "skull", "chọn mẫu riêng cho gõ / xoá")
     app.store.s["key_fx_type"] = "gai"                        # mã đã bỏ
     app.store.fix_triggers()
-    check(app.store.s["key_fx_type"] == "sword", "mẫu cũ đã bỏ -> chuyển sang mẫu mới gần nhất")
+    check(app.store.s["key_fx_type"] == "loithuong", "mẫu cũ đã bỏ -> chuyển sang mẫu mới gần nhất")
     app.store.s["key_fx_type"] = "random"
     got = set()
     for _ in range(30):

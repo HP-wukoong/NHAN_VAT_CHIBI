@@ -1,9 +1,8 @@
 {
-  "version": "3.7",
+  "version": "3.8",
   "date": "2026-11-26",
   "notes": [
-    "Hiệu ứng gõ phím dựng lại từ ảnh hiệu ứng của bạn: bóc tách lõi sét / sợi điện / khói / đá vụn thành lớp, sét lan – chớp từng nhánh – đan xen vàng tím – khói tan – đá văng (20 mẫu)",
-    "Cổ Long: ghép đuôi cho mọi khung bị cụt, xoá mảnh hình lạc",
-    "Cổ Long: chân bước thật theo nhịp chéo, thân đuôi uốn sóng; thêm động tác Bò trườn sát đất"
+    "Thêm hiệu ứng gõ ⚡ Lôi tinh liên hoàn: tinh cầu sét nổ nối tiếp dọc dòng chữ, tia sét tím nhảy cung nối nhau, nổ lớn tại con trỏ",
+    "Thêm hiệu ứng ⚡ Lôi thương xuyên chữ: giáo sét lao chéo xuống, cắm xuyên chữ, nổ chấn vàng tím, đá văng, giáo rung điện rồi tan; khi xoá giáo bị rút phăng lên"
   ]
 }

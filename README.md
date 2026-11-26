@@ -57,7 +57,7 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 
 ## Hệ VFX bàn phím
 
-20 hiệu ứng dựng từ **ảnh hiệu ứng của bạn** (`HieuUng/`, cắt bằng `tools/cat_hieu_ung.py`). Ảnh không được dán nguyên mà được **bóc tách thành lớp** rồi dựng chuyển động.
+22 hiệu ứng (có Lôi tinh liên hoàn, Lôi thương xuyên chữ) dựng từ **ảnh hiệu ứng của bạn** (`HieuUng/`, cắt bằng `tools/cat_hieu_ung.py`). Ảnh không được dán nguyên mà được **bóc tách thành lớp** rồi dựng chuyển động.
 
 **Các lớp được tách:**
 - lõi sét trắng
