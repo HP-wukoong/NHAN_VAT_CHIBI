@@ -29,6 +29,8 @@
   "LongKy_PhunLua": "Phun lửa",
   "LongKy_PhunSamSet": "Phun sấm sét",
   "LongKy_CuonThan": "Cuộn thân",
+  "LongKy_OmCan": "Ôm cắn (đớp phập)",
+  "LongKy_QuatDuoi": "Quật đuôi",
   "LongKy_LoiDien": "Lôi điện quanh thân",
   "LongKy_TreoLoLung": "Treo lơ lửng",
   "LongBa_LongUy": "Tuyệt kỹ Long tộc (Long uy)",
@@ -148,5 +150,80 @@
   "S_HK": {
    "act": "LongBa_FullCombo"
   }
+ },
+ "freefly": {
+  "bay": [
+   "LuonVong"
+  ],
+  "hov": [
+   "LuonVong"
+  ],
+  "takeoff": [
+   "CatCanh"
+  ],
+  "laugh": [
+   "YeuThich"
+  ],
+  "taunts": [
+   "Grào! 🐉",
+   "Rộp rộp~ ngon ghê!",
+   "Cháy rồi kìa 🔥",
+   "Quật cho một phát!",
+   "Giật tê người chưa? ⚡",
+   "Của ta hết! Hehe",
+   "Ôm chặt không cho chạy~"
+  ],
+  "attacks": [
+   {
+    "act": "CanIcon",
+    "fx": "bite",
+    "hit": [
+     0.2222222222222222
+    ],
+    "w": 1.3,
+    "dx": -124.8,
+    "dy": -51.8
+   },
+   {
+    "act": "QuatDuoi",
+    "fx": "shatter",
+    "hit": [
+     0.4666666666666667
+    ],
+    "w": 1.2,
+    "dx": 161.6,
+    "dy": -67.8
+   },
+   {
+    "act": "PhunLua",
+    "fx": "burn",
+    "hit": [
+     0.24
+    ],
+    "w": 1.2,
+    "dx": -230.9,
+    "dy": -82.0
+   },
+   {
+    "act": "PhunSamSet",
+    "fx": "zap",
+    "hit": [
+     0.38
+    ],
+    "w": 1.0,
+    "dx": -246.1,
+    "dy": -89.9
+   },
+   {
+    "act": "CuonThan",
+    "fx": "squeeze",
+    "hit": [
+     0.12
+    ],
+    "w": 0.7,
+    "dx": -1.0,
+    "dy": -69.0
+   }
+  ]
  }
 }

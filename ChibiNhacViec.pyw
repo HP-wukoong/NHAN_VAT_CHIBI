@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.13"
+APP_VER = "3.14"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -624,7 +624,7 @@ BEHAVIOR_LABELS = {
     "BaKhi_FullCombo": "FULL COMBO", "TapLuyen_DanhBong": "Đánh bóng (tập)", "TapLuyen_ChayBo": "Chạy bộ (tập)",
     "TapLuyen_LaoTapLuyen": "Lao tập luyện", "ChuotThu_ChayTheoChuot": "Đuổi theo chuột",
     "BayLuon_PhaIcon": "Bay phá icon (tinh nghịch)", "BayLuon_TuDo": "Bay lượn toàn màn hình",
-    "BayLuon_ChocChuot": "Bay chọc chuột",
+    "BayLuon_ChocChuot": "Bay chọc chuột", "BayLuon_DuoiBatChuot": "Đuổi bắt chuột (chọc rồi chạy)",
 }
 GROUP_LABELS = {"ChienDau": "Chiến đấu", "HacLong": "Hắc Long", "DiChuyen": "Di chuyển", "VaCham": "Va chạm",
                 "TrangThai": "Trạng thái", "BieuCam": "Biểu cảm", "BaKhi": "Bá khí", "TapLuyen": "Tập luyện",
@@ -772,11 +772,12 @@ class ShimejiPack:
         except Exception:
             log_error()
             self.xk = {}
-        if any(k.startswith("x_bay") for k in self.xk):
+        if any(k.startswith("x_bay") for k in self.xk) or self.meta.get("freefly"):
             self._inject_fly()
         self.ok = bool(self.actions) and bool(self.behaviors)
 
-    FLY_BEHAVIORS = (("BayLuon_PhaIcon", "icons", 7), ("BayLuon_TuDo", "free", 6), ("BayLuon_ChocChuot", "tease", 4))
+    FLY_BEHAVIORS = (("BayLuon_PhaIcon", "icons", 7), ("BayLuon_TuDo", "free", 6), ("BayLuon_ChocChuot", "tease", 4),
+                     ("BayLuon_DuoiBatChuot", "chase", 4))
 
     def _inject_fly(self):
         """Bộ có khung bay ngang -> thêm hành vi bay tự do toàn màn hình (chạy bằng code, không sửa XML của bộ)."""
@@ -1238,6 +1239,36 @@ class Engine:
     # ── BAY TỰ DO TOÀN MÀN HÌNH (tinh nghịch, phá icon) ──
     TAUNTS = ("Bùm! 💥", "Hehe, trúng rồi!", "Icon này ngứa mắt ghê~", "Xí! Né đi chứ!", "Thêm phát nữa nhé?",
               "Ai bảo đứng đó 😝", "Rắc!", "Haha, run rồi kìa!")
+    # Áo Đen (bộ không khai báo meta freefly): chiêu đánh icon -> kiểu icon trúng chiêu
+    AODEN_ATTACKS = (("DamThep", "hit", (0.45,)), ("Punch", "hit", (0.45,)), ("KiemKhi", "shatter", (0.5,)),
+                     ("DamSongAm", "hit", (0.45,)), ("DamLienHoan", "hit", (0.35, 0.6)))
+
+    def fly_kit(self):
+        """Bộ khung + chiêu phá phách theo nhân vật. Bộ có meta 'freefly' (vd Cổ Long) tự khai báo; Áo Đen dùng x_*.png."""
+        if getattr(self, "_kit", None) is not None and self._kit[0] is self.pack:
+            return self._kit[1]
+        ff = self.pack.meta.get("freefly") or {}
+        hov = [p for p in self.fly_poses() if p.img.lower().startswith("hl_hover")]
+        if ff:
+            def poses(key):
+                out = []
+                for nm in ff.get(key) or []:
+                    out += self._poses_of(nm)
+                return out
+            kit = dict(bay=poses("bay"), up=poses("up"), dn=poses("dn"), hov=poses("hov"), takeoff=poses("takeoff"),
+                       laugh=poses("laugh"), taunts=tuple(ff.get("taunts") or self.TAUNTS), attacks=[])
+            for a in ff.get("attacks") or []:
+                if self._poses_of(a.get("act", "")):
+                    kit["attacks"].append(dict(act=a["act"], fx=a.get("fx", "hit"), hit=tuple(a.get("hit") or (0.45,)),
+                                               dx=float(a.get("dx", -60)), dy=float(a.get("dy", -40)),
+                                               w=float(a.get("w", 1)), hover=bool(a.get("hover", True))))
+        else:
+            kit = dict(bay=self.xps("x_bay", 8), up=self.xps("x_baylen", 4), dn=self.xps("x_bayxuong", 4), hov=hov,
+                       takeoff=self.xps("x_catcanh", 4), laugh=self._poses_of("CuoiMaQuai"), taunts=self.TAUNTS,
+                       attacks=[dict(act=n, fx=fx, hit=h, dx=None, dy=-48.0, w=1.0, hover=True)
+                                for n, fx, h in self.AODEN_ATTACKS if self._poses_of(n)])
+        self._kit = (self.pack, kit)
+        return kit
 
     def _fly_bounds(self):
         ar = self.env.areas or [self.env.area_at(self.ax, self.ay)]
@@ -1319,73 +1350,98 @@ class Engine:
             self.ay += math.sin(st["t"] * 0.3) * 0.8
             yield hov[(st["t"] // 3) % len(hov)]
 
-    def _smash(self, rect, st):
-        """Bay tới cạnh icon, tung chiêu – đúng nhịp ra đòn thì icon trúng đòn (loá, nứt, rung, văng hồn, sao xoay)."""
+    def _smash(self, rect, st, atk=None):
+        """Bay tới icon, tung chiêu – đúng nhịp ra đòn thì icon trúng chiêu (kiểu theo chiêu: đánh văng, cắn, vỡ vụn,
+        cháy, giật điện, siết...). Hiệu ứng chỉ vẽ đè, icon thật không bị đụng tới."""
+        kit = st["kit"]
         z = self.env.zoom
         x1, y1, x2, y2 = rect
         cx, cy = (x1 + x2) / 2.0 / z, (y1 + y2) / 2.0 / z
-        side = -1 if self.ax < cx else 1
         iw = (x2 - x1) / z
-        yield from self._fly_to(cx + side * (iw / 2 + 34), cy + 48, st, hover_end=True, near=8)
-        self.look_right = side < 0
-        names = [n for n in ("DamThep", "Punch", "KiemKhi", "DamSongAm", "DamLienHoan") if self._poses_of(n)]
-        if not names:
+        atks = kit["attacks"]
+        if not atks:
             return
-        poses = self._poses_of(random.choice(names))
+        if atk is None:                                          # bốc thăm theo trọng số, không lặp lại chiêu vừa dùng
+            pool = [a for a in atks if a["act"] != st.get("last_atk")] or atks
+            tot = sum(a["w"] for a in pool)
+            r_ = random.uniform(0, tot)
+            for a in pool:
+                r_ -= a["w"]
+                if r_ <= 0:
+                    atk = a
+                    break
+            atk = atk or pool[-1]
+        st["last_atk"] = atk["act"]
+        dx = atk["dx"] if atk["dx"] is not None else -(iw / 2 + 34)
+        dy = atk["dy"]
+        # điểm trúng (khi quay TRÁI) = neo + (dx, dy); dx < 0: đánh phía trước (miệng, nắm đấm), dx > 0: phía sau (đuôi)
+        right = (self.ax < cx) if dx < 0 else (self.ax > cx)
+        ar = self.env.area_at(cx, cy)
+
+        def fits(rt):
+            x = cx + dx if rt else cx - dx
+            return ar[0] + 30 <= x <= ar[2] - 30
+        if not fits(right) and fits(not right):                   # icon sát mép: đổi phía để còn chỗ ra chiêu
+            right = not right
+        tx = cx + dx if right else cx - dx
+        ty = cy - dy
+        yield from self._fly_to(tx, ty, st, hover_end=True, near=8)
+        self.ax, self.ay = tx, ty
+        self.look_right = right
+        dirx = 1 if self.ax < cx else -1
+        poses = self._poses_of(atk["act"])
         seq = []
         for p in poses:
             seq += [p] * p.dur
-        seq = seq[:46]
-        hit_at = max(1, int(len(seq) * 0.45))
-        hits = 2 if random.random() < 0.35 else 1
+        seq = seq[:90]
+        hits = sorted(set(max(1, min(len(seq) - 1, int(len(seq) * h))) for h in atk["hit"]))
         for i, p in enumerate(seq):
-            if i == hit_at or (hits == 2 and i == min(len(seq) - 2, hit_at + 9)):
+            if i in hits:
                 try:
-                    self.app.icon_fx.hit(rect, -side, strong=(i != hit_at))
+                    self.app.icon_fx.play(atk["fx"], rect, dirx, strong=(i != hits[0]))
                 except Exception:
                     log_error()
-                st["vx"], st["vy"] = side * 3.5, -1.5               # giật lùi sau cú đánh
-            if i > hit_at:
+                if atk["fx"] == "hit":
+                    st["vx"], st["vy"] = -dirx * 3.5, -1.5               # giật lùi sau cú đánh
+            if i > hits[0] and atk["fx"] == "hit":
                 self.ax += st["vx"] * 0.3
                 st["vx"] *= 0.85
             yield p
         if random.random() < 0.4:
-            self._taunt()
-        if random.random() < 0.45:
-            lp = self._poses_of("CuoiMaQuai")
-            for p in lp[:6]:
+            self._taunt(kit)
+        if random.random() < 0.4 and kit["laugh"]:
+            for p in kit["laugh"][:6]:
                 for _ in range(min(3, p.dur)):
                     yield p
 
-    def _taunt(self):
+    def _taunt(self, kit=None):
         try:
             b = self.app.bubble
             if b.msg and b.msg.get("kind") in ("reminder", "break"):
                 return
-            self.app.say(random.choice(self.TAUNTS), timeout=2)
+            self.app.say(random.choice((kit or {}).get("taunts") or self.TAUNTS), timeout=2)
         except Exception:
             pass
 
     def act_freefly(self, spec, a):
-        bay = self.xps("x_bay", 8)
+        kit = self.fly_kit()
+        bay = kit["bay"]
         if not bay:
             return
-        st = dict(vx=0.0, vy=0.0, t=0, bay=bay, up=self.xps("x_baylen", 4), dn=self.xps("x_bayxuong", 4),
-                  hov=[p for p in self.fly_poses() if p.img.lower().startswith("hl_hover")])
+        st = dict(vx=0.0, vy=0.0, t=0, bay=bay, up=kit["up"], dn=kit["dn"], hov=kit["hov"], kit=kit)
         mode = a.get("Mode", "free")
-        cc = self.xps("x_catcanh", 4)
-        if self.env.on_floor(self.ax, self.ay) is not None and cc:     # khuỵu gối lấy đà -> bật vút lên
-            for q in cc[:2]:
-                for _ in range(3):
-                    yield q
-            for i, q in enumerate(cc[2:]):
-                for _ in range(3):
-                    self.ay -= 9
+        cc = kit["takeoff"]
+        if self.env.on_floor(self.ax, self.ay) is not None and cc:     # lấy đà rồi bật vút lên
+            n = len(cc)
+            for i, q in enumerate(cc):
+                for _ in range(max(1, min(3, q.dur))):
+                    if i >= n // 2:
+                        self.ay -= 9
                     yield q
             st["vy"] = -12.0
             st["vx"] = self.dir() * 3.0
         plan = []
-        if mode == "icons" and self.app.store.s.get("pha_icon", True):
+        if mode == "icons" and self.app.store.s.get("pha_icon", True) and kit["attacks"]:
             icons = self._icon_targets(random.randint(2, 4))
             try:
                 self.app.icon_fx.prepare(icons)                    # chụp hình icon trước khi nhân vật bay tới che
@@ -1399,7 +1455,9 @@ class Engine:
                 mode = "free"
         if mode == "tease":
             plan += [("tease", None), ("pt", self._rand_point()), ("tease", None)]
-        if mode == "free" or not plan:
+        if mode == "chase":
+            plan += [("chase", None), ("pt", self._rand_point())]
+        if mode in ("free", "icons") and not plan:
             plan += [("pt", self._rand_point()) for _ in range(random.randint(3, 6))]
             if random.random() < 0.5:
                 plan.insert(random.randint(0, len(plan)), ("tease", None))
@@ -1420,7 +1478,26 @@ class Engine:
                     tx, ty = cx + math.cos(ang) * 95, cy + 40 + math.sin(ang) * 55
                     yield from self._fly_to(tx, ty, st, max_t=1, near=0)
                 if random.random() < 0.5:
-                    self._taunt()
+                    self._taunt(kit)
+            elif kind == "chase":                                   # đuổi bắt con chuột: bắt được thì "chọc" một phát
+                caught = 0
+                for _ in range(260):
+                    cx, cy = self.env.cursor
+                    yield from self._fly_to(cx + 30, cy + 50, st, max_t=1, near=0)
+                    if math.hypot(self.ax - cx - 30, self.ay - cy - 50) < 26:
+                        caught += 1
+                        z = self.env.zoom
+                        try:
+                            self.app.icon_fx.play("poke", (cx * z - 24, cy * z - 24, cx * z + 24, cy * z + 24),
+                                                  1 if self.ax < cx else -1)
+                        except Exception:
+                            log_error()
+                        self._taunt(dict(taunts=("Bắt được rồi nhé! 😝", "Chạy đâu cho thoát~", "Chạm! Tới lượt bạn đuổi!")))
+                        st["vx"], st["vy"] = random.choice((-1, 1)) * 14.0, -9.0      # vụt bay ra xa rồi đuổi tiếp
+                        for _ in range(14):
+                            yield from self._fly_to(self.ax + st["vx"] * 3, self.ay + st["vy"] * 3, st, max_t=1, near=0)
+                        if caught >= 3:
+                            break
         # hạ cánh: thả rơi theo đà rồi tiếp đất
         self.vx, self.vy = st["vx"] * 0.6, max(st["vy"], 0.0)
         fall = self.pack.actions.get("Fall")
@@ -1428,7 +1505,6 @@ class Engine:
             yield from self.act_fall(fall, dict(fall.attrs))
         if self.env.on_floor(self.ax, self.ay) is not None and "Land" in self.pack.actions:
             yield from self.run_action("Land")
-
 
     # ── các kiểu hành động ──
     def run_action(self, name, attrs=None, depth=0):
@@ -7145,8 +7221,400 @@ def icon_hit_frames(icon, dirx=1, strong=False, seed=0):
     return frames, (cx / W, cy / H)
 
 
+def _bg_fill(patch, m):
+    """Ước lượng nền desktop phía sau icon: màu từ viền ảnh chụp (không có icon) lan vào trong. Dùng để 'xoá' tạm icon
+    gốc khi nó vỡ / cháy thành tro – vẫn chỉ là hình vẽ đè, icon thật không bị đụng tới."""
+    import numpy as np
+    a = np.asarray(patch.convert("RGB")).astype(np.float32)
+    h, w = a.shape[:2]
+    known = np.zeros((h, w), bool)
+    known[:m, :] = known[-m:, :] = known[:, :m] = known[:, -m:] = True
+    out = a.copy()
+    out[~known] = a[known].mean(0)
+    for _ in range(int(max(h, w) * 1.6)):
+        blur = (np.roll(out, 1, 0) + np.roll(out, -1, 0) + np.roll(out, 1, 1) + np.roll(out, -1, 1)) / 4.0
+        out = np.where(known[..., None], a, blur)
+    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8)).convert("RGBA")
+
+
+def _font(px):
+    from PIL import ImageFont
+    for nm in ("arialbd.ttf", "seguibl.ttf", "DejaVuSans-Bold.ttf"):
+        try:
+            return ImageFont.truetype(nm, max(8, int(px)))
+        except Exception:
+            continue
+    try:
+        return ImageFont.load_default(max(8, int(px)))
+    except Exception:
+        return ImageFont.load_default()
+
+
+class _IconCanvas:
+    """Khung chung của hiệu ứng icon: patch = ảnh chụp vùng icon + lề m; bg = nền ước lượng."""
+
+    def __init__(self, patch, m, kw=5.2, kh=4.6):
+        self.patch, self.m = patch.convert("RGBA"), m
+        self.icon = self.patch.crop((m, m, patch.width - m, patch.height - m))
+        self.iw, self.ih = self.icon.size
+        self.W, self.H = int(self.iw * kw), int(self.ih * kh)
+        self.cx, self.cy = self.W / 2.0, self.H * 0.56
+        self.ox, self.oy = int(self.cx - self.iw / 2.0), int(self.cy - self.ih / 2.0)
+        self._bg = None
+        self._ghost = None
+
+    @property
+    def bg(self):
+        if self._bg is None:
+            try:
+                self._bg = _bg_fill(self.patch, self.m)
+            except Exception:
+                self._bg = self.patch
+        return self._bg
+
+    @property
+    def ghost(self):
+        if self._ghost is None:
+            try:
+                self._ghost = _icon_mask(self.icon)
+            except Exception:
+                self._ghost = self.icon
+        return self._ghost
+
+    def new(self):
+        from PIL import ImageDraw
+        im = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        return im, ImageDraw.Draw(im)
+
+    def erase(self, im):
+        """Che icon gốc bằng nền ước lượng (lề trùng khít ảnh thật nên không lộ mép)."""
+        im.alpha_composite(self.bg, (self.ox - self.m, self.oy - self.m))
+
+    def put(self, im, src, sx=1.0, sy=1.0, dx=0, dy=0, rot=0.0, alpha=1.0, pivot="bottom"):
+        w, h = max(2, int(self.iw * sx)), max(2, int(self.ih * sy))
+        s = src.resize((w, h), Image.BICUBIC) if (w, h) != src.size else src
+        if rot:
+            s = s.rotate(rot, Image.BICUBIC, expand=True)
+        if alpha < 0.999:
+            s = s.copy()
+            s.putalpha(s.getchannel("A").point(lambda v, k=alpha: int(v * k)))
+        x = self.cx - s.width / 2.0 + dx
+        y = (self.oy + self.ih - s.height + dy) if pivot == "bottom" else (self.cy - s.height / 2.0 + dy)
+        im.alpha_composite(s, (int(round(x)), int(round(y))))
+
+    def text(self, d, s, xy, px, fill=(255, 255, 255), al=255):
+        f = _font(px)
+        x, y = xy
+        for ox_, oy_ in ((-2, 0), (2, 0), (0, -2), (0, 2), (-1, -1), (1, 1)):
+            d.text((x + ox_, y + oy_), s, font=f, fill=(30, 10, 20, al))
+        d.text((x, y), s, font=f, fill=fill + (al,))
+
+    def stars(self, d, f, k, n=3):
+        for j in range(n):
+            a = f * 0.55 + j * 6.283 / n
+            sx_, sy_ = self.cx + math.cos(a) * self.iw * 0.45, self.oy - self.ih * 0.12 + math.sin(a) * self.ih * 0.12
+            rr = max(3.0, self.iw * 0.09)
+            pts = [(sx_ + math.cos(t * 0.6283 - 1.5708) * (rr if t % 2 == 0 else rr * 0.45),
+                    sy_ + math.sin(t * 0.6283 - 1.5708) * (rr if t % 2 == 0 else rr * 0.45)) for t in range(10)]
+            d.polygon(pts, fill=(255, 220, 60, int(255 * k)))
+
+    def regrow(self, im, d, u, r):
+        """Icon mọc lại sau khi bị phá: phóng từ nhỏ ra, lấp lánh."""
+        s = 0.15 + 0.85 * (1 - (1 - u) ** 3)
+        self.put(im, self.icon, s, s, alpha=min(1.0, 0.3 + u))
+        for j in range(5):
+            a = r.uniform(0, 6.28)
+            rr = self.iw * r.uniform(0.3, 0.7)
+            x, y = self.cx + math.cos(a) * rr, self.cy + math.sin(a) * rr * 0.8
+            L = self.iw * 0.08 * (1 - u)
+            d.line((x - L, y, x + L, y), fill=(255, 255, 220, int(230 * (1 - u))), width=1)
+            d.line((x, y - L, x, y + L), fill=(255, 255, 220, int(230 * (1 - u))), width=1)
+
+
+def _icfx_bite(C, dirx, strong, r):
+    """Bị cắn: 3 phát đớp – icon lún xuống, dấu răng in dần, vụn bay, chữ 'Rộp!'."""
+    chomps = (1, 11, 21)                      # khớp nhịp đớp của Cổ Long (cách nhau 10 nhịp)
+    marks = []
+    crumbs = []
+    n = 32
+    frames = []
+    for f in range(n):
+        im, d = C.new()
+        if f in chomps:
+            side = r.choice((-1, 1))
+            y0 = C.oy + C.ih * r.uniform(0.05, 0.4)
+            marks.append([(C.ox + (C.iw * (0.5 + side * 0.5)) + side * -C.iw * 0.04 * k, y0 + C.ih * 0.13 * k) for k in range(4)])
+            for _ in range(7):
+                col = C.icon.getpixel((r.randrange(C.iw), r.randrange(C.ih)))
+                crumbs.append([C.cx + r.uniform(-0.4, 0.4) * C.iw, C.oy + r.uniform(0, 0.4) * C.ih,
+                               r.uniform(-3, 3) + dirx * 1.5, r.uniform(-5, -2), f, col, r.uniform(1.5, 3.2)])
+        squash = any(0 <= f - c <= 1 for c in chomps)
+        if f < n - 1:
+            C.erase(im)
+            k = (0.82, 0.92)[min(1, min(abs(f - c) for c in chomps))] if squash else 1.0
+            C.put(im, C.icon, 1.0 + (1 - k) * 0.6, k, dx=r.uniform(-2, 2) if squash else 0)
+            fade = 255 if f < n - 6 else int(255 * (n - 1 - f) / 5.0)
+            for mk in marks:
+                for (x, y) in mk:
+                    t = max(2.0, C.iw * 0.07)
+                    d.polygon([(x - t, y), (x + t, y), (x, y + t * 1.5)], fill=(25, 15, 20, fade))
+                    d.line((x - t, y, x + t, y), fill=(255, 255, 255, fade // 2), width=1)
+        for c in crumbs:
+            if f >= c[4]:
+                c[0] += c[2]
+                c[1] += c[3]
+                c[3] += 0.9
+                al = max(0, 255 - (f - c[4]) * 22)
+                if al:
+                    d.rectangle((c[0], c[1], c[0] + c[6], c[1] + c[6]), fill=tuple(c[5][:3]) + (al,))
+        for c in chomps:
+            if 0 <= f - c <= 2:
+                C.text(d, "Rộp!", (C.cx + dirx * C.iw * 0.2 - C.iw * 0.3, C.oy - C.ih * 0.55 - (f - c) * 3),
+                       C.iw * 0.42, (255, 240, 120), 255 - (f - c) * 70)
+        if f >= 23:
+            C.stars(d, f, max(0.0, min(1.0, (n - 1 - f) / 5.0)))
+        frames.append(im)
+    return frames
+
+
+def _icfx_shatter(C, dirx, strong, r):
+    """Vỡ vụn: nứt – vỡ toang thành mảnh văng (rơi theo trọng lực, xoay) – bụi – icon mọc lại lấp lánh."""
+    from PIL import ImageDraw
+    n = 26
+    px, py = C.cx - dirx * C.iw * 0.15, C.cy
+    shards = []
+    k = 9 if strong else 7
+    angs = sorted(r.uniform(0, 6.283) for _ in range(k))
+    for j in range(k):
+        a0, a1 = angs[j], angs[(j + 1) % k] + (6.283 if j == k - 1 else 0)
+        R = C.iw * 1.2
+        poly = [(px - C.ox, py - C.oy)] + [((px - C.ox) + math.cos(a0 + (a1 - a0) * t) * R,
+                                             (py - C.oy) + math.sin(a0 + (a1 - a0) * t) * R) for t in (0, 0.5, 1)]
+        mask = Image.new("L", (C.iw, C.ih), 0)
+        ImageDraw.Draw(mask).polygon(poly, fill=255)
+        if not mask.getbbox():
+            continue
+        piece = Image.new("RGBA", (C.iw, C.ih), (0, 0, 0, 0))
+        piece.paste(C.icon, (0, 0), mask)
+        bb = mask.getbbox()
+        piece = piece.crop(bb)
+        am = (a0 + a1) / 2
+        sp = C.iw * r.uniform(0.08, 0.16)
+        shards.append(dict(im=piece, x=C.ox + bb[0], y=C.oy + bb[1], vx=math.cos(am) * sp + dirx * C.iw * 0.06,
+                           vy=math.sin(am) * sp - C.ih * 0.08, rot=0.0, vr=r.uniform(-25, 25)))
+    frames = []
+    for f in range(n):
+        im, d = C.new()
+        if f < 3:
+            C.put(im, C.icon, dx=r.uniform(-2, 2))
+            for j in range(4):
+                a = r.uniform(0, 6.28)
+                d.line((px, py, px + math.cos(a) * C.iw * 0.5, py + math.sin(a) * C.ih * 0.5), fill=(15, 10, 20, 255),
+                       width=max(1, C.iw // 22))
+            rr = C.iw * (0.35 + 0.25 * f)
+            d.ellipse((px - rr, py - rr, px + rr, py + rr), fill=(255, 255, 240, 150 - f * 40))
+        elif f < n - 1:
+            C.erase(im)
+            u = (f - 3) / float(n - 4)
+            if f < 17:
+                for s in shards:
+                    s["x"] += s["vx"]
+                    s["y"] += s["vy"]
+                    s["vy"] += C.ih * 0.025
+                    s["rot"] += s["vr"]
+                    g = s["im"].rotate(s["rot"], Image.BICUBIC, expand=True)
+                    al = 1.0 if f < 11 else max(0.0, 1 - (f - 11) / 6.0)
+                    g.putalpha(g.getchannel("A").point(lambda v, k=al: int(v * k)))
+                    im.alpha_composite(g, (int(s["x"]), int(s["y"])))
+            if 3 <= f <= 10:
+                q = (f - 3) / 7.0
+                for j in range(6):
+                    a = j * 1.05 + 0.3
+                    rr = C.iw * (0.25 + 0.5 * q)
+                    x, y = C.cx + math.cos(a) * rr * 0.7, C.cy + C.ih * 0.25 + math.sin(a) * rr * 0.3 - q * C.ih * 0.2
+                    d.ellipse((x - rr * 0.5, y - rr * 0.35, x + rr * 0.5, y + rr * 0.35), fill=(205, 198, 188, int(140 * (1 - q))))
+            if f >= 16:
+                C.regrow(im, d, (f - 16) / float(n - 18), r)
+            if f >= 5 and f < 16:
+                C.stars(d, f, 1.0)
+        frames.append(im)
+    return frames
+
+
+def _flame(d, x, base, h, w, ph, al=1.0):
+    """Một lưỡi lửa: đỏ cam ngoài – cam – lõi vàng, đầu lửa lắc lư."""
+    for k, col in ((1.0, (255, 80, 20)), (0.7, (255, 160, 40)), (0.42, (255, 240, 150))):
+        hh, ww = h * k, w * k
+        sway = math.sin(ph) * w * 0.6
+        pts = [(x - ww, base), (x - ww * 0.6, base - hh * 0.45), (x + sway, base - hh), (x + ww * 0.6, base - hh * 0.45),
+               (x + ww, base)]
+        d.polygon(pts, fill=col + (int(230 * al),))
+
+
+def _icfx_burn(C, dirx, strong, r):
+    """Cháy: bén lửa – lửa bùng trùm icon, icon cháy đen, khói, tàn lửa – hoá tro rơi lả tả – icon mọc lại."""
+    import numpy as np
+    n = 32
+    base = np.asarray(C.icon).astype(np.float32)
+    noise = make_noise(C.iw + 2, C.ih + 2, r.randrange(999), cell=max(3, C.iw // 6))[:C.ih, :C.iw]
+    smoke = []
+    ash = []
+    frames = []
+    for f in range(n):
+        im, d = C.new()
+        if f < 22:
+            ch = min(1.0, max(0.0, (f - 2) / 12.0))                       # mức cháy đen
+            a = base.copy()
+            g = a[..., :3].mean(2, keepdims=True)
+            a[..., :3] = a[..., :3] * (1 - ch) + (g * 0.25 + np.array([30, 14, 6])) * ch
+            dis = max(0.0, (f - 15) / 6.0)                                # hoá tro (tan theo nhiễu)
+            if dis > 0:
+                a[..., 3] *= np.clip((noise - dis) / 0.12, 0, 1)
+                C.erase(im)
+            ico = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), "RGBA")
+            C.put(im, ico)
+            if dis > 0 and f % 1 == 0:
+                for _ in range(6):
+                    ash.append([C.ox + r.uniform(0, C.iw), C.oy + r.uniform(0, C.ih), r.uniform(-0.6, 0.6), r.uniform(0.5, 1.5), f])
+        else:
+            C.erase(im)
+            C.regrow(im, d, (f - 22) / float(n - 23), r)
+        if 1 <= f <= 19:                                                   # lửa
+            k = min(1.0, f / 4.0) * (1 if f < 15 else max(0.2, (19 - f) / 4.0))
+            nfl = 6 if strong else 5
+            for j in range(nfl):
+                x = C.ox + C.iw * (j + 0.5) / nfl + r.uniform(-2, 2)
+                h = C.ih * (0.55 + 0.75 * k) * (0.75 + 0.35 * math.sin(f * 1.7 + j * 2.1))
+                _flame(d, x, C.oy + C.ih * 1.02, h, C.iw / nfl * 0.75, f * 0.9 + j, 0.95)
+            if f % 2 == 0:
+                smoke.append([C.cx + r.uniform(-0.3, 0.3) * C.iw, C.oy - C.ih * 0.1, C.iw * 0.18, f])
+            for _ in range(2):
+                x, y = C.cx + r.uniform(-0.5, 0.5) * C.iw, C.oy - r.uniform(0, 0.9) * C.ih
+                d.rectangle((x, y, x + 1.5, y + 1.5), fill=(255, 210, 90, 255))
+        for s in smoke:
+            q = (f - s[3]) / 10.0
+            if 0 <= q <= 1:
+                rr = s[2] * (1 + 1.6 * q)
+                y = s[1] - q * C.ih * 1.3
+                d.ellipse((s[0] - rr, y - rr, s[0] + rr, y + rr), fill=(70, 66, 66, int(140 * (1 - q))))
+        for p in ash:
+            if f >= p[4]:
+                p[0] += p[2]
+                p[1] += p[3]
+                p[3] += 0.25
+                al = max(0, 220 - (f - p[4]) * 25)
+                if al:
+                    d.rectangle((p[0], p[1], p[0] + 2, p[1] + 2), fill=(90, 86, 84, al))
+        frames.append(im)
+    return frames
+
+
+def _zigzag(r, a, b, n, amp):
+    pts = [a]
+    for k in range(1, n):
+        t = k / float(n)
+        x, y = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+        dx, dy = b[1] - a[1], a[0] - b[0]
+        L = math.hypot(dx, dy) or 1
+        o = r.uniform(-amp, amp)
+        pts.append((x + dx / L * o, y + dy / L * o))
+    pts.append(b)
+    return pts
+
+
+def _icfx_zap(C, dirx, strong, r):
+    """Giật điện: sét bò khắp icon, icon nháy âm bản / sáng loá, rung, khét khói, vết cháy sém mờ dần."""
+    from PIL import ImageOps
+    n = 22
+    inv = ImageOps.invert(C.icon.convert("RGB")).convert("RGBA")
+    inv.putalpha(C.icon.getchannel("A"))
+    frames = []
+    for f in range(n):
+        im, d = C.new()
+        live = f < 14
+        if f < n - 1:
+            C.erase(im)
+            src = inv if (live and f % 3 == 1) else C.icon
+            C.put(im, src, dx=r.uniform(-2.5, 2.5) if live else 0, dy=r.uniform(-1.5, 1.5) if live else 0)
+            if live and f % 3 == 2:
+                d.rectangle((C.ox, C.oy, C.ox + C.iw, C.oy + C.ih), fill=(220, 200, 255, 90))
+        if live:
+            k = 1.0 if f < 10 else (14 - f) / 4.0
+            for j in range(6 if strong else 4):
+                a = (r.uniform(C.ox - C.iw * 0.3, C.ox + C.iw * 1.3), r.uniform(C.oy - C.ih * 0.3, C.oy + C.ih * 1.3))
+                b = (r.uniform(C.ox, C.ox + C.iw), r.uniform(C.oy, C.oy + C.ih))
+                pts = _zigzag(r, a, b, 6, C.iw * 0.12)
+                d.line(pts, fill=(140, 80, 255, int(120 * k)), width=max(3, C.iw // 9))
+                d.line(pts, fill=(200, 170, 255, int(220 * k)), width=max(2, C.iw // 20))
+                d.line(pts, fill=(255, 255, 255, int(255 * k)), width=1)
+        if f >= 10:
+            q = (f - 10) / float(n - 10)
+            for j in range(3):
+                x = C.cx + (j - 1) * C.iw * 0.25
+                y = C.oy - q * C.ih * 0.9
+                rr = C.iw * (0.12 + 0.2 * q)
+                d.ellipse((x - rr, y - rr, x + rr, y + rr), fill=(80, 76, 80, int(120 * (1 - q))))
+            if f < n - 1:
+                for j in range(4):
+                    x, y = C.ox + C.iw * (0.2 + 0.2 * j), C.oy + C.ih * (0.3 + 0.13 * (j % 2))
+                    d.ellipse((x - 3, y - 2, x + 3, y + 2), fill=(20, 16, 18, int(150 * (1 - q))))
+        frames.append(im)
+    return frames
+
+
+def _icfx_squeeze(C, dirx, strong, r):
+    """Bị ôm siết: icon bị bóp méo nhịp nhịp, giọt mồ hôi, chữ '!', rồi bung ra."""
+    n = 26
+    frames = []
+    for f in range(n):
+        im, d = C.new()
+        if f < n - 1:
+            C.erase(im)
+            w = 0.5 + 0.5 * math.cos(f * 0.9)
+            sx, sy = (1 - 0.4 * w, 1 + 0.16 * w) if f < 19 else (1 + 0.15 * math.sin((f - 19) * 1.4) * (n - f) / 7.0, 1.0)
+            C.put(im, C.icon, sx, sy)
+            if 2 <= f < 19:
+                for j in (-1, 1):
+                    x = C.cx + j * C.iw * 0.55
+                    y = C.oy + C.ih * 0.1 + ((f * 3 + j * 5) % 12)
+                    d.ellipse((x - 2.5, y - 4, x + 2.5, y + 3), fill=(120, 200, 255, 230))
+                C.text(d, "!", (C.cx - C.iw * 0.08, C.oy - C.ih * 0.7), C.iw * 0.55, (255, 90, 90))
+        frames.append(im)
+    return frames
+
+
+def _icfx_poke(C, dirx, strong, r):
+    """Chọc trúng con chuột: loá nhỏ, sao bay."""
+    n = 12
+    frames = []
+    for f in range(n):
+        im, d = C.new()
+        k = 1 - f / float(n)
+        rr = C.iw * (0.2 + 0.08 * f)
+        d.ellipse((C.cx - rr, C.cy - rr, C.cx + rr, C.cy + rr), outline=(255, 240, 160, int(255 * k)), width=2)
+        C.stars(d, f * 2, k, 4)
+        frames.append(im)
+    return frames
+
+
+ICON_FX = {"bite": _icfx_bite, "shatter": _icfx_shatter, "burn": _icfx_burn, "zap": _icfx_zap,
+           "squeeze": _icfx_squeeze, "poke": _icfx_poke}
+
+
+def icon_fx_frames(kind, patch, m, dirx=1, strong=False, seed=0):
+    """(frames, neo) của icon trúng chiêu kiểu kind. patch = ảnh chụp vùng icon + lề m px."""
+    r = random.Random(seed)
+    if kind not in ICON_FX:
+        icon = patch.crop((m, m, patch.width - m, patch.height - m))
+        return icon_hit_frames(icon, dirx, strong, seed)
+    C = _IconCanvas(patch, m)
+    frames = ICON_FX[kind](C, dirx, strong, r)
+    frames.append(Image.new("RGBA", (C.W, C.H), (0, 0, 0, 0)))
+    return frames, (C.cx / C.W, C.cy / C.H)
+
+
 class IconFx:
-    """Icon desktop trúng đòn khi nhân vật bay phá: CHỈ vẽ đè hình lên màn hình, không di chuyển / sửa icon thật."""
+    """Icon desktop trúng chiêu khi nhân vật phá phách: CHỈ vẽ đè hình lên màn hình, không di chuyển / sửa icon thật."""
 
     def __init__(self, app):
         self.app = app
@@ -7155,20 +7623,26 @@ class IconFx:
         self.shots = {}
         self.n = 0
 
+    @staticmethod
+    def margin(rect):
+        return int((rect[2] - rect[0]) * 0.2) + 6
+
     def _grab(self, rect):
+        m = self.margin(rect)
         x1, y1, x2, y2 = (int(round(v)) for v in rect)
         w, h = max(8, x2 - x1), max(8, y2 - y1)
         if IS_WIN:
             try:
                 from PIL import ImageGrab
-                return ImageGrab.grab(bbox=(x1, y1, x1 + w, y1 + h), all_screens=True).convert("RGBA")
+                return ImageGrab.grab(bbox=(x1 - m, y1 - m, x1 + w + m, y1 + h + m), all_screens=True).convert("RGBA")
             except Exception:
                 log_error()
-        im = Image.new("RGBA", (w, h), (40, 46, 60, 255))            # (máy không chụp được màn hình) icon giả
-        from PIL import ImageDraw
+        from PIL import ImageDraw                                    # máy không chụp được màn hình: icon giả
+        im = Image.new("RGBA", (w + 2 * m, h + 2 * m), (40, 70, 110, 255))
         d = ImageDraw.Draw(im)
-        d.rounded_rectangle((w * 0.12, h * 0.25, w * 0.88, h * 0.85), radius=max(2, w // 10), fill=(250, 200, 70, 255))
-        d.rectangle((w * 0.12, h * 0.18, w * 0.45, h * 0.3), fill=(240, 180, 50, 255))
+        d.rounded_rectangle((m + w * 0.12, m + h * 0.25, m + w * 0.88, m + h * 0.85), radius=max(2, w // 10),
+                            fill=(250, 200, 70, 255))
+        d.rectangle((m + w * 0.12, m + h * 0.18, m + w * 0.45, m + h * 0.3), fill=(240, 180, 50, 255))
         return im
 
     def prepare(self, rects):
@@ -7176,14 +7650,17 @@ class IconFx:
         for r in rects:
             self.shots[tuple(r)] = self._grab(r)
 
-    def hit(self, rect, dirx=1, strong=False):
+    def play(self, kind, rect, dirx=1, strong=False):
         r = tuple(rect)
-        icon = self.shots.get(r)
-        if icon is None:
-            icon = self.shots[r] = self._grab(r)
+        patch = self.shots.get(r)
+        if patch is None:
+            patch = self.shots[r] = self._grab(r)
         self.n += 1
-        frames, anchor = icon_hit_frames(icon, dirx, strong, self.n)
+        frames, anchor = icon_fx_frames(kind, patch, self.margin(r), dirx, strong, self.n)
         self.player.play_frames((r[0] + r[2]) / 2.0, (r[1] + r[3]) / 2.0, frames, anchor)
+
+    def hit(self, rect, dirx=1, strong=False):
+        self.play("hit", rect, dirx, strong)
 
 
 class KeyFx:

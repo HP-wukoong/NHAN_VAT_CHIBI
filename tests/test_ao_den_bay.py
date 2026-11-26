@@ -1,6 +1,7 @@
 """Áo Đen: khung vẽ thêm, bay tự do toàn màn hình (kể cả 2 màn hình), phá icon (chỉ hiệu ứng), chọc chuột,
 quay người khi đổi hướng, nhảy parabol có lấy đà; Cổ Long không bị ảnh hưởng."""
 import sys
+import math
 import random
 from common import load, make_app, check, RESULTS
 
@@ -15,7 +16,7 @@ for n in ("BayLuon_PhaIcon", "BayLuon_TuDo", "BayLuon_ChocChuot"):
 check(any(n == "BayLuon_PhaIcon" for n, _, _ in pk.behaviors["Stand"].nexts), "đang đứng có thể tự chuyển sang bay phá icon")
 
 hits = []
-app.icon_fx.hit = lambda r, d=1, strong=False: hits.append((r, d, strong))
+app.icon_fx.play = lambda kind, r, d=1, strong=False: hits.append((r, d, strong, kind))
 app.icon_fx.prepare = lambda rects: None
 
 
@@ -127,9 +128,64 @@ for p in eng.jump_to(eng.ax + 200, y0 - 120):
 check(imgs[0].startswith("x_catcanh"), "nhảy: khuỵu gối lấy đà trước")
 check(min(ys) < y0 - 120 - 10, "nhảy: bay theo đường parabol (đỉnh cao hơn chỗ đáp)")
 
-# Cổ Long không bị bơm hành vi bay của Áo Đen
-p2 = C.ShimejiPack(C.os.path.join(C.NHANVAT_DIR, "CoLong"))
-check(not any(n.startswith("BayLuon") for n in p2.behaviors), "Cổ Long giữ nguyên bộ hành vi riêng")
+# ── Áo Đen: rồng hiện từ hư không + đứng nộ sấm sét ──
+acts = pk.actions
+check([r for r, _ in acts["HacLong_NhayVut"].refs][2] == "HL_RongHienB" and
+      [r for r, _ in acts["HacLong_BayTheoChuot"].refs][2] == "HL_RongHienA", "2 chiêu rồng: có đoạn rồng hiện ra trước")
+for L, base in (("A", "hl_a0"), ("B", "hl_b0")):
+    ps = acts["HL_RongHien" + L].poses
+    first, last = pk.image(ps[0].img), pk.image(ps[15].img)
+    orig = pk.image(base + ".png")
+    import numpy as np
+    a0 = np.asarray(first)[..., 3].astype(int).sum()
+    a1 = np.asarray(orig)[..., 3].astype(int).sum()
+    check(a0 < a1 * 0.5, "rồng %s: khung đầu chỉ có người + khe hư không (%.0f%% điểm ảnh)" % (L, 100.0 * a0 / a1))
+    check(last.tobytes() == orig.tobytes(), "rồng %s: khung cuối đúng y ảnh gốc" % L)
+nk = [p.img for p in acts["NoKhi"].poses]
+check(all(i.startswith("x_aura") for i in nk if "aura" in i and "aurafade2" not in i) and any(i.startswith("x_aura") for i in nk),
+      "đứng nộ: dùng khung sấm sét bao phủ (bỏ 2 vòng cung)")
+im = pk.image("x_aura3.png")
+arr = np.asarray(im)
+red = ((arr[..., 0] > 200) & (arr[..., 1] < 140) & (arr[..., 3] > 150)).sum()
+check(red > 400, "khung nộ khí có tia sét đỏ (%d điểm)" % red)
+
+# ── Cổ Long: phá phách riêng ──
+app.switch_pack(C.os.path.join(C.NHANVAT_DIR, "CoLong"))
+pet, eng, env = app.pet, app.pet.engine, app.pet.env
+kit = eng.fly_kit()
+fx = sorted(a["fx"] for a in kit["attacks"])
+check(fx == ["bite", "burn", "shatter", "squeeze", "zap"], "Cổ Long: ôm cắn, quật đuôi vỡ, phun lửa cháy, phun sét, cuộn siết (%s)" % fx)
+check(all(n in pet.pack.behaviors for n in ("BayLuon_PhaIcon", "BayLuon_DuoiBatChuot", "LongKy_OmCan", "LongKy_QuatDuoi")),
+      "Cổ Long có hành vi bay phá icon, đuổi bắt chuột, ôm cắn, quật đuôi")
+hits.clear()
+app.icon_fx.play = lambda kind, r, d=1, strong=False: hits.append((r, d, strong, kind))
+seen = set()
+for sd in (2, 5, 9, 13):
+    random.seed(sd)
+    ok, path, imgs, n = fly("BayLuon_PhaIcon")
+    seen |= {h[3] for h in hits}
+check(len(seen) >= 3, "Cổ Long phá icon bằng nhiều chiêu khác nhau: %s" % sorted(seen))
+check(inside(path) and env.on_floor(eng.ax, eng.ay) is not None, "Cổ Long bay trong màn hình, xong hạ cánh")
+
+# đứng đúng chỗ ra đòn: điểm trúng (miệng / chóp đuôi) trùng tâm icon
+eng.ax, eng.ay = 900.0, 500.0
+st = dict(vx=0.0, vy=0.0, t=0, bay=kit["bay"], up=[], dn=[], hov=kit["hov"], kit=kit)
+rect = (600, 300, 648, 348)
+for atk in kit["attacks"]:
+    got = []
+    app.icon_fx.play = lambda kind, r, d=1, strong=False: got.append((eng.ax, eng.ay, eng.look_right))
+    eng.ax, eng.ay = 900.0, 500.0
+    list(eng._smash(rect, st, atk))
+    ax, ay, right = got[0]
+    hx = ax + (-atk["dx"] if right else atk["dx"])
+    hy = ay + atk["dy"]
+    check(abs(hx - 624) < 14 and abs(hy - 324) < 14, "%s: điểm trúng cách tâm icon %d px" % (atk["act"], math.hypot(hx - 624, hy - 324)))
+
+# ── hiệu ứng icon: mọi kiểu kết thúc trong suốt (icon thật lộ lại nguyên vẹn) ──
+patch = Image.new("RGBA", (64, 64), (40, 70, 110, 255))
+for kind in ("hit", "bite", "shatter", "burn", "zap", "squeeze", "poke"):
+    fr, anc = C.icon_fx_frames(kind, patch, 8, 1, True, 1)
+    check(len(fr) >= 10 and fr[-1].getbbox() is None, "icon %s: %d khung, khung cuối trong suốt" % (kind, len(fr)))
 
 print("\n%d/%d đạt" % (sum(RESULTS), len(RESULTS)))
 sys.exit(0 if all(RESULTS) else 1)

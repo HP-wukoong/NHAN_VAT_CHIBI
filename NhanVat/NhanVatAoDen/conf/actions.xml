@@ -640,15 +640,17 @@
   <Action Name="HacLong_NhayVut" Type="Sequence" BorderType="Floor" Loop="false">
    <ActionReference Name="HL_Chuan"/>
    <ActionReference Name="HL_NhayVut"/>
-   <ActionReference Name="HL_Quanh"/>
+   <ActionReference Name="HL_RongHienB"/>
+   <ActionReference Name="HL_QuanhB"/>
    <ActionReference Name="HL_Roi"/>
    <ActionReference Name="DapDat"/>
   </Action>
   <Action Name="HacLong_BayTheoChuot" Type="Sequence" BorderType="Floor" Loop="false">
    <ActionReference Name="HL_Chuan"/>
    <ActionReference Name="HL_NhayVut"/>
-   <ActionReference Name="HL_Bay"/>
-   <ActionReference Name="HL_Quanh"/>
+   <ActionReference Name="HL_RongHienA"/>
+   <ActionReference Name="HL_BayA"/>
+   <ActionReference Name="HL_QuanhA"/>
    <ActionReference Name="HL_Roi"/>
    <ActionReference Name="DapDat"/>
   </Action>
@@ -971,85 +973,85 @@
     <Pose Image="/power3.png" ImageRight="/power3r.png" ImageAnchor="82,166" Velocity="0,0" Duration="3"/>
     <Pose Image="/power4.png" ImageRight="/power4r.png" ImageAnchor="84,161" Velocity="0,0" Duration="3"/>
     <Pose Image="/power5.png" ImageRight="/power5r.png" ImageAnchor="85,168" Velocity="0,0" Duration="3"/>
-    <Pose Image="/aura0.png" ImageRight="/aura0r.png" ImageAnchor="111,113" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura1.png" ImageRight="/aura1r.png" ImageAnchor="133,136" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura2.png" ImageRight="/aura2r.png" ImageAnchor="155,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura3.png" ImageRight="/aura3r.png" ImageAnchor="175,172" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura4.png" ImageRight="/aura4r.png" ImageAnchor="156,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura5.png" ImageRight="/aura5r.png" ImageAnchor="171,169" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura6.png" ImageRight="/aura6r.png" ImageAnchor="159,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura7.png" ImageRight="/aura7r.png" ImageAnchor="172,175" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura8.png" ImageRight="/aura8r.png" ImageAnchor="161,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura9.png" ImageRight="/aura9r.png" ImageAnchor="144,146" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura0.png" ImageRight="/aura0r.png" ImageAnchor="111,113" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura1.png" ImageRight="/aura1r.png" ImageAnchor="133,136" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura2.png" ImageRight="/aura2r.png" ImageAnchor="155,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura3.png" ImageRight="/aura3r.png" ImageAnchor="175,172" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura4.png" ImageRight="/aura4r.png" ImageAnchor="156,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura5.png" ImageRight="/aura5r.png" ImageAnchor="171,169" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura6.png" ImageRight="/aura6r.png" ImageAnchor="159,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura7.png" ImageRight="/aura7r.png" ImageAnchor="172,175" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura8.png" ImageRight="/aura8r.png" ImageAnchor="161,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura9.png" ImageRight="/aura9r.png" ImageAnchor="144,146" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura0.png" ImageRight="/aura0r.png" ImageAnchor="111,113" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura1.png" ImageRight="/aura1r.png" ImageAnchor="133,136" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura2.png" ImageRight="/aura2r.png" ImageAnchor="155,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura3.png" ImageRight="/aura3r.png" ImageAnchor="175,172" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura4.png" ImageRight="/aura4r.png" ImageAnchor="156,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura5.png" ImageRight="/aura5r.png" ImageAnchor="171,169" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura6.png" ImageRight="/aura6r.png" ImageAnchor="159,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura7.png" ImageRight="/aura7r.png" ImageAnchor="172,175" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura8.png" ImageRight="/aura8r.png" ImageAnchor="161,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura9.png" ImageRight="/aura9r.png" ImageAnchor="144,146" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aurafade0.png" ImageRight="/aurafade0r.png" ImageAnchor="160,160" Velocity="0,0" Duration="6"/>
-    <Pose Image="/aurafade1.png" ImageRight="/aurafade1r.png" ImageAnchor="160,160" Velocity="0,0" Duration="6"/>
+    <Pose Image="/x_aura0.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura1.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura2.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura3.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura4.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura5.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura6.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura7.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura8.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura9.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura0.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura1.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura2.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura3.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura4.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura5.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura6.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura7.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura8.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura9.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura0.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura1.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura2.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura3.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura4.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura5.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura6.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura7.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura8.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura9.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aurafade0.png" ImageAnchor="150,208" Velocity="0,0" Duration="6"/>
+    <Pose Image="/x_aurafade1.png" ImageAnchor="150,208" Velocity="0,0" Duration="6"/>
     <Pose Image="/aurafade2.png" ImageRight="/aurafade2r.png" ImageAnchor="49,136" Velocity="0,0" Duration="6"/>
    </Animation>
   </Action>
   <Action Name="NoKhi" Type="Animate" BorderType="Floor">
    <Animation>
-    <Pose Image="/aura0.png" ImageRight="/aura0r.png" ImageAnchor="111,113" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura1.png" ImageRight="/aura1r.png" ImageAnchor="133,136" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura2.png" ImageRight="/aura2r.png" ImageAnchor="155,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura3.png" ImageRight="/aura3r.png" ImageAnchor="175,172" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura4.png" ImageRight="/aura4r.png" ImageAnchor="156,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura5.png" ImageRight="/aura5r.png" ImageAnchor="171,169" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura6.png" ImageRight="/aura6r.png" ImageAnchor="159,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura7.png" ImageRight="/aura7r.png" ImageAnchor="172,175" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura8.png" ImageRight="/aura8r.png" ImageAnchor="161,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura9.png" ImageRight="/aura9r.png" ImageAnchor="144,146" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura0.png" ImageRight="/aura0r.png" ImageAnchor="111,113" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura1.png" ImageRight="/aura1r.png" ImageAnchor="133,136" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura2.png" ImageRight="/aura2r.png" ImageAnchor="155,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura3.png" ImageRight="/aura3r.png" ImageAnchor="175,172" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura4.png" ImageRight="/aura4r.png" ImageAnchor="156,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura5.png" ImageRight="/aura5r.png" ImageAnchor="171,169" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura6.png" ImageRight="/aura6r.png" ImageAnchor="159,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura7.png" ImageRight="/aura7r.png" ImageAnchor="172,175" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura8.png" ImageRight="/aura8r.png" ImageAnchor="161,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura9.png" ImageRight="/aura9r.png" ImageAnchor="144,146" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura0.png" ImageRight="/aura0r.png" ImageAnchor="111,113" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura1.png" ImageRight="/aura1r.png" ImageAnchor="133,136" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura2.png" ImageRight="/aura2r.png" ImageAnchor="155,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura3.png" ImageRight="/aura3r.png" ImageAnchor="175,172" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura4.png" ImageRight="/aura4r.png" ImageAnchor="156,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura5.png" ImageRight="/aura5r.png" ImageAnchor="171,169" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura6.png" ImageRight="/aura6r.png" ImageAnchor="159,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura7.png" ImageRight="/aura7r.png" ImageAnchor="172,175" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura8.png" ImageRight="/aura8r.png" ImageAnchor="161,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura9.png" ImageRight="/aura9r.png" ImageAnchor="144,146" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura0.png" ImageRight="/aura0r.png" ImageAnchor="111,113" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura1.png" ImageRight="/aura1r.png" ImageAnchor="133,136" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura2.png" ImageRight="/aura2r.png" ImageAnchor="155,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura3.png" ImageRight="/aura3r.png" ImageAnchor="175,172" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura4.png" ImageRight="/aura4r.png" ImageAnchor="156,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura5.png" ImageRight="/aura5r.png" ImageAnchor="171,169" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura6.png" ImageRight="/aura6r.png" ImageAnchor="159,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura7.png" ImageRight="/aura7r.png" ImageAnchor="172,175" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura8.png" ImageRight="/aura8r.png" ImageAnchor="161,160" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aura9.png" ImageRight="/aura9r.png" ImageAnchor="144,146" Velocity="0,0" Duration="2"/>
-    <Pose Image="/aurafade0.png" ImageRight="/aurafade0r.png" ImageAnchor="160,160" Velocity="0,0" Duration="5"/>
-    <Pose Image="/aurafade1.png" ImageRight="/aurafade1r.png" ImageAnchor="160,160" Velocity="0,0" Duration="5"/>
+    <Pose Image="/x_aura0.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura1.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura2.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura3.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura4.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura5.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura6.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura7.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura8.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura9.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura0.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura1.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura2.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura3.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura4.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura5.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura6.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura7.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura8.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura9.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura0.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura1.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura2.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura3.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura4.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura5.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura6.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura7.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura8.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura9.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura0.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura1.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura2.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura3.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura4.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura5.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura6.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura7.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura8.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aura9.png" ImageAnchor="150,208" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_aurafade0.png" ImageAnchor="150,208" Velocity="0,0" Duration="5"/>
+    <Pose Image="/x_aurafade1.png" ImageAnchor="150,208" Velocity="0,0" Duration="5"/>
     <Pose Image="/aurafade2.png" ImageRight="/aurafade2r.png" ImageAnchor="49,136" Velocity="0,0" Duration="5"/>
    </Animation>
   </Action>
@@ -1112,5 +1114,97 @@
    <ActionReference Name="DamThep"/>
    <ActionReference Name="KiemKhi"/>
   </Action>
+  <!-- x:begin (tools/dung_ao_den.py – khung vẽ thêm) -->
+  <Action Name="HL_RongHienA" Type="Animate">
+   <Animation>
+    <Pose Image="/x_hla_in0.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in1.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in2.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in3.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in4.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in5.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in6.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in7.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in8.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in9.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in10.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in11.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in12.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in13.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in14.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hla_in15.png" ImageAnchor="112,222" Velocity="0,0" Duration="2"/>
+    <Pose Image="/hl_a0.png" ImageRight="/hl_a0r.png" ImageAnchor="112,222" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a1.png" ImageRight="/hl_a1r.png" ImageAnchor="112,217" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a2.png" ImageRight="/hl_a2r.png" ImageAnchor="112,212" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a3.png" ImageRight="/hl_a3r.png" ImageAnchor="112,217" Velocity="0,0" Duration="3"/>
+   </Animation>
+  </Action>
+  <Action Name="HL_QuanhA" Type="Animate">
+   <Animation>
+    <Pose Image="/hl_a0.png" ImageRight="/hl_a0r.png" ImageAnchor="112,222" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a1.png" ImageRight="/hl_a1r.png" ImageAnchor="112,217" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a2.png" ImageRight="/hl_a2r.png" ImageAnchor="112,212" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a3.png" ImageRight="/hl_a3r.png" ImageAnchor="112,217" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a0.png" ImageRight="/hl_a0r.png" ImageAnchor="112,222" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a1.png" ImageRight="/hl_a1r.png" ImageAnchor="112,217" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a2.png" ImageRight="/hl_a2r.png" ImageAnchor="112,212" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a3.png" ImageRight="/hl_a3r.png" ImageAnchor="112,217" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a0.png" ImageRight="/hl_a0r.png" ImageAnchor="112,222" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a1.png" ImageRight="/hl_a1r.png" ImageAnchor="112,217" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a2.png" ImageRight="/hl_a2r.png" ImageAnchor="112,212" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a3.png" ImageRight="/hl_a3r.png" ImageAnchor="112,217" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_fade.png" ImageRight="/hl_fader.png" ImageAnchor="112,199" Velocity="0,0" Duration="3"/>
+   </Animation>
+  </Action>
+  <Action Name="HL_RongHienB" Type="Animate">
+   <Animation>
+    <Pose Image="/x_hlb_in0.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in1.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in2.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in3.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in4.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in5.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in6.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in7.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in8.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in9.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in10.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in11.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in12.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in13.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in14.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/x_hlb_in15.png" ImageAnchor="95,220" Velocity="0,0" Duration="2"/>
+    <Pose Image="/hl_b0.png" ImageRight="/hl_b0r.png" ImageAnchor="95,220" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b1.png" ImageRight="/hl_b1r.png" ImageAnchor="95,215" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b2.png" ImageRight="/hl_b2r.png" ImageAnchor="95,210" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b3.png" ImageRight="/hl_b3r.png" ImageAnchor="95,215" Velocity="0,0" Duration="3"/>
+   </Animation>
+  </Action>
+  <Action Name="HL_QuanhB" Type="Animate">
+   <Animation>
+    <Pose Image="/hl_b0.png" ImageRight="/hl_b0r.png" ImageAnchor="95,220" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b1.png" ImageRight="/hl_b1r.png" ImageAnchor="95,215" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b2.png" ImageRight="/hl_b2r.png" ImageAnchor="95,210" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b3.png" ImageRight="/hl_b3r.png" ImageAnchor="95,215" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b0.png" ImageRight="/hl_b0r.png" ImageAnchor="95,220" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b1.png" ImageRight="/hl_b1r.png" ImageAnchor="95,215" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b2.png" ImageRight="/hl_b2r.png" ImageAnchor="95,210" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b3.png" ImageRight="/hl_b3r.png" ImageAnchor="95,215" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b0.png" ImageRight="/hl_b0r.png" ImageAnchor="95,220" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b1.png" ImageRight="/hl_b1r.png" ImageAnchor="95,215" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b2.png" ImageRight="/hl_b2r.png" ImageAnchor="95,210" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_b3.png" ImageRight="/hl_b3r.png" ImageAnchor="95,215" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_fade.png" ImageRight="/hl_fader.png" ImageAnchor="112,199" Velocity="0,0" Duration="3"/>
+   </Animation>
+  </Action>
+  <Action Name="HL_BayA" Type="Embedded" Class="com.group_finity.mascot.action.Jump" VelocityParam="20" TargetX="${mascot.environment.cursor.x}" TargetY="${mascot.environment.cursor.y - 80}">
+   <Animation>
+    <Pose Image="/hl_a0.png" ImageRight="/hl_a0r.png" ImageAnchor="112,222" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a1.png" ImageRight="/hl_a1r.png" ImageAnchor="112,217" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a2.png" ImageRight="/hl_a2r.png" ImageAnchor="112,212" Velocity="0,0" Duration="3"/>
+    <Pose Image="/hl_a3.png" ImageRight="/hl_a3r.png" ImageAnchor="112,217" Velocity="0,0" Duration="3"/>
+   </Animation>
+  </Action>
+  <!-- x:end -->
  </ActionList>
 </Mascot>

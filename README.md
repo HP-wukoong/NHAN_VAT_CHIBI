@@ -205,3 +205,8 @@ Trên Linux chạy bằng `xvfb-run python3 tests/<tên file>`. Mỗi bộ test 
 - Khung vẽ thêm (bay, bổ nhào, cất cánh, quay người) dựng từ nét vẽ gốc bằng `python tools/dung_ao_den.py`; neo ghi ở `NhanVat/NhanVatAoDen/conf/x_khung.json`.
 - Xem thử chuyến bay: `python tests/xem_bay_ao_den.py BayLuon_PhaIcon 3 bay.gif`.
 
+## Phá phách v3.14
+- Cổ Long khai báo bộ chiêu phá icon trong `NhanVat/CoLong/conf/chibi.json` (mục `freefly`: chiêu, kiểu icon trúng chiêu, điểm trúng đo từ khung hình). Kiểu icon: `hit`, `bite`, `shatter`, `burn`, `zap`, `squeeze`, `poke`.
+- Áo Đen: `python tools/dung_ao_den.py` dựng khung bay, rồng hiện từ hư không (`x_hla_in*`, `x_hlb_in*`), đứng nộ sấm sét (`x_aura*`) và tự nối vào `conf/actions.xml` (khối `x:begin … x:end`).
+- Xem thử: `python tests/xem_bay_ao_den.py BayLuon_PhaIcon 13 out.gif CoLong 0,0,700,480`.
+

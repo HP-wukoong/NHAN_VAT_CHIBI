@@ -1283,6 +1283,8 @@ def S_coil():
         info = pair(F, a, b, m, sy=1 + 0.02 * math.sin(i * 0.9), rot=1.5 * math.sin(i * 0.6), pivot="anchor",
                     glow=0.25 + 0.6 * k, flash=fl)
         r = random.Random(i)
+        if i == 20:
+            HIT["coil"] = info["center"]                          # icon nằm giữa vòng cuộn (bị ôm siết)
         body_arcs(F, info, r, 1 + int(3 * k), 1.0)
         if i >= 30:
             a_ = (i - 30) / 8.0
@@ -1335,6 +1337,8 @@ def S_fire():
                 body_arcs(F, info, r, 2, 0.9)
         if i == 10:
             flash_burst(F, M, 22, 1.0)
+        if i == 20:
+            HIT["fire"] = add(M, dirv(176), 165)                  # icon bị đốt ở giữa dòng lửa
     return build(T, f)
 
 
@@ -1385,6 +1389,8 @@ def S_boltb():
                         tb.draw(em, 1.0, 0.0, 0.9, 0.6, r, xf=lambda p: (end[0] + p[0], end[1] + p[1]))
         if i in (4, 18, 29):
             flash_burst(F, M, 26, 1.0)
+        if i == 20:
+            HIT["zap"] = (M[0] - 175, M[1])                        # icon trúng tia sét gần đầu tia
         body_arcs(F, info, r, 2, 0.9)
     return build(T, f)
 
@@ -1686,6 +1692,102 @@ def S_ult():
     return build(T, f)
 
 
+HIT = {}                                     # điểm trúng icon của các chiêu phá phách (toạ độ khung, neo = 0,0, quay trái)
+BITE_CHOMPS = (8, 18, 28)
+
+
+@defset("bite")
+def S_bite():
+    """Ôm icon cắn: vươn vuốt ôm lấy, ngửa đầu há miệng rồi đớp phập xuống 3 lần (mỗi lần gặm rung đầu), thở phì."""
+    T = 36
+
+    def f(F, i):
+        c = min(BITE_CHOMPS, key=lambda x: abs(i - x))
+        d_ = i - c
+        if i < 5:
+            k_, pos, rot, sx, sy = "roar1", (kfv(i, [(0, 0), (4, 8)]), 0), kfv(i, [(0, 0), (4, 6)]), 1, 1
+        elif i >= 32:
+            k_, pos, rot, sx, sy = "roar1", (kfv(i, [(32, -8), (35, 0)]), 0), kfv(i, [(32, -4), (35, 0)]), 1, 1
+        elif d_ in (-3, -2, -1):                                     # ngửa đầu, há miệng
+            k_, pos, rot, sx, sy = "roar2", (6 + 3 * d_ * -1, -4), 8, 1, 1
+        elif d_ == 0:                                                # ĐỚP
+            k_, pos, rot, sx, sy = "roar2", (-14, 4), -10, 1.06, 0.9
+        elif 1 <= d_ <= 4:                                           # gặm: lắc đầu nhay nhay
+            sh = shake(i, 2.5)
+            k_, pos, rot, sx, sy = "roar1", (-10 + sh[0], 3 + sh[1]), -6 + 3 * math.sin(i * 2.1), 1.03, 0.95
+        else:
+            k_, pos, rot, sx, sy = "roar1", (0, 0), 2, 1, 1
+        info = F.sprite(k_, pos, sx=sx, sy=sy, rot=rot, pivot="anchor", glow=0.45, glow_col=(255, 170, 60),
+                        flash=0.35 if d_ == 0 else 0)
+        M = info["mouth"]
+        if i == BITE_CHOMPS[0]:
+            HIT["bite"] = add(M, (-10, 6))
+        r = random.Random(i * 5)
+        if d_ == 0:                                                  # loé răng nanh
+            flash_burst(F, M, 16, 0.9)
+            for a in (150, 180, 210):
+                F.line([add(M, dirv(a), 6), add(M, dirv(a), 20)], (255, 250, 230, 255), 1.4)
+        if 1 <= d_ <= 4 and i % 2 == 0:                              # vụn bắn ra quanh miệng
+            for _ in range(4):
+                p = add(M, dirv(r.uniform(120, 240)), r.uniform(8, 24))
+                F.ell(p, 1.4, 1.4, fill=(255, 220, 120, 230))
+        if i % 6 == 3:
+            body_arcs(F, info, r, 2, 0.9)
+    return build(T, f)
+
+
+def _tail_tip(name):
+    """Chóp đuôi = điểm xa nhất bên phải (rồng quay trái) của khung gốc."""
+    k = key(name)
+    A = np.asarray(k.im.getchannel("A"))
+    ys, xs = np.nonzero(A > 140)
+    x1 = xs.max()
+    sel = xs >= x1 - 4
+    return (float(x1), float(ys[sel].mean()))
+
+
+@defset("tail")
+def S_tail():
+    """Quật đuôi: thu người, vung đuôi lên cao run run lấy đà, rồi QUẬT vút xuống (vệt đuôi, loé chạm), dội lại."""
+    T = 30
+    HIT_F = 14
+    K = "walk5"
+
+    def f(F, i):
+        rot = kfv(i, [(0, 0), (6, -26), (10, -30), (12, -28), (13, -8), (14, 8), (15, 18), (18, 10), (24, -3), (30, 0)])
+        if 6 <= i <= 11:
+            rot += 2.0 * math.sin(i * 2.7)                           # run run lấy đà
+        k = key(K)
+        info = F.sprite(K, (0, -20), rot=rot, pivot=k.mouth, glow=kfv(i, [(0, 0.3), (12, 0.8), (18, 0.5), (30, 0.3)]),
+                        glow_col=(255, 170, 60), flash=0.4 if i == HIT_F else 0)
+        tip = info["fwd"](_tail_tip(K))
+        if i == HIT_F:
+            HIT["tail"] = tip
+            flash_burst(F, tip, 22, 1.0)
+            ring(F, tip, 26, 10, 0.9)
+        if 12 <= i <= 17:                                             # vệt quật: cung sáng theo đường chóp đuôi
+            for j in range(1, 5):
+                r0 = kfv(i - j * 0.5, [(0, 0), (6, -26), (10, -30), (12, -28), (13, -8), (14, 8), (15, 18), (18, 10)])
+                pv = info["fwd"](k.mouth)
+                tp = _tail_tip(K)
+                dx, dy = (tp[0] - k.mouth[0]) * SCALE, (tp[1] - k.mouth[1]) * SCALE
+                th = math.radians(r0)
+                q = (pv[0] + dx * math.cos(th) - dy * math.sin(th), pv[1] + dx * math.sin(th) + dy * math.cos(th))
+                F.ell(q, 7 - j, 7 - j, fill=(255, 210, 120, int(200 / j)), layer="fgg")
+        if i % 5 == 2:
+            body_arcs(F, info, random.Random(i), 2, 0.9)
+    return build(T, f)
+
+
+def compute_hits():
+    """Dựng thử đúng khung ra đòn của các chiêu để biết điểm trúng icon (chạy trong tiến trình chính)."""
+    for name, i in (("bite", BITE_CHOMPS[0]), ("tail", 14), ("fire", 20), ("boltb", 20), ("coil", 20)):
+        fr = SETS[name]["fn"]()
+        F = Frame()
+        fr[i](F)
+    return dict(HIT)
+
+
 @defset("dark")
 def S_dark():
     segs = [("walk3", 4), ("st1", 10), ("st5", 22), ("walk3", 6)]
@@ -1928,6 +2030,8 @@ ACTIONS = [
     _seq("LongNghi_Ngu", "NamXuong", ("Ngu", {"Duration": "1500"}), "DungDay"),
     # chiêu
     _anim("GamRu", "roar"), _anim("PhunLua", "fire"), _anim("PhunSamSet", "boltb"), _anim("CuonThan", "coil"),
+    _anim("CanIcon", "bite"), _anim("QuatDuoi", "tail"),
+    _seq("LongKy_OmCan", "CanIcon"), _seq("LongKy_QuatDuoi", "QuatDuoi"),
     _anim("LoiDien", "aura"), _anim("TreoLoLung", "hover"), _anim("LongUy", "ult"), _anim("HacHoa", "dark"), _anim("HoaMini", "mini"),
     _seq("LongKy_GamRu", "GamRu"), _seq("LongKy_PhunLua", "PhunLua"), _seq("LongKy_PhunSamSet", "PhunSamSet"),
     _seq("LongKy_CuonThan", "CuonThan"), _seq("LongKy_LoiDien", "LoiDien"), _seq("LongKy_TreoLoLung", "TreoLoLung"),
@@ -1959,7 +2063,7 @@ ACTIONS = [
 
 FREQ = [("Stand", 80), ("StandAlt", 35), ("Walk", 100), ("Run", 30), ("Dash", 15), ("LongDi_BoTruon", 30),
         ("LongNghi_CuonMinh", 24), ("LongNghi_Ngu", 8),
-        ("LongKy_GamRu", 9), ("LongKy_PhunLua", 8), ("LongKy_PhunSamSet", 8), ("LongKy_CuonThan", 9), ("LongKy_LoiDien", 8),
+        ("LongKy_GamRu", 9), ("LongKy_PhunLua", 8), ("LongKy_PhunSamSet", 8), ("LongKy_CuonThan", 9), ("LongKy_OmCan", 6), ("LongKy_QuatDuoi", 6), ("LongKy_LoiDien", 8),
         ("LongKy_TreoLoLung", 8), ("LongBa_LongUy", 3), ("LongBa_HacHoa", 4), ("LongBa_FullCombo", 2), ("LongBien_HoaMini", 5),
         ("LongPhi_BayVut", 8), ("LongPhi_BayTheoChuot", 4), ("LongPhi_LaoXuongDapDat", 4),
         ("LongDi_BamVachTrai", 5), ("LongDi_BamVachPhai", 5),
@@ -1980,7 +2084,7 @@ META = {
         "StandAlt": "Ngó nghiêng", "Run": "Chạy nhanh", "Dash": "Lướt sát đất",
         "LongNghi_CuonMinh": "Nằm nghỉ", "LongNghi_Ngu": "Ngủ say (khò khò)",
         "LongKy_GamRu": "Gầm rú & thét lớn", "LongKy_PhunLua": "Phun lửa", "LongKy_PhunSamSet": "Phun sấm sét",
-        "LongKy_CuonThan": "Cuộn thân", "LongKy_LoiDien": "Lôi điện quanh thân", "LongKy_TreoLoLung": "Treo lơ lửng",
+        "LongKy_CuonThan": "Cuộn thân", "LongKy_OmCan": "Ôm cắn (đớp phập)", "LongKy_QuatDuoi": "Quật đuôi", "LongKy_LoiDien": "Lôi điện quanh thân", "LongKy_TreoLoLung": "Treo lơ lửng",
         "LongBa_LongUy": "Tuyệt kỹ Long tộc (Long uy)", "LongBa_HacHoa": "Hắc hoá (trạng thái tím)",
         "LongBa_FullCombo": "FULL COMBO Long tộc", "LongBien_HoaMini": "Hoá rồng mini",
         "LongPhi_BayVut": "Bay vút lên trời", "LongPhi_BayTheoChuot": "Bay theo chuột",
@@ -2137,6 +2241,21 @@ def main(argv):
         info[n] = inf
         print("%-9s %3d khung  %dx%d" % (n, len(inf["files"]), inf["size"][0], inf["size"][1]))
     json.dump(info, open(info_path, "w", encoding="utf-8"), indent=0)
+    hits = compute_hits()
+
+    def at(k, ox=0.0, oy=0.0):
+        return dict(dx=round(hits[k][0] + ox, 1), dy=round(hits[k][1] + oy, 1))
+    META["freefly"] = {
+        "bay": ["LuonVong"], "hov": ["LuonVong"], "takeoff": ["CatCanh"], "laugh": ["YeuThich"],
+        "taunts": ["Grào! 🐉", "Rộp rộp~ ngon ghê!", "Cháy rồi kìa 🔥", "Quật cho một phát!", "Giật tê người chưa? ⚡",
+                   "Của ta hết! Hehe", "Ôm chặt không cho chạy~"],
+        "attacks": [dict(act="CanIcon", fx="bite", hit=[BITE_CHOMPS[0] / 36.0], w=1.3, **at("bite")),
+                    dict(act="QuatDuoi", fx="shatter", hit=[14 / 30.0], w=1.2, **at("tail")),
+                    dict(act="PhunLua", fx="burn", hit=[0.24], w=1.2, **at("fire")),
+                    dict(act="PhunSamSet", fx="zap", hit=[0.38], w=1.0, **at("zap")),
+                    dict(act="CuonThan", fx="squeeze", hit=[0.12], w=0.7, **at("coil"))],
+    }
+    print("điểm trúng icon:", {k: tuple(round(v) for v in p) for k, p in hits.items()})
     with open(os.path.join(conf, "actions.xml"), "w", encoding="utf-8") as f:
         f.write(build_actions_xml(info))
     with open(os.path.join(conf, "behaviors.xml"), "w", encoding="utf-8") as f:

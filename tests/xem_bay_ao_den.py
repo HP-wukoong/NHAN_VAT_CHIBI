@@ -4,6 +4,8 @@ from common import load, make_app
 import random, sys
 from PIL import Image, ImageDraw, ImageOps
 C = load(); app = make_app(C)
+if len(ARGV) > 4:                                   # tham số 4: tên bộ nhân vật (vd CoLong)
+    app.switch_pack(C.os.path.join(C.NHANVAT_DIR, ARGV[4]))
 random.seed(int(ARGV[2]) if len(ARGV) > 2 else 3)
 pet = app.pet; eng = pet.engine; env = pet.env; pk = pet.pack
 W, H = 1600, 1000
@@ -20,12 +22,14 @@ d.rectangle((0, H - 40, W, H), fill=(25, 25, 35, 255))
 app.areas = [(0, 0, W, H - 40)]
 overlays = []
 tick = {"t": 0}
-real_hit = app.icon_fx.hit
-def hit(r, dirx=1, strong=False):
-    icon = bg.crop(tuple(int(v) for v in r))
-    fr, anc = C.icon_hit_frames(icon, dirx, strong, tick["t"])
+def play(kind, r, dirx=1, strong=False):
+    m = C.IconFx.margin(r)
+    patch = bg.crop((int(r[0]) - m, int(r[1]) - m, int(r[2]) + m, int(r[3]) + m))
+    fr, anc = C.icon_fx_frames(kind, patch, m, dirx, strong, tick["t"])
     overlays.append((tick["t"], fr, anc, ((r[0] + r[2]) / 2, (r[1] + r[3]) / 2)))
-app.icon_fx.hit = hit
+    kinds.append(kind)
+kinds = []
+app.icon_fx.play = play
 app.icon_fx.prepare = lambda rects: None
 for i in range(400):
     env.refresh(); env.icon_plats = icons
@@ -55,11 +59,14 @@ for i in range(1200):
                 o = seq[k]
                 fr.alpha_composite(o, (int(cx - o.width * anc[0]), int(cy - o.height * anc[1])))
         fr.alpha_composite(im, (int(eng.ax - ax), int(eng.ay - p.ay)))
-        frames.append(fr.resize((W // 2, H // 2)).convert("RGB"))
+        frames.append((fr if len(ARGV) > 5 else fr.resize((W // 2, H // 2))).convert("RGB"))
     if eng.cur != mode and i > 10 and frames:
         for _ in range(12):
             frames.append(frames[-1])
         break
 out = ARGV[3]
+if len(ARGV) > 5:                                   # tham số 5: vùng cắt cận cảnh x1,y1,x2,y2 (toạ độ thật)
+    x1, y1, x2, y2 = (int(v) for v in ARGV[5].split(","))
+    frames = [f.crop((x1, y1, x2, y2)) for f in frames]
 frames[0].save(out, save_all=True, append_images=frames[1:], duration=80, loop=0)
-print(len(frames), "khung ->", out, "trúng", len(overlays))
+print(len(frames), "khung ->", out, "trúng", len(overlays), kinds)

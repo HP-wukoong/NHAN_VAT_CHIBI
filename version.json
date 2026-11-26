@@ -1,11 +1,11 @@
 {
-  "version": "3.13",
+  "version": "3.14",
   "date": "2026-11-26",
   "notes": [
-    "Áo Đen bay tự do TOÀN MÀN HÌNH (cả nhiều màn hình): khuỵu gối lấy đà rồi vút lên, bay lượn mượt (tăng tốc, ôm cua, nhấp nhô, nghiêng người lên/xuống theo hướng bay), khăn đỏ và vạt áo bay phần phật",
-    "Tinh nghịch: 'Bay phá icon' – lao tới icon desktop tung đấm thép / kiếm khí / sóng âm: icon loá, nứt, rung, hồn icon văng xoay, sao chóng mặt rồi lành lại; đánh xong cười ma quái, buông câu trêu. Chỉ là hiệu ứng vẽ đè – icon thật KHÔNG bị di chuyển hay sửa",
-    "Thêm 'Bay lượn toàn màn hình' và 'Bay chọc chuột' (lượn vòng quanh con trỏ); bật/tắt từng hành vi và gán cho thao tác chuột như các chiêu khác; tuỳ chọn tắt riêng phần phá icon",
-    "Vẽ thêm 22 khung từ nét vẽ gốc: bay ngang (8), bay chúi lên (4), bổ nhào (4), cất cánh (4), quay người (2)",
-    "Động tác như người thật: đổi hướng thì xoay người, bước đi nhanh dần / chậm lại khi tới nơi, nhảy có lấy đà và bay theo đường parabol"
+    "Áo Đen – 2 chiêu rồng (Hắc Long nhảy vút, Hắc Long bay theo chuột): khi bay lơ lửng lên, khe hư không xé ra, đầu rồng chui ra trước rồi thân rồng hiện dần cuộn quanh toàn thân nhân vật, cuối cùng mới là hình rồng cuộn như cũ; mỗi chiêu một dạng rồng riêng",
+    "Áo Đen – Đứng nộ (Nổ khí): bỏ 2 vòng cung đỏ, thay bằng sấm sét đỏ thẫm bao phủ: vòm sét gấp khúc trùm người, điện bò trên tay vai chân, sét chạy mặt đất, chớp tắt lệch nhịp",
+    "Cổ Long cũng bay phá phách: ÔM ICON CẮN (đớp phập 3 lần, dấu răng, vụn bay, 'Rộp!'), QUẬT ĐUÔI làm icon vỡ vụn (mảnh văng rồi mọc lại), PHUN LỬA đốt icon (cháy đen, hoá tro, khói, rồi hồi sinh), PHUN SÉT giật điện icon, CUỘN SIẾT icon; thêm 2 chiêu Ôm cắn, Quật đuôi dùng được như chiêu thường",
+    "Trò nghịch mới cho cả hai: 'Đuổi bắt chuột' – đuổi theo con trỏ, bắt được thì chọc một phát rồi vụt chạy, trêu tiếp; mỗi chuyến phá icon không lặp lại chiêu vừa dùng; icon sát mép màn hình tự đổi phía để ra đòn trúng",
+    "Mọi hiệu ứng phá icon chỉ vẽ đè lên màn hình – icon thật không bị di chuyển hay sửa"
   ]
 }

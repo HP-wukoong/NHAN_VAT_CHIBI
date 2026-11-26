@@ -748,6 +748,86 @@
     <Pose Image="/coil37.png" ImageAnchor="158,201" Velocity="0,0" Duration="1"/>
    </Animation>
   </Action>
+  <Action Name="CanIcon" Type="Animate" BorderType="Floor">
+   <Animation>
+    <Pose Image="/bite00.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite01.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite02.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite03.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite04.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite05.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite06.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite07.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite08.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite09.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite10.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite11.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite12.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite13.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite14.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite15.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite16.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite17.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite18.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite19.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite20.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite21.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite22.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite23.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite24.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite25.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite26.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite27.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite28.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite29.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite30.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite31.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite32.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite33.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite34.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+    <Pose Image="/bite35.png" ImageAnchor="152,197" Velocity="0,0" Duration="1"/>
+   </Animation>
+  </Action>
+  <Action Name="QuatDuoi" Type="Animate" BorderType="Floor">
+   <Animation>
+    <Pose Image="/tail00.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail01.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail02.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail03.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail04.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail05.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail06.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail07.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail08.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail09.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail10.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail11.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail12.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail13.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail14.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail15.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail16.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail17.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail18.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail19.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail20.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail21.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail22.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail23.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail24.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail25.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail26.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail27.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail28.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+    <Pose Image="/tail29.png" ImageAnchor="154,272" Velocity="0,0" Duration="1"/>
+   </Animation>
+  </Action>
+  <Action Name="LongKy_OmCan" Type="Sequence" Loop="false">
+   <ActionReference Name="CanIcon"/>
+  </Action>
+  <Action Name="LongKy_QuatDuoi" Type="Sequence" Loop="false">
+   <ActionReference Name="QuatDuoi"/>
+  </Action>
   <Action Name="LoiDien" Type="Animate" BorderType="Floor">
    <Animation>
     <Pose Image="/aura00.png" ImageAnchor="131,206" Velocity="0,0" Duration="1"/>

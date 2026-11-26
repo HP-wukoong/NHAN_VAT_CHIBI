@@ -1591,5 +1591,97 @@
 242,
 202
 ]
+},
+"bite": {
+"files": [
+"bite00.png",
+"bite01.png",
+"bite02.png",
+"bite03.png",
+"bite04.png",
+"bite05.png",
+"bite06.png",
+"bite07.png",
+"bite08.png",
+"bite09.png",
+"bite10.png",
+"bite11.png",
+"bite12.png",
+"bite13.png",
+"bite14.png",
+"bite15.png",
+"bite16.png",
+"bite17.png",
+"bite18.png",
+"bite19.png",
+"bite20.png",
+"bite21.png",
+"bite22.png",
+"bite23.png",
+"bite24.png",
+"bite25.png",
+"bite26.png",
+"bite27.png",
+"bite28.png",
+"bite29.png",
+"bite30.png",
+"bite31.png",
+"bite32.png",
+"bite33.png",
+"bite34.png",
+"bite35.png"
+],
+"anchor": [
+152,
+197
+],
+"d": 1,
+"size": [
+306,
+239
+]
+},
+"tail": {
+"files": [
+"tail00.png",
+"tail01.png",
+"tail02.png",
+"tail03.png",
+"tail04.png",
+"tail05.png",
+"tail06.png",
+"tail07.png",
+"tail08.png",
+"tail09.png",
+"tail10.png",
+"tail11.png",
+"tail12.png",
+"tail13.png",
+"tail14.png",
+"tail15.png",
+"tail16.png",
+"tail17.png",
+"tail18.png",
+"tail19.png",
+"tail20.png",
+"tail21.png",
+"tail22.png",
+"tail23.png",
+"tail24.png",
+"tail25.png",
+"tail26.png",
+"tail27.png",
+"tail28.png",
+"tail29.png"
+],
+"anchor": [
+154,
+272
+],
+"d": 1,
+"size": [
+364,
+326
+]
 }
 }
