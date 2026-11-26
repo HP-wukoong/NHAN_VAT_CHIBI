@@ -73,9 +73,11 @@ def run():
     for _ in range(10):
         eng.tick()
     eng.end_drag()
+    landed = False
     for _ in range(400):
         eng.tick()
-    check(pet.env.on_floor(eng.ax, eng.ay) is not None, "xách lên thả ra -> lao xuống đập đất")
+        landed |= pet.env.on_floor(eng.ax, eng.ay) is not None   # (chạm đất xong có thể tự chọn bay lượn tiếp)
+    check(landed, "xách lên thả ra -> lao xuống đập đất")
     n1 = os.path.getsize(C.ERR_FILE) if os.path.exists(C.ERR_FILE) else 0
     check(n1 == n0, "không phát sinh lỗi khi chạy")
     finish(app, C)

@@ -215,3 +215,8 @@ Trên Linux chạy bằng `xvfb-run python3 tests/<tên file>`. Mỗi bộ test 
 - Chỉ dừng khi đâm mép màn hình (bám tường / treo trần / nảy / đáp đất ra chiêu) hoặc chạm icon (phá).
 - Đo độ mượt: `python tests/do_muot_bay.py BayLuon_TuDo NhanVatAoDen 4` (in gia tốc và các cú giật không do va chạm – phải rỗng).
 
+## Hiệu năng (v3.16)
+- Luồng chính (vẽ nhân vật, 40 ms/nhịp) không làm việc nặng: dò cửa sổ / icon, chụp màn hình, dựng hình hiệu ứng đều ở luồng phụ; gửi tin cho Explorer có giới hạn chờ.
+- Bộ đệm: hiệu ứng gõ ≤ 100 MB/kênh, khung nhân vật ≤ 160 MB.
+- Đo lag: `python tests/do_lag.py NhanVatAoDen` (hoặc `CoLong`) – in thời gian từng phần, số lần khựng > 100 ms và RAM.
+

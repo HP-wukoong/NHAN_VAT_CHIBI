@@ -17,6 +17,7 @@ import random
 import re
 import socket
 import threading
+import time
 import statistics
 import unicodedata
 import uuid
@@ -68,7 +69,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.15"
+APP_VER = "3.16"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -908,6 +909,9 @@ def _win_api_setup():
     u32.FindWindowExW.restype = wintypes.HWND
     u32.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
     u32.SendMessageW.restype = ctypes.c_ssize_t
+    u32.SendMessageTimeoutW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM, wintypes.UINT,
+                                        wintypes.UINT, ctypes.POINTER(ctypes.c_size_t)]
+    u32.SendMessageTimeoutW.restype = ctypes.c_ssize_t
     u32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
     u32.IsWindowVisible.argtypes = [wintypes.HWND]
     u32.IsIconic.argtypes = [wintypes.HWND]
@@ -993,6 +997,15 @@ def window_platforms():
     return out
 
 
+def _send_to(hwnd, msg, wp, lp, ms=250):
+    """Gửi tin nhắn sang cửa sổ của chương trình khác CÓ GIỚI HẠN CHỜ (Explorer bận / treo thì bỏ qua, không đơ app).
+    Trả về (thành công?, kết quả)."""
+    u32 = ctypes.windll.user32
+    res = ctypes.c_size_t(0)
+    ok = u32.SendMessageTimeoutW(hwnd, msg, wp, lp, 0x0002, ms, ctypes.byref(res))      # SMTO_ABORTIFHUNG
+    return bool(ok), int(res.value)
+
+
 def desktop_icon_platforms():
     """Đỉnh các biểu tượng thư mục/file trên desktop đang thấy được."""
     out = []
@@ -1012,8 +1025,8 @@ def desktop_icon_platforms():
         lv = u32.FindWindowExW(dv, None, "SysListView32", None) if dv else None
         if not lv or not u32.IsWindowVisible(lv):
             return out
-        n = int(u32.SendMessageW(lv, 0x1004, 0, 0))     # LVM_GETITEMCOUNT
-        if n <= 0:
+        ok, n = _send_to(lv, 0x1004, 0, 0)              # LVM_GETITEMCOUNT
+        if not ok or n <= 0:
             return out
         pid = wintypes.DWORD()
         u32.GetWindowThreadProcessId(lv, ctypes.byref(pid))
@@ -1025,7 +1038,10 @@ def desktop_icon_platforms():
             for i in range(min(n, 400)):
                 rc = wintypes.RECT(1, 0, 0, 0)            # LVIR_ICON
                 k32.WriteProcessMemory(hp, mem, ctypes.byref(rc), 16, None)
-                if not u32.SendMessageW(lv, 0x100E, i, mem):   # LVM_GETITEMRECT
+                ok, got = _send_to(lv, 0x100E, i, mem)       # LVM_GETITEMRECT
+                if not ok:
+                    break                                     # Explorer không trả lời: bỏ lượt này
+                if not got:
                     continue
                 k32.ReadProcessMemory(hp, mem, ctypes.byref(rc), 16, None)
                 p1 = wintypes.POINT(rc.left, rc.top)
@@ -1043,6 +1059,53 @@ def desktop_icon_platforms():
     except Exception:
         log_error()
     return out
+
+
+class _Scanner:
+    """Dò mép cửa sổ (0,5 giây/lần) và icon desktop (3 giây/lần) ở LUỒNG PHỤ – luồng vẽ nhân vật chỉ đọc kết quả mới
+    nhất, không bao giờ phải chờ Explorer hay cửa sổ bị treo."""
+
+    def __init__(self):
+        self.win, self.icons = [], []
+        self.want_win = self.want_icons = False
+        self.kick_icons = False
+        self.th = None
+        self.seen = 0.0
+        self.cost = {"win": 0.0, "icon": 0.0}
+
+    def ensure(self, want_win, want_icons):
+        self.want_win, self.want_icons = want_win, want_icons
+        self.seen = time_now()
+        if IS_WIN and (self.th is None or not self.th.is_alive()):
+            self.th = threading.Thread(target=self._run, daemon=True)
+            self.th.start()
+
+    def _run(self):
+        tw = ti = 0.0
+        while time_now() - self.seen < 30:                 # app không còn hỏi (đã thoát / ẩn lâu) -> nghỉ
+            t = time_now()
+            try:
+                if self.want_win and t - tw >= 0.5:
+                    tw = t
+                    a = time.perf_counter()
+                    self.win = window_platforms()
+                    self.cost["win"] = (time.perf_counter() - a) * 1000
+                elif not self.want_win:
+                    self.win = []
+                if (self.want_icons and t - ti >= 3.0) or self.kick_icons:
+                    ti = t
+                    self.kick_icons = False
+                    a = time.perf_counter()
+                    self.icons = desktop_icon_platforms()
+                    self.cost["icon"] = (time.perf_counter() - a) * 1000
+                elif not self.want_icons:
+                    self.icons = []
+            except Exception:
+                log_error()
+            time.sleep(0.1)
+
+
+SCANNER = _Scanner()
 
 
 class Env:
@@ -1065,12 +1128,19 @@ class Env:
         self.areas = [(a[0] / z, a[1] / z, a[2] / z, a[3] / z) for a in self.app.areas]
         t = time_now()
         s = self.app.store.s
-        if force or t - self._last_win > 0.5:
-            self._last_win = t
-            self.win_plats = window_platforms() if s.get("walk_windows", True) else []
-        if force or t - self._last_icon > 3.0:
-            self._last_icon = t
-            self.icon_plats = desktop_icon_platforms() if s.get("jump_icons", True) else []
+        if IS_WIN:                                        # dò ở luồng phụ, ở đây chỉ lấy kết quả mới nhất
+            SCANNER.ensure(s.get("walk_windows", True), s.get("jump_icons", True) or s.get("pha_icon", True))
+            self.win_plats = SCANNER.win
+            self.all_icons = SCANNER.icons
+            self.icon_plats = SCANNER.icons if s.get("jump_icons", True) else []
+        else:
+            if force or t - self._last_win > 0.5:
+                self._last_win = t
+                self.win_plats = window_platforms() if s.get("walk_windows", True) else []
+            if force or t - self._last_icon > 3.0:
+                self._last_icon = t
+                self.icon_plats = desktop_icon_platforms() if s.get("jump_icons", True) else []
+            self.all_icons = self.icon_plats
         pl = [Platform(a[0], a[2], a[3], "base") for a in self.areas]
         for p in self.win_plats + self.icon_plats:
             pl.append(Platform(p.x1 / z, p.x2 / z, p.y / z, p.kind, p.hwnd))
@@ -1297,12 +1367,7 @@ class Engine:
     def _icon_targets(self, n):
         z = self.env.zoom
         out = []
-        icons = list(self.env.icon_plats)
-        if not icons and IS_WIN:
-            try:
-                icons = desktop_icon_platforms()               # đang tắt "nhảy lên icon" vẫn lấy được icon để phá
-            except Exception:
-                icons = []
+        icons = list(self.env.icon_plats) or list(getattr(self.env, "all_icons", []) or [])
         random.shuffle(icons)
         for p in icons[:n]:
             w = p.x2 - p.x1
@@ -1403,6 +1468,11 @@ class Engine:
             seq += [p] * p.dur
         seq = seq[:90]
         hits = sorted(set(max(1, min(len(seq) - 1, int(len(seq) * h))) for h in atk["hit"]))
+        try:
+            for n_, h_ in enumerate(hits):                     # dựng sẵn ở luồng phụ, tới nhịp trúng là phát ngay
+                self.app.icon_fx.prebake(atk["fx"], rect, dirx, strong=(n_ > 0))
+        except Exception:
+            log_error()
         for i, p in enumerate(seq):
             if i in hits:
                 try:
@@ -7183,15 +7253,19 @@ class _VfxBaker:
 
     def __init__(self):
         import queue
-        self.q = queue.Queue()
+        import itertools
+        self.q = queue.PriorityQueue()                 # việc gấp (hình cần phát ngay) luôn làm trước biến thể phụ
+        self.cnt = itertools.count()
         self.busy = set()
         self.th = None
 
-    def ask(self, job, fn):
+    def ask(self, job, fn, prio=None):
         if job in self.busy:
             return
+        if prio is None:
+            prio = 0 if (isinstance(job, tuple) and job and job[0] in ("first", "icon_fx", "icon_shot")) else 1
         self.busy.add(job)
-        self.q.put((job, fn))
+        self.q.put((prio, next(self.cnt), job, fn))
         if self.th is None or not self.th.is_alive():
             self.th = threading.Thread(target=self._run, daemon=True)
             self.th.start()
@@ -7199,7 +7273,7 @@ class _VfxBaker:
     def _run(self):
         while True:
             try:
-                job, fn = self.q.get(timeout=5)
+                _p, _n, job, fn = self.q.get(timeout=5)
             except Exception:
                 return
             try:
@@ -7210,6 +7284,14 @@ class _VfxBaker:
 
 
 VFX_BAKER = _VfxBaker()
+
+
+FX_CACHE_MB = 100                     # đệm hiệu ứng gõ tối đa / kênh (trước: 24 mục, cỡ to có thể > 1 GB RAM)
+PET_CACHE_MB = 160                    # đệm khung nhân vật tối đa
+
+
+def _seq_bytes(seq):
+    return sum(len(fr[0]) for fr in seq if isinstance(fr[0], (bytes, bytearray)))
 
 
 class FxPlayer:
@@ -7286,12 +7368,30 @@ class FxPlayer:
     def _enc(frames):
         return [(im.convert("RGBa").tobytes("raw", "BGRa"), im.width, im.height) for im in frames]
 
-    def variants(self, key, size, mode=None):
-        """Trả về các biến thể đã dựng. Lần đầu dựng 1 biến thể ngay, phần còn lại dựng ở luồng phụ."""
+    def cache_mb(self):
+        with self.lock:
+            return sum(_seq_bytes(seq) for vs in self.cache.values() for seq in vs) / 1e6
+
+    def _trim(self, keep=None):
+        """Bỏ mục ít dùng nhất cho tới khi tổng đệm dưới FX_CACHE_MB (gọi khi đã giữ khoá)."""
+        tot = sum(_seq_bytes(seq) for vs in self.cache.values() for seq in vs)
+        lim = FX_CACHE_MB * 1e6
+        for k in list(self.cache):
+            if tot <= lim:
+                break
+            if k == keep:
+                continue
+            tot -= sum(_seq_bytes(seq) for seq in self.cache.pop(k))
+
+    def variants(self, key, size, mode=None, block=True):
+        """Trả về các biến thể đã dựng. block=False (lúc gõ phím): chưa có hình thì dựng ở luồng phụ, trả [] ngay –
+        luồng chính không bao giờ phải chờ dựng hình."""
         mode = mode or self.mode
         k = (key, size, mode)
         with self.lock:
-            vs = self.cache.get(k)
+            vs = self.cache.pop(k, None)
+            if vs is not None:
+                self.cache[k] = vs                               # vừa dùng -> đưa về cuối (giữ lâu hơn)
         if not vs:
             with self.lock:                                       # đã có cỡ gần giống -> phát tạm, dựng cỡ đúng ở luồng phụ
                 near = [(abs(kk[1] - size), v) for kk, v in self.cache.items() if kk[0] == key and kk[2] == mode and v]
@@ -7306,25 +7406,42 @@ class FxPlayer:
                             with self.lock:
                                 if not self.cache.get(k):
                                     self.cache[k] = [seq]
+                                    self._trim(keep=k)
                         finally:
                             self.pending.discard(k)
                     VFX_BAKER.ask(("first",) + k, first)
                 return near[1]
+            if not block:
+                if k not in self.pending:
+                    self.pending.add(k)
+
+                    def first_nb(k=k, key=key, size=size, mode=mode):
+                        try:
+                            seq = self._enc(FX_BY_KEY[key][2](size, 0, mode))
+                            with self.lock:
+                                if not self.cache.get(k):
+                                    self.cache[k] = [seq]
+                                    self._trim(keep=k)
+                        finally:
+                            self.pending.discard(k)
+                    VFX_BAKER.ask(("first",) + k, first_nb)
+                return []
             maker = FX_BY_KEY[key][2]
             vs = [self._enc(maker(size, 0, mode))]
             with self.lock:
                 self.cache[k] = vs
-                while len(self.cache) > 24:
-                    self.cache.pop(next(iter(self.cache)))
-        if len(vs) < self.VARIANTS:
-            def more(k=k, key=key, size=size, mode=mode):
+                self._trim(keep=k)
+        nvar = self.VARIANTS if size <= 260 else (3 if size <= 400 else 2)   # cỡ to: ít biến thể cho nhẹ RAM
+        if len(vs) < nvar:
+            def more(k=k, key=key, size=size, mode=mode, nvar=nvar):
                 maker = FX_BY_KEY[key][2]
-                for seed in range(1, self.VARIANTS):
+                for seed in range(1, nvar):
                     seq = self._enc(maker(size, seed, mode))
                     with self.lock:
                         lst = self.cache.get(k)
                         if lst is not None and len(lst) < self.VARIANTS:
                             lst.append(seq)
+                            self._trim(keep=k)
             VFX_BAKER.ask(k, more)
         return vs
 
@@ -7332,7 +7449,12 @@ class FxPlayer:
         mode = mode or self.mode
         key = fx_resolve(key or self.default_key)
         self.last_key = key
-        vs = self.variants(key, size, mode)
+        vs = self.variants(key, size, mode, block=False)
+        if not vs:                                              # hình đang dựng ở luồng phụ: giữ phím, xong là phát
+            self.held = (time_now(), x, y, size, key, mode)
+            if self.job is None:
+                self.job = self.app.root.after(30, self._step)
+            return
         seq = random.choice(list(vs))
         if len(self.live) >= self.MAX_LIVE:                    # quá tải: cái cũ nhất nhảy sang pha tan biến
             old = self.live[0]
@@ -7370,6 +7492,17 @@ class FxPlayer:
                 log_error()
 
     def _step(self):
+        held = getattr(self, "held", None)
+        if held is not None:
+            t0, hx, hy, hsize, hkey, hmode = held
+            with self.lock:
+                ready = bool(self.cache.get((hkey, hsize, hmode)))
+            if ready or time_now() - t0 > 0.6:
+                self.held = None
+                if ready:
+                    self.job = None
+                    self.play(hx, hy, hsize, hkey, hmode)
+                    return
         alive = []
         for e in self.live:
             if e["i"] >= len(e["seq"]):
@@ -7391,7 +7524,8 @@ class FxPlayer:
             alive.append(e)
         self.live = alive
         self.last_step = time_now()
-        self.job = self.app.root.after(self._tick(), self._step) if self.live else None
+        busy = self.live or getattr(self, "held", None) is not None
+        self.job = self.app.root.after(self._tick() if self.live else 30, self._step) if busy else None
 
     def _alpha(self):
         try:
@@ -7902,29 +8036,28 @@ def icon_fx_frames(kind, patch, m, dirx=1, strong=False, seed=0):
 
 
 class IconFx:
-    """Icon desktop trúng chiêu khi nhân vật phá phách: CHỈ vẽ đè hình lên màn hình, không di chuyển / sửa icon thật."""
+    """Icon desktop trúng chiêu khi nhân vật phá phách: CHỈ vẽ đè hình lên màn hình, không di chuyển / sửa icon thật.
+    Chụp màn hình và dựng hình đều làm ở LUỒNG PHỤ (không làm khựng nhân vật); luồng chính chỉ phát khung đã xong."""
 
     def __init__(self, app):
+        import queue
         self.app = app
         self.player = FxPlayer(app, "bolt", "T")
         self.player.MAX_LIVE = 4
         self.shots = {}
         self.n = 0
+        self.ready = {}                       # khoá -> (frames, neo) đã dựng xong
+        self.want = {}                        # khoá -> vị trí cần phát ngay khi dựng xong
+        self.q = queue.Queue()
+        self.lock = threading.Lock()
 
     @staticmethod
     def margin(rect):
         return int((rect[2] - rect[0]) * 0.2) + 6
 
-    def _grab(self, rect):
+    def _fake(self, rect):
         m = self.margin(rect)
-        x1, y1, x2, y2 = (int(round(v)) for v in rect)
-        w, h = max(8, x2 - x1), max(8, y2 - y1)
-        if IS_WIN:
-            try:
-                from PIL import ImageGrab
-                return ImageGrab.grab(bbox=(x1 - m, y1 - m, x1 + w + m, y1 + h + m), all_screens=True).convert("RGBA")
-            except Exception:
-                log_error()
+        w, h = max(8, int(rect[2] - rect[0])), max(8, int(rect[3] - rect[1]))
         from PIL import ImageDraw                                    # máy không chụp được màn hình: icon giả
         im = Image.new("RGBA", (w + 2 * m, h + 2 * m), (40, 70, 110, 255))
         d = ImageDraw.Draw(im)
@@ -7933,23 +8066,91 @@ class IconFx:
         d.rectangle((m + w * 0.12, m + h * 0.18, m + w * 0.45, m + h * 0.3), fill=(240, 180, 50, 255))
         return im
 
-    def prepare(self, rects):
-        self.shots = {}
+    def _grab_all(self, rects):
+        """Chụp MỘT lần vùng bao tất cả icon rồi cắt từng icon (trước đây chụp cả màn hình cho từng icon)."""
+        out = {}
+        if IS_WIN and rects:
+            try:
+                from PIL import ImageGrab
+                ms = [self.margin(r) for r in rects]
+                x1 = int(min(r[0] - m for r, m in zip(rects, ms)))
+                y1 = int(min(r[1] - m for r, m in zip(rects, ms)))
+                x2 = int(max(r[2] + m for r, m in zip(rects, ms)))
+                y2 = int(max(r[3] + m for r, m in zip(rects, ms)))
+                big = ImageGrab.grab(bbox=(x1, y1, x2, y2), all_screens=True).convert("RGBA")
+                for r, m in zip(rects, ms):
+                    out[tuple(r)] = big.crop((int(r[0] - m - x1), int(r[1] - m - y1), int(r[2] + m - x1), int(r[3] + m - y1)))
+            except Exception:
+                log_error()
         for r in rects:
-            self.shots[tuple(r)] = self._grab(r)
+            if tuple(r) not in out:
+                out[tuple(r)] = self._fake(r)
+        return out
+
+    def _grab(self, rect):
+        return self._grab_all([rect])[tuple(rect)]
+
+    def prepare(self, rects):
+        rects = [tuple(r) for r in rects]
+        self.shots = {}
+
+        def job():
+            got = self._grab_all(rects)
+            with self.lock:
+                self.shots.update(got)
+        VFX_BAKER.ask(("icon_shot", tuple(rects)), job)
+
+    def _key(self, kind, rect, dirx, strong):
+        return (kind, tuple(rect), int(dirx), bool(strong))
+
+    def prebake(self, kind, rect, dirx=1, strong=False):
+        """Dựng sẵn hình icon trúng chiêu (gọi lúc nhân vật bắt đầu tung chiêu) để tới nhịp trúng là có ngay."""
+        k = self._key(kind, rect, dirx, strong)
+        if k in self.ready:
+            return
+
+        def job(k=k):
+            r = k[1]
+            with self.lock:
+                patch = self.shots.get(r)
+            if patch is None:
+                patch = self._grab(r)
+                with self.lock:
+                    self.shots[r] = patch
+            self.n += 1
+            res = icon_fx_frames(k[0], patch, self.margin(r), k[2], k[3], self.n)
+            self.q.put((k, res))
+        VFX_BAKER.ask(("icon_fx",) + k, job)
 
     def play(self, kind, rect, dirx=1, strong=False):
+        k = self._key(kind, rect, dirx, strong)
         r = tuple(rect)
-        patch = self.shots.get(r)
-        if patch is None:
-            patch = self.shots[r] = self._grab(r)
-        self.n += 1
-        frames, anchor = icon_fx_frames(kind, patch, self.margin(r), dirx, strong, self.n)
-        self.player.play_frames((r[0] + r[2]) / 2.0, (r[1] + r[3]) / 2.0, frames, anchor)
+        pos = ((r[0] + r[2]) / 2.0, (r[1] + r[3]) / 2.0)
+        self.poll()
+        res = self.ready.pop(k, None)
+        if res is not None:
+            self.player.play_frames(pos[0], pos[1], res[0], res[1])
+        else:
+            self.want[k] = pos                                   # chưa xong: phát ngay khi luồng phụ dựng xong
+            self.prebake(kind, rect, dirx, strong)
+
+    def poll(self):
+        """Gọi mỗi nhịp ở luồng chính: nhận hình đã dựng xong."""
+        while True:
+            try:
+                k, res = self.q.get_nowait()
+            except Exception:
+                break
+            pos = self.want.pop(k, None)
+            if pos is not None:
+                self.player.play_frames(pos[0], pos[1], res[0], res[1])
+            else:
+                self.ready[k] = res
+                while len(self.ready) > 12:
+                    self.ready.pop(next(iter(self.ready)))
 
     def hit(self, rect, dirx=1, strong=False):
         self.play("hit", rect, dirx, strong)
-
 
 class KeyFx:
     def __init__(self, app):
@@ -7964,7 +8165,7 @@ class KeyFx:
         self.last_pos = None
         self.finder = CaretFinder()
         try:
-            app.root.after(2500, self.warm)
+            app.root.after(800, self.warm)                       # dựng sẵn hình ở luồng phụ ngay sau khi mở
         except Exception:
             pass
         self.wait = None                          # (mã yêu cầu, loại, lúc hỏi, vị trí chuột dự phòng)
@@ -7993,7 +8194,9 @@ class KeyFx:
             base = text_h * 6.0
         else:
             base = 150 * self.app.dpi
-        return int(max(16, min(560, round(base * k / 8.0) * 8)))
+        v = max(16.0, min(560.0, base * k))
+        n = round(math.log(v / 16.0) / math.log(1.12))             # gom cỡ theo bậc ~12% (ít mục đệm hơn)
+        return int(max(16, min(560, round(16 * 1.12 ** n / 4.0) * 4)))
 
     def _note(self, how):
         exe = get_foreground_exe() or "?"
@@ -8089,8 +8292,9 @@ class KeyFx:
                 return
             sz = self.size()
             for pl, k in ((self.bolt, s.get("key_fx_type", "bolt")), (self.slash, s.get("key_fx_del", "slash"))):
+                k = fx_resolve(k)
                 if k in FX_BY_KEY:
-                    pl.variants(k, sz)
+                    pl.variants(k, sz, block=False)                  # dựng sẵn ở luồng phụ
         except Exception:
             log_error()
 
@@ -8367,6 +8571,7 @@ class Pet:
         self.acc = 0.0
         self.sleeping = False
         self.cache = {}
+        self.cache_bytes, self.cache_sizes = 0, {}
         self.layered = None
         self.pack = None
         self.engine = None
@@ -8426,6 +8631,7 @@ class Pet:
         self.zoom = self.s_user * self.app.dpi
         self.env.zoom = self.zoom
         self.cache = {}
+        self.cache_bytes, self.cache_sizes = 0, {}
         self.env.refresh(force=True)
         if self.engine is None:
             self.engine = Engine(self, self.pack)
@@ -8577,10 +8783,19 @@ class Pet:
             bg.paste(solid.convert("RGB"), (0, 0), a)
             data = ImageTk.PhotoImage(bg)
         f = (data, w, h, off, top, base.width)
-        self.cache[key] = f
-        while len(self.cache) > 360:             # bỏ khung cũ nhất thay vì xoá sạch (đỡ giật)
-            self.cache.pop(next(iter(self.cache)))
+        self._cache_put(key, f, w * h * 4)
         return f
+
+    def _cache_put(self, key, f, nbytes):
+        """Đệm khung đã vẽ: bỏ khung cũ nhất khi vượt PET_CACHE_MB hoặc 700 khung (không xoá sạch -> đỡ giật)."""
+        self.cache[key] = f
+        self.cache_bytes = getattr(self, "cache_bytes", 0) + nbytes
+        sizes = self.__dict__.setdefault("cache_sizes", {})
+        sizes[key] = nbytes
+        while len(self.cache) > 1 and (self.cache_bytes > PET_CACHE_MB * 1e6 or len(self.cache) > 700):
+            k0 = next(iter(self.cache))
+            self.cache.pop(k0)
+            self.cache_bytes -= sizes.pop(k0, 0)
 
     def frame_rot(self, fn, mirror, ang, ax, ay):
         """Khung xoay nghiêng quanh neo (bay lượn): cắt sát hình sau khi xoay -> trả thêm vị trí neo mới."""
@@ -8592,16 +8807,17 @@ class Pet:
         base = self.pack.image(fn)
         if mirror:
             base = ImageOps.mirror(base)
+        bb = base.getchannel("A").getbbox() or (0, 0, base.width, base.height)
+        base = base.crop(bb)                                    # cắt sát hình trước khi xoay (khung rồng nhiều khoảng trống)
+        ax, ay = ax - bb[0], ay - bb[1]
         z = self.zoom
         w, h = max(1, int(round(base.width * z))), max(1, int(round(base.height * z)))
-        im = base.resize((w, h), Image.LANCZOS) if (w, h) != base.size else base
-        axz, ayz = ax * z, ay * z
-        R = int(math.ceil(max(math.hypot(axz - cx, ayz - cy) for cx in (0, w) for cy in (0, h)))) + 2
-        cv = Image.new("RGBA", (2 * R, 2 * R), (0, 0, 0, 0))
-        cv.paste(im, (int(round(R - axz)), int(round(R - ayz))))
-        cv = cv.rotate(ang, Image.BICUBIC, center=(R, R))
-        bb = cv.getchannel("A").getbbox() or (0, 0, 2, 2)
-        cv = cv.crop(bb)
+        im = base.resize((w, h), Image.BILINEAR) if (w, h) != base.size else base
+        cv = im.rotate(ang, Image.BILINEAR, expand=True)        # xoay thẳng, không đệm khung vuông to gấp đôi
+        th = math.radians(ang)
+        vx, vy = ax * z - w / 2.0, ay * z - h / 2.0
+        nax = cv.width / 2.0 + vx * math.cos(th) + vy * math.sin(th)
+        nay = cv.height / 2.0 - vx * math.sin(th) + vy * math.cos(th)
         if self.mode == "layered":
             data = cv.convert("RGBa").tobytes("raw", "BGRa")
         else:
@@ -8611,10 +8827,8 @@ class Pet:
             solid.alpha_composite(cv)
             bg.paste(solid.convert("RGB"), (0, 0), a)
             data = ImageTk.PhotoImage(bg)
-        f = (data, cv.width, cv.height, 0, 0, (R - bb[0], R - bb[1]))
-        self.cache[key] = f
-        while len(self.cache) > 700:
-            self.cache.pop(next(iter(self.cache)))
+        f = (data, cv.width, cv.height, 0, 0, (nax, nay))
+        self._cache_put(key, f, cv.width * cv.height * 4)
         return f
 
     def render(self):
@@ -8629,9 +8843,10 @@ class Pet:
         z = self.zoom
         tilt = getattr(eng, "tilt", 0.0) or 0.0
         if abs(tilt) >= 1.5:                                    # bay lượn: thân nghiêng theo hướng bay
-            bw = self.pack.image(fn).width
-            axi = (bw - p.ax) if right else p.ax
-            data, w, h, off, top, (nax, nay) = self.frame_rot(fn, mirror, int(round(tilt / 3.0)) * 3, axi, p.ay)
+            axi = (self.pack.image(fn).width - p.ax) if right else p.ax
+            im0 = self.pack.image(fn)
+            stp = 3 if im0.width * im0.height < 60000 else 5           # hình to (rồng): bậc góc thô hơn, ít phải xoay lại
+            data, w, h, off, top, (nax, nay) = self.frame_rot(fn, mirror, int(round(tilt / stp)) * stp, axi, p.ay)
             x = int(round(eng.ax * z - nax))
             y = int(round(eng.ay * z - nay))
         else:
@@ -8648,6 +8863,7 @@ class Pet:
                 log_error()
                 self.mode = "key"           # dự phòng: chuyển sang chế độ màu khoá
                 self.cache = {}
+                self.cache_bytes, self.cache_sizes = 0, {}
                 try:
                     self.root.attributes("-transparentcolor", KEY)
                 except Exception:
@@ -9072,6 +9288,7 @@ class App:
             dtt = min(0.2, max(0.01, t - self._last))
             self._last = t
             self.gmouse.poll()
+            self.icon_fx.poll()
             if not self.hidden and not self.fs_hidden:
                 self.pet.tick(dtt)
         except Exception:
@@ -10453,9 +10670,11 @@ class Manager:
         self.fxd.set(dict(FX_CHOICES).get(s.get("key_fx_del", "slash")))
         self.fxd.grid(row=5, column=1, sticky="w", padx=6)
         self.fxt.bind("<<ComboboxSelected>>", lambda e: (self.app.set_setting("key_fx_type", lab2k[self.fxt.get()]),
-                                                         self.fx_preview_set(lab2k[self.fxt.get()], "T")))
+                                                         self.fx_preview_set(lab2k[self.fxt.get()], "T"),
+                                                         self.app.keyfx.warm()))
         self.fxd.bind("<<ComboboxSelected>>", lambda e: (self.app.set_setting("key_fx_del", lab2k[self.fxd.get()]),
-                                                         self.fx_preview_set(lab2k[self.fxd.get()], "D")))
+                                                         self.fx_preview_set(lab2k[self.fxd.get()], "D"),
+                                                         self.app.keyfx.warm()))
         tb = ttk.Frame(kf)
         tb.grid(row=6, column=0, columnspan=2, sticky="w", pady=4)
         ttk.Button(tb, text="⚡ Thử gõ trên màn hình", style="Small.TButton",

@@ -106,6 +106,8 @@ C.IS_WIN = False
 # 8) phần mềm không báo vị trí con trỏ mới -> sau 4 cú gõ chuyển sang tin cú gõ (không bỏ qua mãi)
 kf.trust.clear()
 kf.skip_run.clear()
+kf.bolt.variants(C.fx_resolve(app.store.s.get("key_fx_type", "bolt")), 152, block=True)   # như app dựng sẵn lúc mở
+kf.last_size = 152
 n0 = kf.bolt.played
 kf.prev_caret = ((300, 300), C.time_now())
 for _ in range(3):
