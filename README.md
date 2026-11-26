@@ -67,6 +67,10 @@ Dữ liệu (việc nhắc, nhật ký tự học, cài đặt) lưu trong thư 
 
 Kèm theo là trường "khoảng cách tới tâm năng lượng" và các rẻ quạt sợi sét.
 
+**Tuỳ chỉnh** (Cài đặt → ⚡ Hiệu ứng gõ phím): Hệ số cỡ, **Độ đậm** (độ trong suốt 15–100%), **Tốc độ xuất hiện** (×0.4 chậm – ×2.0 nhanh).
+
+Đầu lâu chỉ dùng phần đầu lâu bóc riêng từ ảnh; Lôi tinh liên hoàn dùng sợi sét mảnh một màu lôi xanh.
+
 **Mỗi frame diễn ra:**
 - Sét lan dần từ tâm theo mép răng cưa.
 - Từng rẻ quạt chớp, tắt, loé theo nhịp riêng.

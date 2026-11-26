@@ -68,7 +68,7 @@ except Exception:
     HAS_PIL = False
 
 APP_NAME = "Chibi Nhắc Việc"
-APP_VER = "3.8"
+APP_VER = "3.9"
 KEY = "#ff00ff"          # màu nền trong suốt
 PORT = 47613             # chống chạy 2 lần
 FONT = "Segoe UI" if IS_WIN else "DejaVu Sans"
@@ -332,7 +332,7 @@ DEFAULT_SETTINGS = {
     "pack": "", "free_master": True, "free": {}, "assigned_no_free": True, "walk_windows": True, "jump_icons": True,
     "auto_jump": True, "climb": True, "smooth": True, "triggers": None, "screen_mode": "desktop",
     "update_mode": "notify", "last_update_check": "", "just_updated": "",
-    "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0, "key_fx_type": "bolt", "key_fx_del": "slash", "key_fx_autosize": True,
+    "key_fx": True, "key_fx_pet": True, "key_fx_size": 1.0, "key_fx_alpha": 1.0, "key_fx_speed": 1.0, "key_fx_type": "bolt", "key_fx_del": "slash", "key_fx_autosize": True,
     "drop_action": "VaCham_RoiHoDat", "wall_hit_action": "TrangThai_AnVa",
 }
 
@@ -1906,7 +1906,8 @@ class LayeredWin:
         self.BIH = BIH
         self.blend = BLEND(0, 0, 255, 1)
 
-    def update(self, x, y, w, h, bgra):
+    def update(self, x, y, w, h, bgra, alpha=255):
+        self.blend.alpha = max(0, min(255, int(alpha)))              # độ trong suốt chung của cả cửa sổ
         bih = self.BIH(ctypes.sizeof(self.BIH), w, -h, 1, 32, 0, 0, 0, 0, 0, 0)
         bits = ctypes.c_void_p()
         hbmp = self.g32.CreateDIBSection(self.hdc_mem, ctypes.byref(bih), 0, ctypes.byref(bits), None, 0)
@@ -3881,6 +3882,12 @@ class LoiBolt:
                               kink=(kink[0] * 1.15, kink[1] * 1.15), seg=(0.14, 0.26), blen=blen, spread=spread, hue=hue)
                 self.kids.append((cum[i] / self.L, kid))
 
+    def set_pal(self, pal):
+        self.pal = pal
+        for _, kid in self.kids:
+            kid.set_pal(pal)
+        return self
+
     def _cut(self, s0, s1):
         """Đoạn đường từ tỉ lệ s0 tới s1 của chiều dài."""
         a, b = s0 * self.L, s1 * self.L
@@ -3915,7 +3922,7 @@ class LoiBolt:
                     tip = _c01((1 - u) / 0.18) if vis > 0.05 else 0.0     # đầu tia nhọn
                     root = _c01(u / 0.12) if tail > 0.02 else 1.0          # đang co rút: gốc cũng nhọn
                     ws.append(w * min(tip, max(0.35, root)) if k not in (0, n - 1) else (0.0 if k == n - 1 else w * (1.0 if tail <= 0.02 else 0.3)))
-                loi_stroke(em, pts, ws, power, self.hue)
+                loi_stroke(em, pts, ws, power, self.hue, getattr(self, "pal", None))
         for tk, kid in self.kids:
             if grow > tk:
                 g = (grow - tk) / 0.28
@@ -3943,15 +3950,23 @@ def taper_poly(pts, ws, k=1.0):
     return L + R[::-1]
 
 
-def loi_stroke(em, pts, ws, power=1.0, hue=0.0):
-    """Vẽ một đường sét theo bảng màu cố định: quầng đen tím – quầng tím – viền tím đậm – thân tím điện – lõi trắng tím."""
+LOI_XANH = ((232, 248, 255), (70, 170, 255), (16, 70, 175), (20, 70, 150))     # lôi xanh: lõi, thân, viền, quầng
+
+
+def loi_stroke(em, pts, ws, power=1.0, hue=0.0, pal=None):
+    """Vẽ một đường sét theo bảng màu cố định: quầng đen tím – quầng tím – viền tím đậm – thân tím điện – lõi trắng tím.
+    pal = (lõi, thân, viền, quầng) để dùng bảng màu khác (vd LOI_XANH)."""
     p = _c01(power)
     wmax = max(ws) if ws else 1.0
-    mid = tuple(int(LOI_MID[i] + (LOI_MID_B[i] - LOI_MID[i]) * hue) for i in range(3))
-    core = tuple(int(LOI_CORE[i] + (LOI_CORE_B[i] - LOI_CORE[i]) * hue) for i in range(3))
-    em.line("aura", pts, LOI_AURA + (int(120 * (0.4 + 0.6 * p)),), wmax * 7.0)
+    if pal:
+        core, mid, edge, aura = pal
+    else:
+        mid = tuple(int(LOI_MID[i] + (LOI_MID_B[i] - LOI_MID[i]) * hue) for i in range(3))
+        core = tuple(int(LOI_CORE[i] + (LOI_CORE_B[i] - LOI_CORE[i]) * hue) for i in range(3))
+        edge, aura = LOI_EDGE, LOI_AURA
+    em.line("aura", pts, aura + (int(120 * (0.4 + 0.6 * p)),), wmax * 7.0)
     em.line("glow", pts, mid + (int(215 * p),), wmax * 2.8)
-    em.poly("base", taper_poly(pts, ws, 1.7), LOI_EDGE + (int(255 * min(1.0, 0.35 + p)),))
+    em.poly("base", taper_poly(pts, ws, 1.7), edge + (int(255 * min(1.0, 0.35 + p)),))
     em.poly("base", taper_poly(pts, ws, 1.0), mid + (int(255 * min(1.0, 0.2 + p)),))
     if p > 0.25:
         em.poly("base", taper_poly(pts, ws, 0.42), core + (int(255 * _c01((p - 0.25) / 0.5)),))
@@ -4101,6 +4116,11 @@ class Part:
         x, y, s = self.x, self.y, self.size
         if self.kind == "sprite":                             # mảnh bóc từ ảnh (đá vụn...) bay theo quán tính
             cv.stamp(self.img, (x, y), 1.0, self.rot, min(1.0, k * 1.6))
+            return
+        if self.kind == "spark_b":                            # tia lửa lôi xanh, mảnh
+            tail = (x - self.vx * 1.6, y - self.vy * 1.6)
+            cv.line("glow", [tail, (x, y)], LOI_XANH[1] + (int(200 * k),), 2.2)
+            cv.line("base", [tail, (x, y)], LOI_XANH[0] + (int(255 * k),), 0.8)
             return
         if self.kind == "spark":                              # vệt tia lửa điện: lõi trắng, viền tím
             s = max(s, 1.2)
@@ -5747,6 +5767,19 @@ def img_flash(cv, c, r, k, tint):
         cv.poly("base", [_ad(c, _dv(a - 6), r * 0.28), _ad(c, _dv(a), ln), _ad(c, _dv(a + 6), r * 0.28)], (255, 250, 230, int(220 * k)))
 
 
+def to_blue(im):
+    """Đổi sợi sét sang lôi xanh theo độ sáng: tối -> xanh thẫm, vừa -> xanh điện, sáng -> trắng xanh; làm mảnh sợi:
+    điểm mờ nhạt (quầng rộng của ảnh gốc) bị cắt bớt."""
+    import numpy as np
+    a = np.asarray(im).astype(np.float32) / 255.0
+    lum = a[..., :3].max(2)
+    c0, c1, c2 = (np.array(LOI_XANH[2]) / 255.0, np.array(LOI_XANH[1]) / 255.0, np.array(LOI_XANH[0]) / 255.0)
+    t = np.clip(lum, 0, 1)[..., None]
+    rgb = np.where(t < 0.6, c0 + (c1 - c0) * (t / 0.6), c1 + (c2 - c1) * ((t - 0.6) / 0.4))
+    al = a[..., 3] * np.clip((lum - 0.35) / 0.3, 0, 1)                         # bỏ phần tối/khói -> sợi mảnh, sạch
+    return Image.fromarray((np.dstack([rgb, al]) * 255).astype(np.uint8), "RGBA")
+
+
 class LoiTinhLienHoan(Vfx):
     """Lôi tinh liên hoàn – gõ: tinh cầu sét (bóc từ ảnh) nổ nối tiếp dọc dòng chữ, mỗi lần nổ tia sét nhảy cung sang
     điểm kế, cuối cùng nổ lớn tại con trỏ; xoá: nổ tại chữ bị xoá rồi giật lùi sang trái, nhỏ dần và tắt."""
@@ -5766,14 +5799,15 @@ class LoiTinhLienHoan(Vfx):
             L = fx_layers(self.SRCS[k % len(self.SRCS)], sz, nsec=8)
             self.nodes.append((k * 3, p, L, last))
         self.ok = all(L.ok for _, _, L, _ in self.nodes)
-        self.hops = [LoiBolt(a, b, self.S * 0.016, r, branches=2, depth=1, lift=0.3) for a, b in zip(self.order, self.order[1:])]
+        self.hops = [LoiBolt(a, b, self.S * 0.006, r, branches=2, depth=1, lift=0.3).set_pal(LOI_XANH)
+                     for a, b in zip(self.order, self.order[1:])]
         self.gain = [[(1.6 if j < 2 else (0.3 if r.random() < 0.25 else (1.4 if r.random() > 0.8 else 1.0))) for _ in range(8)]
                      for j in range(12)]
 
     def update(self, f, t):
         for t0, p, L, last in self.nodes:
             if f == t0 + 1:
-                self.emit(14 if last else 6, p, self.S * (0.05 if last else 0.03), 9, self.S * 0.01, "spark")
+                self.emit(14 if last else 6, p, self.S * (0.05 if last else 0.03), 9, self.S * 0.006, "spark_b")
 
     def draw(self, cv, f, t):
         for t0, p, L, last in self.nodes:
@@ -5785,14 +5819,15 @@ class LoiTinhLienHoan(Vfx):
             hi = _eo(_ph(u, 0, 0.3)) * 1.15
             lo = _ph(u, 0.5, 0.97) * 1.15
             if self.ok:
-                im, cm = L.frame(lo, hi, self.gain[min(a, 11)], 1.6 if a < 2 else 1.0, 1.0, _ph(u, 0.35, 0.8),
+                im, cm = L.frame(lo, hi, self.gain[min(a, 11)], 1.6 if a < 2 else 1.0, 0.0, _ph(u, 0.35, 0.8),
                                  jitter=(a % 3) - 1)
+                im = to_blue(im)                                  # một màu lôi xanh, chỉ giữ sợi sét (bỏ khói)
                 pin = (L.w / 2.0, L.h / 2.0)
                 sc = 0.8 + 0.25 * _eo(_ph(u, 0, 0.4))
                 _place(cv, im, pin, p, sc, a * 4)
-                _place(cv, _tinted(cm, L.tint, 1.4), pin, p, sc, a * 4, 1.0, "glow")
+                _place(cv, _tinted(cm, LOI_XANH[1], 1.1), pin, p, sc, a * 4, 1.0, "glow")
             if a < 2:
-                img_flash(cv, p, self.S * (0.09 if last else 0.05), 1.0 - a * 0.3, L.tint if self.ok else LOI_MID)
+                img_flash(cv, p, self.S * (0.08 if last else 0.045), 1.0 - a * 0.3, LOI_XANH[1])
         for i, h in enumerate(self.hops):                         # tia sét nhảy cung nối điểm vừa nổ sang điểm kế
             a = f - (i * 3 + 1)
             if 0 <= a < 5:
@@ -5886,6 +5921,86 @@ class LoiThuongTu(Vfx):
             img_flash(cv, self.c, self.S * 0.07, 1 - (f - 2) / 5.0, self.shaft.tint)
 
 
+SKULLS = [("daulau2", 45, 65, 27), ("daulau2", 163, 70, 25), ("daulau3", 65, 105, 28), ("daulau3", 105, 40, 22),
+          ("daulau1", 40, 75, 22), ("daulau2", 131, 31, 13), ("daulau3", 25, 50, 13), ("daulau3", 167, 60, 12)]
+_SKULL_CACHE = {}
+
+
+def skull_sprite(k):
+    """Đầu lâu thứ k bóc khỏi ảnh (cắt tròn mép mềm, bỏ khói / xoáy xung quanh)."""
+    if k in _SKULL_CACHE:
+        return _SKULL_CACHE[k]
+    import numpy as np
+    name, cx, cy, r = SKULLS[k % len(SKULLS)]
+    src = fx_src(name)
+    if src is None:
+        return None
+    R = int(r * 1.12)
+    box = (cx - R, cy - int(R * 1.05), cx + R, cy + int(R * 1.15))
+    im = src.crop(box)
+    a = np.asarray(im).astype(np.float32)
+    h, w = a.shape[:2]
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    d = np.hypot((xx - w / 2.0) / (w / 2.0), (yy - h * 0.47) / (h * 0.5))
+    a[..., 3] *= np.clip((1.0 - d) / 0.18, 0, 1)
+    lum = a[..., :3].mean(2)
+    sat = a[..., :3].max(2) - a[..., :3].min(2)
+    a[..., 3] *= np.clip(1.0 - (sat - 60) / 160.0 * (lum > 150), 0.25, 1)      # bớt quầng lửa tím sáng loang ra
+    out = Image.fromarray(a.astype(np.uint8), "RGBA")
+    _SKULL_CACHE[k] = out
+    return out
+
+
+class DauLauBay(Vfx):
+    """Đầu lâu ma quỷ (chỉ đầu lâu, bóc từ ảnh): gõ – từng cái hiện ra theo nhiễu, nhỏ trước to sau, bay lên lắc lư,
+    mắt loé theo nhịp, tan dần ở trên cao; xoá – các đầu lâu lao bổ xuống chữ, thu nhỏ rồi biến mất."""
+    name, frames, anchor, box = "skull", 22, (0.5, 0.95), (1.2, 2.0)
+
+    def init(self):
+        r = self.rnd
+        self.items = []
+        order = [5, 6, 4, 3, 2] if r.random() < 0.5 else [7, 5, 1, 0, 2]
+        for j, k in enumerate(order):
+            im = skull_sprite(k)
+            if im is None:
+                continue
+            target = self.S * (0.16 + 0.07 * j)                                     # nhỏ rồi to dần
+            sc = target / float(max(im.size))
+            self.items.append(dict(im=im, sc=sc, t0=j * 0.1, x=r.uniform(-0.22, 0.22) * self.S, sway=r.choice((-1, 1)),
+                                   noise=make_noise(im.width + 4, im.height + 4, self.seed * 17 + j, cell=max(3, im.width // 8))))
+        self.ok = bool(self.items)
+
+    def draw(self, cv, f, t):
+        for j, it in enumerate(self.items):
+            u = (t - it["t0"]) / 0.62
+            if u < 0 or u > 1:
+                continue
+            if not self.D:
+                y = self.c[1] - self.S * (0.15 + 1.25 * _eo(u))
+                x = self.c[0] + it["x"] + math.sin(u * 7) * self.S * 0.06 * it["sway"]
+                rot = math.sin(u * 8) * 10 * it["sway"]
+                sc = it["sc"] * (0.6 + 0.4 * _eo(_ph(u, 0, 0.3)))
+                thr = (1 - _ph(u, 0, 0.25)) * 0.9 + _ph(u, 0.72, 1.0) * 0.95
+            else:
+                y = self.c[1] - self.S * (1.4 - 1.3 * _ei(u))
+                x = self.c[0] + it["x"] * (1 - _ei(u))
+                rot = math.sin(u * 14) * 6
+                sc = it["sc"] * (1.0 - 0.7 * _ph(u, 0.7, 1.0))
+                thr = (1 - _ph(u, 0, 0.2)) * 0.9 + _ph(u, 0.85, 1.0) * 0.95
+            im = dissolve(it["im"], thr, it["noise"])                           # hiện ra / tan theo nhiễu, mép cháy tím
+            cv.stamp(im, (x, y), sc, rot)
+            eye = 0.5 + 0.5 * abs(math.sin(f * 0.9 + j))                        # mắt loé theo nhịp
+            k = (1 - thr) * eye
+            if k > 0.05:
+                for sx in (-1, 1):
+                    e = (x + sx * it["im"].width * 0.19 * sc, y - it["im"].height * 0.02 * sc)
+                    cv.ell("glow", e, it["im"].width * 0.13 * sc, it["im"].width * 0.1 * sc, (200, 110, 255, int(220 * k)))
+                    cv.ell("base", e, it["im"].width * 0.04 * sc, it["im"].width * 0.03 * sc, (255, 240, 255, int(255 * k)))
+
+
+DauLauBay.fallback = DauLauQuy
+
+
 # ── các hiệu ứng (bảng thông số: ảnh nào, tâm năng lượng ở đâu, lan theo kiểu nào, đan xen sợi nào) ──
 _SV = ["setvang%d" % i for i in range(1, 10)]
 _ST = ["settim%d" % i for i in range(1, 6)]
@@ -5900,7 +6015,7 @@ def _fx(key, frames, box, anchor, layers, strands=None, parts=None, ring=True, g
 
 
 IMG_FX = [
-    LoiTinhLienHoan, LoiThuongTu,
+    LoiTinhLienHoan, LoiThuongTu, DauLauBay,
     _fx("bolt", 15, (1.5, 1.5), (0.5, 0.5), [dict(src="tia_chop", size=1.35)], (_ST + _SV, 5, 0.5), "spark",
         base=LoiTinhBaoPhat),
     _fx("novang", 15, (1.5, 1.5), (0.5, 0.5), [dict(src="no_vang", size=1.35, rocks=True), dict(src="tim_no", size=0.9, origin=(0.5, 0.86),
@@ -5950,8 +6065,6 @@ IMG_FX = [
         reveal="up", t1=0.4, nsec=4, vig=True, steady=True), dict(src="bingan3", size=1.45, origin=(0.5, 1.0),
         pin=(0.5, 0.98), reveal="up", t0=0.25, nsec=4, vig=True, steady=True, sway=4)], None, "petal", grow=0.35, fade=0.68,
         base=BiNganHoa),
-    _fx("skull", 20, (1.3, 2.0), (0.5, 0.95), [dict(src="daulau3", size=1.4, origin=(0.5, 1.0), pin=(0.5, 0.98),
-        reveal="up", rise=0.45, nsec=5, vig=True, steady=True, sway=7)], None, "soul", grow=0.35, fade=0.6, base=DauLauQuy),
     _fx("sword", 18, (2.0, 2.2), (0.5, 0.9), [dict(src="phikiem3", size=1.1, reveal="wipe", wipe=60, origin=(0.1, 0.0),
         pin=(0.5, 0.75), t1=0.42, vig=True, steady=True, move=((-0.45, -0.35), (0.25, 0.05)), ease=_ei),
         dict(src="phikiem5", size=1.4, origin=(0.5, 0.92), pin=(0.5, 0.92), t0=0.3, nsec=6, vig=True, steady=True,
@@ -6147,13 +6260,27 @@ class FxPlayer:
             if lw:
                 try:
                     ax, ay = e["anchor"]
-                    lw.update(e["pos"][0] - int(w * ax), e["pos"][1] - int(h * ay), w, h, data)
+                    lw.update(e["pos"][0] - int(w * ax), e["pos"][1] - int(h * ay), w, h, data, self._alpha())
                 except Exception:
                     log_error()
             e["i"] += 1
             alive.append(e)
         self.live = alive
-        self.job = self.app.root.after(self.TICK, self._step) if self.live else None
+        self.job = self.app.root.after(self._tick(), self._step) if self.live else None
+
+    def _alpha(self):
+        try:
+            return int(255 * max(0.15, min(1.0, float(self.app.store.s.get("key_fx_alpha", 1.0)))))
+        except Exception:
+            return 255
+
+    def _tick(self):
+        """Nhịp phát theo thanh trượt tốc độ: 0.4 (chậm, 100 ms/khung) .. 2.0 (nhanh, 20 ms/khung)."""
+        try:
+            sp = max(0.4, min(2.0, float(self.app.store.s.get("key_fx_speed", 1.0))))
+        except Exception:
+            sp = 1.0
+        return max(20, int(round(self.TICK / sp)))
 
 
 class KeyFx:
@@ -8346,6 +8473,22 @@ class Manager:
         ttk.Checkbutton(kf, text="Kích thước theo cỡ chữ của phần mềm (chữ to → hiệu ứng to)", variable=self.kauto_v,
                         command=lambda: self.app.set_setting("key_fx_autosize", self.kauto_v.get())
                         ).grid(row=9, column=0, columnspan=2, sticky="w")
+
+        def slider(row, text, key, lo, hi, fmt):
+            ttk.Label(kf, text=text).grid(row=row, column=0, sticky="w", pady=3)
+            fr = ttk.Frame(kf)
+            fr.grid(row=row, column=1, sticky="w", padx=6)
+            v = tk.DoubleVar(value=float(s.get(key, 1.0)))
+            lab = ttk.Label(fr, text=fmt(v.get()), width=12, style="Muted.TLabel")
+            sc = ttk.Scale(fr, from_=lo, to=hi, variable=v, length=200,
+                           command=lambda _x: lab.config(text=fmt(v.get())))
+            sc.pack(side="left")
+            lab.pack(side="left", padx=6)
+            sc.bind("<ButtonRelease-1>", lambda e: self.app.set_setting(key, round(v.get(), 2)))
+            return v
+        self.kalpha_v = slider(10, "Độ đậm (trong suốt):", "key_fx_alpha", 0.15, 1.0, lambda x: "%d%%" % round(x * 100))
+        self.kspeed_v = slider(11, "Tốc độ xuất hiện:", "key_fx_speed", 0.4, 2.0,
+                               lambda x: ("chậm " if x < 0.9 else ("nhanh " if x > 1.1 else "vừa ")) + "×%.1f" % x)
         ttk.Label(kf, text="Hệ số cỡ:").grid(row=3, column=0, sticky="w", pady=4)
         self.kfs_v = tk.DoubleVar(value=s.get("key_fx_size", 1.0))
         ksc = ttk.Scale(kf, from_=0.4, to=2.5, variable=self.kfs_v, length=200)
@@ -8438,13 +8581,17 @@ class Manager:
             cv.create_text(130, 14, text=p.get("name", ""), fill=C_GOLD, font=(FONT, 9, "bold"))
             if p["i"] < len(p["frames"]):
                 im = p["frames"][p["i"]]
+                al = float(self.app.store.s.get("key_fx_alpha", 1.0))
+                if al < 0.999:
+                    im = im.copy()
+                    im.putalpha(im.getchannel("A").point(lambda v: int(v * al)))
                 ax, ay = p["anchor"]
                 self._fxp_img = ImageTk.PhotoImage(im)
                 cv.create_image(178 - im.width * ax, 150 - im.height * ay, image=self._fxp_img, anchor="nw")
             p["i"] += 1
         except Exception:
             log_error()
-        self.win.after(45, self.fx_preview_loop)
+        self.win.after(self.app.keyfx.bolt._tick(), self.fx_preview_loop)
 
     def _kfx_demo(self, kind):
         x, y = self.win.winfo_pointerxy()

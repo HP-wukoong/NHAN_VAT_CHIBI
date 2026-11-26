@@ -1,8 +1,9 @@
 {
-  "version": "3.8",
+  "version": "3.9",
   "date": "2026-11-26",
   "notes": [
-    "Thêm hiệu ứng gõ ⚡ Lôi tinh liên hoàn: tinh cầu sét nổ nối tiếp dọc dòng chữ, tia sét tím nhảy cung nối nhau, nổ lớn tại con trỏ",
-    "Thêm hiệu ứng ⚡ Lôi thương xuyên chữ: giáo sét lao chéo xuống, cắm xuyên chữ, nổ chấn vàng tím, đá văng, giáo rung điện rồi tan; khi xoá giáo bị rút phăng lên"
+    "Hiệu ứng Đầu lâu: chỉ giữ đầu lâu (bóc riêng 8 đầu lâu từ ảnh), bỏ khói/xoáy thừa; đầu lâu hiện dần nhỏ→to, bay lên lắc lư, mắt loé; khi xoá lao bổ xuống chữ",
+    "Thêm 2 thanh trượt ở tab Hiệu ứng gõ phím: Độ đậm (trong suốt 15–100%) và Tốc độ xuất hiện (chậm ×0.4 – nhanh ×2.0), áp dụng cả ô xem trước",
+    "Lôi tinh liên hoàn: sợi sét mảnh, một màu lôi xanh"
   ]
 }
